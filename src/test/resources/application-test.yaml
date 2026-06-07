@@ -24,7 +24,7 @@ app:
     oauth:
       enabled: false
     bootstrap-key-file: ${java.io.tmpdir}/sign-verify-test/bootstrap-api-key.txt
-    master-key: ZGV2LWRldi1kZXYtZGV2LWRldi1kZXYtZGV2LWRldi1kZXYtZGV2LWRldi1kZXY=
+    master-key: jmXybkAUJpitU/086qz5mmCmT7DoMqibeEfZ6XwMF9I=
   storage:
     jobs-dir: ${java.io.tmpdir}/sign-verify-test/jobs
   dss:
@@ -40,3 +40,20 @@ app:
         oj-keystore-path: classpath:keystore/oj-keystore.p12
         oj-keystore-password-env: TEST_KEYSTORE_PASSWORD
         oj-url: https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv:OJ.C_.2019.276.01.0001.01.ENG
+  async:
+    max-pending-per-principal: 5
+    max-pending-global: 100
+    job-ttl: PT24H
+    max-pickup-attempts: 3
+    worker:
+      poll-interval: PT60S
+  callback:
+    timeout: PT5S
+    allow-http: true
+    block-private-networks: false
+    max-attempts: 3
+    backoff: PT5S,PT30S,PT2M
+    success-statuses: 200,202
+    non-retryable-statuses: 400,401,403,404,410
+    worker:
+      poll-interval: PT30S

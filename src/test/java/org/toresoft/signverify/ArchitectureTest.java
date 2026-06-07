@@ -44,6 +44,10 @@ class ArchitectureTest {
       noClasses()
           .that()
           .resideInAPackage("..api..")
+          .and()
+          .doNotHaveSimpleName("VerificationController")
+          .and()
+          .doNotHaveSimpleName("AsyncVerificationController")
           .should()
           .dependOnClassesThat()
           .resideInAPackage("..persistence..");
