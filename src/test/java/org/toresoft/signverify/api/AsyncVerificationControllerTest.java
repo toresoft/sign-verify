@@ -47,8 +47,23 @@ import org.toresoft.signverify.security.Principal;
  * only the MVC slice and mock the controller's collaborators.
  */
 @WebMvcTest(controllers = AsyncVerificationController.class)
-@org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc(addFilters = false)
+@org.springframework.context.annotation.Import(
+    AsyncVerificationControllerTest.PermissiveSecurity.class)
 class AsyncVerificationControllerTest {
+
+  static class PermissiveSecurity {
+    @org.springframework.context.annotation.Bean
+    @org.springframework.context.annotation.Primary
+    org.springframework.security.web.SecurityFilterChain testFilterChain(
+        org.springframework.security.config.annotation.web.builders.HttpSecurity http)
+        throws Exception {
+      http.csrf(c -> c.disable())
+          .authorizeHttpRequests(a -> a.anyRequest().permitAll())
+          .httpBasic(b -> b.disable())
+          .formLogin(f -> f.disable());
+      return http.build();
+    }
+  }
 
   @Autowired private MockMvc mockMvc;
   @Autowired private ObjectMapper om;
