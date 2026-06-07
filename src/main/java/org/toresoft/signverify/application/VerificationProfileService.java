@@ -17,7 +17,8 @@ public class VerificationProfileService {
   private final VerificationProfileRepository repo;
   private final PresetXmlLoader presetLoader;
 
-  public VerificationProfileService(VerificationProfileRepository repo, PresetXmlLoader presetLoader) {
+  public VerificationProfileService(
+      VerificationProfileRepository repo, PresetXmlLoader presetLoader) {
     this.repo = repo;
     this.presetLoader = presetLoader;
   }
@@ -31,7 +32,8 @@ public class VerificationProfileService {
   }
 
   @Transactional
-  public VerificationProfile create(String name, String description, ProfilePreset preset, String customXml) {
+  public VerificationProfile create(
+      String name, String description, ProfilePreset preset, String customXml) {
     if (repo.findByName(name).isPresent()) throw AppException.conflict("profile name taken");
     VerificationProfile p = new VerificationProfile();
     p.setId(UUID.randomUUID());
@@ -47,10 +49,12 @@ public class VerificationProfileService {
 
   @Transactional
   public VerificationProfile update(UUID id, String description, String customXml) {
-    VerificationProfile p = repo.findById(id).orElseThrow(() -> AppException.notFound("profile not found"));
+    VerificationProfile p =
+        repo.findById(id).orElseThrow(() -> AppException.notFound("profile not found"));
     if (description != null) p.setDescription(description);
     if (customXml != null) {
-      if (p.getPreset() != ProfilePreset.CUSTOM) throw AppException.badRequest("policyXml editing allowed only on CUSTOM");
+      if (p.getPreset() != ProfilePreset.CUSTOM)
+        throw AppException.badRequest("policyXml editing allowed only on CUSTOM");
       p.setPolicyXml(customXml);
     }
     p.setUpdatedAt(Instant.now());
@@ -59,22 +63,31 @@ public class VerificationProfileService {
 
   @Transactional
   public void delete(UUID id) {
-    VerificationProfile p = repo.findById(id).orElseThrow(() -> AppException.notFound("profile not found"));
+    VerificationProfile p =
+        repo.findById(id).orElseThrow(() -> AppException.notFound("profile not found"));
     if (p.getIsDefault()) throw AppException.conflict("cannot delete default profile");
     repo.deleteById(id);
   }
 
   @Transactional
   public VerificationProfile setDefault(UUID id) {
-    VerificationProfile target = repo.findById(id).orElseThrow(() -> AppException.notFound("profile not found"));
-    repo.findByIsDefaultTrue().ifPresent(curr -> { curr.setIsDefault(false); repo.save(curr); });
+    VerificationProfile target =
+        repo.findById(id).orElseThrow(() -> AppException.notFound("profile not found"));
+    repo.findByIsDefaultTrue()
+        .ifPresent(
+            curr -> {
+              curr.setIsDefault(false);
+              repo.save(curr);
+            });
     target.setIsDefault(true);
     target.setUpdatedAt(Instant.now());
     return repo.save(target);
   }
 
   public VerificationProfile getOrDefault(UUID id) {
-    if (id != null) return repo.findById(id).orElseThrow(() -> AppException.notFound("profile not found"));
-    return repo.findByIsDefaultTrue().orElseThrow(() -> AppException.notFound("no default profile"));
+    if (id != null)
+      return repo.findById(id).orElseThrow(() -> AppException.notFound("profile not found"));
+    return repo.findByIsDefaultTrue()
+        .orElseThrow(() -> AppException.notFound("no default profile"));
   }
 }

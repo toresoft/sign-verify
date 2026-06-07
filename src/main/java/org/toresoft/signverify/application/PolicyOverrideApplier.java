@@ -16,12 +16,15 @@ import org.w3c.dom.NodeList;
 @Component
 public class PolicyOverrideApplier {
 
-  private static final Map<String, List<String>> CHECK_TO_TAGS = Map.of(
-      "checkRevocation", List.of("RevocationDataAvailable", "RevocationDataFreshness", "RevocationCertHashMatch"),
-      "checkSignatureIntegrity", List.of("SignatureIntact", "SignatureValid"),
-      "checkCertificateChain", List.of("ProspectiveCertificateChain", "TrustedServiceStatus"),
-      "checkTimestamp", List.of("TimestampDelay", "MessageImprintDataIntact"),
-      "checkQualified", List.of("QualifiedCertificate"));
+  private static final Map<String, List<String>> CHECK_TO_TAGS =
+      Map.of(
+          "checkRevocation",
+              List.of(
+                  "RevocationDataAvailable", "RevocationDataFreshness", "RevocationCertHashMatch"),
+          "checkSignatureIntegrity", List.of("SignatureIntact", "SignatureValid"),
+          "checkCertificateChain", List.of("ProspectiveCertificateChain", "TrustedServiceStatus"),
+          "checkTimestamp", List.of("TimestampDelay", "MessageImprintDataIntact"),
+          "checkQualified", List.of("QualifiedCertificate"));
 
   public String apply(String xml, Map<String, Object> overrides) {
     if (overrides == null || overrides.isEmpty()) return xml;

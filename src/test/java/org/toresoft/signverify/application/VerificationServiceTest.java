@@ -26,20 +26,32 @@ class VerificationServiceTest {
     VerificationProfile p = new VerificationProfile();
     p.setName("STANDARD");
     p.setPreset(ProfilePreset.STANDARD);
-    p.setPolicyXml("<ConstraintsParameters xmlns=\"http://dss.esig.europa.eu/validation/policy\"/>");
+    p.setPolicyXml(
+        "<ConstraintsParameters xmlns=\"http://dss.esig.europa.eu/validation/policy\"/>");
     when(profileService.getOrDefault(any())).thenReturn(p);
-    when(validator.validate(any())).thenAnswer(inv -> {
-      Thread.sleep(3000);
-      return new ValidationResult("PAdES", "TOTAL_PASSED", null, 1, Map.of());
-    });
+    when(validator.validate(any()))
+        .thenAnswer(
+            inv -> {
+              Thread.sleep(3000);
+              return new ValidationResult("PAdES", "TOTAL_PASSED", null, 1, Map.of());
+            });
 
     VerificationService service = new VerificationService(validator, profileService, applier, 1);
 
-    Thread t1 = new Thread(() -> service.verifySync(new VerificationService.VerifyRequest(new byte[]{1}, "a.pdf", null, Map.of(), Set.of(ReportType.SIMPLE))));
+    Thread t1 =
+        new Thread(
+            () ->
+                service.verifySync(
+                    new VerificationService.VerifyRequest(
+                        new byte[] {1}, "a.pdf", null, Map.of(), Set.of(ReportType.SIMPLE))));
     t1.start();
     Thread.sleep(200);
 
-    assertThatThrownBy(() -> service.verifySync(new VerificationService.VerifyRequest(new byte[]{2}, "b.pdf", null, Map.of(), Set.of(ReportType.SIMPLE))))
+    assertThatThrownBy(
+            () ->
+                service.verifySync(
+                    new VerificationService.VerifyRequest(
+                        new byte[] {2}, "b.pdf", null, Map.of(), Set.of(ReportType.SIMPLE))))
         .isInstanceOf(AppException.class);
     t1.join();
   }

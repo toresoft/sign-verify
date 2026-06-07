@@ -155,6 +155,29 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ProfileView' }
 
+  /api/v1/verifications:
+    post:
+      tags: [Verifications]
+      operationId: verifySync
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                metadata:
+                  type: string
+                  description: "JSON con profileId?, profileOverrides?, reports[]?"
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VerificationResponse' }
+
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -262,3 +285,17 @@ components:
             content:
               type: array
               items: { $ref: '#/components/schemas/ProfileView' }
+
+    VerificationResponse:
+      type: object
+      properties:
+        verifiedAt: { type: string, format: date-time }
+        profileUsed: { type: string }
+        overridesApplied: { type: boolean }
+        signatureFormat: { type: string }
+        indication: { type: string }
+        subIndication: { type: string, nullable: true }
+        signatureCount: { type: integer }
+        reports:
+          type: object
+          additionalProperties: { type: object }

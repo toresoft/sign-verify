@@ -3,7 +3,6 @@ package org.toresoft.signverify.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -24,8 +23,7 @@ class VerificationProfileServiceTest {
   @Test
   void cannot_delete_default() {
     var def = repo.findByIsDefaultTrue().orElseThrow();
-    assertThatThrownBy(() -> service.delete(def.getId()))
-        .isInstanceOf(AppException.class);
+    assertThatThrownBy(() -> service.delete(def.getId())).isInstanceOf(AppException.class);
   }
 
   @Test

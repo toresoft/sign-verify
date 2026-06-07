@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.toresoft.signverify.domain.exception.AppException;
 import org.toresoft.signverify.domain.model.ApiKey;
-import org.toresoft.signverify.domain.model.PrincipalType;
 import org.toresoft.signverify.domain.model.Role;
 import org.toresoft.signverify.domain.port.PasswordHasherPort;
 import org.toresoft.signverify.persistence.ApiKeyRepository;

@@ -29,29 +29,39 @@ public class GlobalExceptionHandler {
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
-  public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex, WebRequest req) {
-    String detail = ex.getBindingResult().getAllErrors().stream()
-        .map(e -> e.getDefaultMessage()).reduce((a, b) -> a + "; " + b).orElse("invalid input");
+  public ResponseEntity<Map<String, Object>> handleValidation(
+      MethodArgumentNotValidException ex, WebRequest req) {
+    String detail =
+        ex.getBindingResult().getAllErrors().stream()
+            .map(e -> e.getDefaultMessage())
+            .reduce((a, b) -> a + "; " + b)
+            .orElse("invalid input");
     return problem(400, Errors.VALIDATION_INVALID_INPUT, "Bad Request", detail, req);
   }
 
   @ExceptionHandler(HttpMessageNotReadableException.class)
-  public ResponseEntity<Map<String, Object>> handleNotReadable(HttpMessageNotReadableException ex, WebRequest req) {
-    return problem(400, Errors.VALIDATION_INVALID_INPUT, "Bad Request", "malformed request body", req);
+  public ResponseEntity<Map<String, Object>> handleNotReadable(
+      HttpMessageNotReadableException ex, WebRequest req) {
+    return problem(
+        400, Errors.VALIDATION_INVALID_INPUT, "Bad Request", "malformed request body", req);
   }
 
   @ExceptionHandler(MaxUploadSizeExceededException.class)
-  public ResponseEntity<Map<String, Object>> handleTooLarge(MaxUploadSizeExceededException ex, WebRequest req) {
-    return problem(413, Errors.PAYLOAD_TOO_LARGE, "Payload Too Large", "max upload size exceeded", req);
+  public ResponseEntity<Map<String, Object>> handleTooLarge(
+      MaxUploadSizeExceededException ex, WebRequest req) {
+    return problem(
+        413, Errors.PAYLOAD_TOO_LARGE, "Payload Too Large", "max upload size exceeded", req);
   }
 
   @ExceptionHandler(AccessDeniedException.class)
-  public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex, WebRequest req) {
+  public ResponseEntity<Map<String, Object>> handleAccessDenied(
+      AccessDeniedException ex, WebRequest req) {
     return problem(403, Errors.AUTHZ_FORBIDDEN, "Forbidden", "insufficient role", req);
   }
 
   @ExceptionHandler(AuthenticationException.class)
-  public ResponseEntity<Map<String, Object>> handleAuth(AuthenticationException ex, WebRequest req) {
+  public ResponseEntity<Map<String, Object>> handleAuth(
+      AuthenticationException ex, WebRequest req) {
     return problem(401, Errors.AUTH_INVALID, "Unauthorized", "invalid credentials", req);
   }
 
@@ -61,7 +71,8 @@ public class GlobalExceptionHandler {
     return problem(500, Errors.INTERNAL, "Internal Server Error", "unexpected error", req);
   }
 
-  private ResponseEntity<Map<String, Object>> problem(int status, String code, String title, String detail, WebRequest req) {
+  private ResponseEntity<Map<String, Object>> problem(
+      int status, String code, String title, String detail, WebRequest req) {
     var body = new java.util.LinkedHashMap<String, Object>();
     body.put("type", URI.create("urn:signverify:error:" + code).toString());
     body.put("title", title);

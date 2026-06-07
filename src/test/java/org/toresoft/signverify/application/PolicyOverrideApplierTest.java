@@ -11,7 +11,8 @@ class PolicyOverrideApplierTest {
 
   @Test
   void disable_revocation_sets_level_ignore() {
-    String xml = """
+    String xml =
+        """
         <ConstraintsParameters xmlns="http://dss.esig.europa.eu/validation/policy">
           <SignatureConstraints>
             <BasicSignatureConstraints>

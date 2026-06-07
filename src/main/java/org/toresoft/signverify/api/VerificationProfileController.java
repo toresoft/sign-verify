@@ -42,19 +42,30 @@ public class VerificationProfileController implements ProfilesApi {
   @Override
   @PreAuthorize("hasRole('PRIVILEGED')")
   public ResponseEntity<ProfileView> createProfile(ProfileCreateRequest req) {
-    VerificationProfile p = service.create(
-        req.getName(),
-        req.getDescription() != null && req.getDescription().isPresent() ? req.getDescription().get() : null,
-        ProfilePreset.valueOf(req.getPreset().getValue()),
-        req.getPolicyXml() != null && req.getPolicyXml().isPresent() ? req.getPolicyXml().get() : null);
+    VerificationProfile p =
+        service.create(
+            req.getName(),
+            req.getDescription() != null && req.getDescription().isPresent()
+                ? req.getDescription().get()
+                : null,
+            ProfilePreset.valueOf(req.getPreset().getValue()),
+            req.getPolicyXml() != null && req.getPolicyXml().isPresent()
+                ? req.getPolicyXml().get()
+                : null);
     return ResponseEntity.status(201).body(toView(p));
   }
 
   @Override
   @PreAuthorize("hasRole('PRIVILEGED')")
   public ResponseEntity<ProfileView> updateProfile(UUID id, ProfileUpdateRequest req) {
-    String desc = req.getDescription() != null && req.getDescription().isPresent() ? req.getDescription().get() : null;
-    String xml = req.getPolicyXml() != null && req.getPolicyXml().isPresent() ? req.getPolicyXml().get() : null;
+    String desc =
+        req.getDescription() != null && req.getDescription().isPresent()
+            ? req.getDescription().get()
+            : null;
+    String xml =
+        req.getPolicyXml() != null && req.getPolicyXml().isPresent()
+            ? req.getPolicyXml().get()
+            : null;
     return ResponseEntity.ok(toView(service.update(id, desc, xml)));
   }
 
@@ -75,9 +86,10 @@ public class VerificationProfileController implements ProfilesApi {
     ProfileView v = new ProfileView();
     v.setId(p.getId());
     v.setName(p.getName());
-    v.setDescription(p.getDescription() != null
-        ? JsonNullable.of(p.getDescription())
-        : JsonNullable.<String>undefined());
+    v.setDescription(
+        p.getDescription() != null
+            ? JsonNullable.of(p.getDescription())
+            : JsonNullable.<String>undefined());
     v.setPreset(ProfileView.PresetEnum.valueOf(p.getPreset().name()));
     v.setIsDefault(p.getIsDefault());
     v.setCreatedAt(p.getCreatedAt().atOffset(ZoneOffset.UTC));

@@ -17,7 +17,11 @@ import org.toresoft.signverify.domain.port.ValidationResult;
 public class VerificationService {
 
   public record VerifyRequest(
-      byte[] file, String filename, UUID profileId, Map<String, Object> overrides, Set<ReportType> reports) {}
+      byte[] file,
+      String filename,
+      UUID profileId,
+      Map<String, Object> overrides,
+      Set<ReportType> reports) {}
 
   public record VerifyResponse(
       String profileName, boolean overridesApplied, ValidationResult result) {}
@@ -53,7 +57,9 @@ public class VerificationService {
       String policyXml = profile.getPolicyXml();
       boolean overridesApplied = req.overrides() != null && !req.overrides().isEmpty();
       if (overridesApplied) policyXml = overrideApplier.apply(policyXml, req.overrides());
-      var result = validator.validate(new ValidationRequest(req.file(), req.filename(), policyXml, req.reports()));
+      var result =
+          validator.validate(
+              new ValidationRequest(req.file(), req.filename(), policyXml, req.reports()));
       return new VerifyResponse(profile.getName(), overridesApplied, result);
     } finally {
       concurrencyLimiter.release();

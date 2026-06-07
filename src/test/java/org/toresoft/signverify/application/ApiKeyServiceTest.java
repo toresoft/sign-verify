@@ -1,7 +1,7 @@
 package org.toresoft.signverify.application;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -11,11 +11,11 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.toresoft.signverify.domain.exception.AppException;
 import org.toresoft.signverify.domain.model.ApiKey;
+import org.toresoft.signverify.domain.model.PrincipalType;
 import org.toresoft.signverify.domain.model.Role;
 import org.toresoft.signverify.domain.port.PasswordHasherPort;
 import org.toresoft.signverify.persistence.ApiKeyRepository;
 import org.toresoft.signverify.security.Principal;
-import org.toresoft.signverify.domain.model.PrincipalType;
 
 class ApiKeyServiceTest {
 
@@ -23,14 +23,19 @@ class ApiKeyServiceTest {
   private final PasswordHasherPort hasher = mock(PasswordHasherPort.class);
   private final ApiKeyService service = new ApiKeyService(repo, hasher);
 
-  private final Principal admin = new Principal(PrincipalType.API_KEY, "admin", Role.PRIVILEGED, "admin");
+  private final Principal admin =
+      new Principal(PrincipalType.API_KEY, "admin", Role.PRIVILEGED, "admin");
 
   @Test
   void delete_last_privileged_throws_conflict() {
     UUID id = UUID.randomUUID();
     ApiKey only = new ApiKey();
-    only.setId(id); only.setRole(Role.PRIVILEGED); only.setEnabled(true);
-    only.setName("only"); only.setKeyPrefix("only0001"); only.setKeyHash("h");
+    only.setId(id);
+    only.setRole(Role.PRIVILEGED);
+    only.setEnabled(true);
+    only.setName("only");
+    only.setKeyPrefix("only0001");
+    only.setKeyHash("h");
     only.setCreatedAt(Instant.now());
     when(repo.findById(id)).thenReturn(Optional.of(only));
     when(repo.countByRoleAndEnabled(Role.PRIVILEGED, true)).thenReturn(1L);
@@ -45,8 +50,12 @@ class ApiKeyServiceTest {
   void delete_when_other_privileged_exists_ok() {
     UUID id = UUID.randomUUID();
     ApiKey k = new ApiKey();
-    k.setId(id); k.setRole(Role.PRIVILEGED); k.setEnabled(true);
-    k.setName("k"); k.setKeyPrefix("priv0001"); k.setKeyHash("h");
+    k.setId(id);
+    k.setRole(Role.PRIVILEGED);
+    k.setEnabled(true);
+    k.setName("k");
+    k.setKeyPrefix("priv0001");
+    k.setKeyHash("h");
     k.setCreatedAt(Instant.now());
     when(repo.findById(id)).thenReturn(Optional.of(k));
     when(repo.countByRoleAndEnabled(Role.PRIVILEGED, true)).thenReturn(2L);

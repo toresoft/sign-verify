@@ -9,19 +9,17 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
+import org.toresoft.signverify.IsolatedDbTest;
 import org.toresoft.signverify.domain.model.ApiKey;
 import org.toresoft.signverify.domain.model.Role;
 import org.toresoft.signverify.domain.port.PasswordHasherPort;
 import org.toresoft.signverify.persistence.ApiKeyRepository;
 
-@SpringBootTest
-@ActiveProfiles("test")
+@IsolatedDbTest
 class ApiKeyControllerIT {
 
   @Autowired private WebApplicationContext ctx;
@@ -45,20 +43,25 @@ class ApiKeyControllerIT {
     k.setEnabled(true);
     k.setCreatedAt(Instant.now());
     repo.save(k);
-    mvc = MockMvcBuilders.webAppContextSetup(ctx)
-        .apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity())
-        .build();
+    mvc =
+        MockMvcBuilders.webAppContextSetup(ctx)
+            .apply(
+                org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers
+                    .springSecurity())
+            .build();
   }
 
   @Test
   void create_then_list() throws Exception {
-    String body = """
+    String body =
+        """
         {"name":"new-priv","role":"PRIVILEGED"}
         """;
-    mvc.perform(post("/api/v1/api-keys")
-            .header("X-API-Key", adminKey)
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(body))
+    mvc.perform(
+            post("/api/v1/api-keys")
+                .header("X-API-Key", adminKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.plaintextKey").exists());
 

@@ -10,7 +10,8 @@ class PresetXmlLoaderTest {
 
   @Test
   void load_each_preset() throws Exception {
-    for (ProfilePreset p : new ProfilePreset[] {ProfilePreset.BASIC, ProfilePreset.STANDARD, ProfilePreset.STRICT}) {
+    for (ProfilePreset p :
+        new ProfilePreset[] {ProfilePreset.BASIC, ProfilePreset.STANDARD, ProfilePreset.STRICT}) {
       var res = new ClassPathResource("policy/" + p.name() + ".xml");
       try (var in = res.getInputStream()) {
         String content = new String(in.readAllBytes());

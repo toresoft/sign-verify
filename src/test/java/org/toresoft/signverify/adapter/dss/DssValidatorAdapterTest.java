@@ -22,8 +22,12 @@ class DssValidatorAdapterTest {
   @Test
   void parses_error_for_garbage_input() {
     byte[] bogus = "not a signature".getBytes();
-    String policy = "<ConstraintsParameters xmlns=\"http://dss.esig.europa.eu/validation/policy\"/>";
-    assertThatThrownBy(() -> adapter.validate(new ValidationRequest(bogus, "x.pdf", policy, Set.of(ReportType.SIMPLE))))
+    String policy =
+        "<ConstraintsParameters xmlns=\"http://dss.esig.europa.eu/validation/policy\"/>";
+    assertThatThrownBy(
+            () ->
+                adapter.validate(
+                    new ValidationRequest(bogus, "x.pdf", policy, Set.of(ReportType.SIMPLE))))
         .isInstanceOf(AppException.class)
         .hasMessageContaining("Unprocessable");
   }

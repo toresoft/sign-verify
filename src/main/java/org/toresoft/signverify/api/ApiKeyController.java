@@ -41,11 +41,12 @@ public class ApiKeyController implements ApiKeysApi {
   public ResponseEntity<ApiKeyCreatedResponse> createApiKey(ApiKeyCreateRequest req) {
     Principal actor = currentPrincipal();
     var expAt = req.getExpiresAt();
-    var res = service.create(
-        req.getName(),
-        Role.valueOf(req.getRole().getValue()),
-        expAt != null && expAt.isPresent() ? expAt.get().toInstant() : null,
-        actor);
+    var res =
+        service.create(
+            req.getName(),
+            Role.valueOf(req.getRole().getValue()),
+            expAt != null && expAt.isPresent() ? expAt.get().toInstant() : null,
+            actor);
     ApiKeyCreatedResponse out = new ApiKeyCreatedResponse();
     fillCreatedView(out, res.entity());
     out.setPlaintextKey(res.plaintext());
@@ -65,7 +66,9 @@ public class ApiKeyController implements ApiKeysApi {
   }
 
   private Principal currentPrincipal() {
-    var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+    var auth =
+        org.springframework.security.core.context.SecurityContextHolder.getContext()
+            .getAuthentication();
     return (Principal) auth.getPrincipal();
   }
 
@@ -83,12 +86,14 @@ public class ApiKeyController implements ApiKeysApi {
     v.setEnabled(k.isEnabled());
     v.setBootstrap(k.isBootstrap());
     v.setCreatedAt(k.getCreatedAt().atOffset(ZoneOffset.UTC));
-    v.setExpiresAt(k.getExpiresAt() == null
-        ? JsonNullable.<OffsetDateTime>undefined()
-        : JsonNullable.of(k.getExpiresAt().atOffset(ZoneOffset.UTC)));
-    v.setLastUsedAt(k.getLastUsedAt() == null
-        ? JsonNullable.<OffsetDateTime>undefined()
-        : JsonNullable.of(k.getLastUsedAt().atOffset(ZoneOffset.UTC)));
+    v.setExpiresAt(
+        k.getExpiresAt() == null
+            ? JsonNullable.<OffsetDateTime>undefined()
+            : JsonNullable.of(k.getExpiresAt().atOffset(ZoneOffset.UTC)));
+    v.setLastUsedAt(
+        k.getLastUsedAt() == null
+            ? JsonNullable.<OffsetDateTime>undefined()
+            : JsonNullable.of(k.getLastUsedAt().atOffset(ZoneOffset.UTC)));
   }
 
   private void fillCreatedView(ApiKeyCreatedResponse v, ApiKey k) {
@@ -99,11 +104,13 @@ public class ApiKeyController implements ApiKeysApi {
     v.setEnabled(k.isEnabled());
     v.setBootstrap(k.isBootstrap());
     v.setCreatedAt(k.getCreatedAt().atOffset(ZoneOffset.UTC));
-    v.setExpiresAt(k.getExpiresAt() == null
-        ? JsonNullable.<OffsetDateTime>undefined()
-        : JsonNullable.of(k.getExpiresAt().atOffset(ZoneOffset.UTC)));
-    v.setLastUsedAt(k.getLastUsedAt() == null
-        ? JsonNullable.<OffsetDateTime>undefined()
-        : JsonNullable.of(k.getLastUsedAt().atOffset(ZoneOffset.UTC)));
+    v.setExpiresAt(
+        k.getExpiresAt() == null
+            ? JsonNullable.<OffsetDateTime>undefined()
+            : JsonNullable.of(k.getExpiresAt().atOffset(ZoneOffset.UTC)));
+    v.setLastUsedAt(
+        k.getLastUsedAt() == null
+            ? JsonNullable.<OffsetDateTime>undefined()
+            : JsonNullable.of(k.getLastUsedAt().atOffset(ZoneOffset.UTC)));
   }
 }
