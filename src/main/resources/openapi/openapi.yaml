@@ -25,7 +25,13 @@ paths:
       operationId: health
       security: []
       responses:
-        '200': { description: ok }
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthStatus' }
+            application/vnd.spring-boot.actuator.v3+json:
+              schema: { $ref: '#/components/schemas/HealthStatus' }
 
   /api/v1/api-keys:
     get:
@@ -321,6 +327,15 @@ components:
       bearerFormat: JWT
 
   schemas:
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [UP, DOWN, OUT_OF_SERVICE, UNKNOWN] }
+        groups:
+          type: array
+          items: { type: string }
+
     Problem:
       type: object
       properties:
