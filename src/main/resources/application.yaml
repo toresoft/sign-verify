@@ -1,0 +1,120 @@
+spring:
+  application:
+    name: sign-verify-2
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:dev;DB_CLOSE_DELAY=-1;MODE=PostgreSQL}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 60MB
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${APP_SECURITY_OAUTH_ISSUER_URI:}
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+  error:
+    include-message: never
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
+app:
+  upload:
+    max-size: 50MB
+  security:
+    oauth:
+      enabled: ${APP_SECURITY_OAUTH_ENABLED:true}
+      role-claim: ${APP_SECURITY_OAUTH_ROLE_CLAIM:roles}
+      privileged-values: ${APP_SECURITY_OAUTH_PRIVILEGED_VALUES:admin,privileged}
+    bootstrap-key-file: ${APP_SECURITY_BOOTSTRAP_KEY_FILE:/var/lib/sign-verify/bootstrap-api-key.txt}
+    master-key: ${APP_SECRET_MASTER_KEY:}
+  storage:
+    jobs-dir: ${APP_STORAGE_JOBS_DIR:/var/lib/sign-verify/jobs}
+  dss:
+    cache-dir: ${APP_DSS_CACHE_DIR:/var/lib/sign-verify/dss-cache}
+    online-mode: true
+  tsl:
+    sources:
+      - id: eu-lotl
+        type: LOTL
+        url: https://ec.europa.eu/tools/lotl/eu-lotl.xml
+        pivot-support: true
+        oj-keystore-path: classpath:keystore/oj-keystore.p12
+        oj-keystore-password-env: APP_OJ_KEYSTORE_PASSWORD
+        oj-url: https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv:OJ.C_.2019.276.01.0001.01.ENG
+    refresh:
+      cron: "0 0 2 * * *"
+      timezone: Europe/Rome
+      startup-mode: BACKGROUND
+  verify:
+    max-concurrent: 8
+  async:
+    workers: 4
+    worker:
+      poll-interval: 5s
+    max-pending-per-principal: 50
+    max-pending-global: 500
+    max-pickup-attempts: 10
+    job-ttl: 7d
+    input-retention: 1h
+    result-retention: 30d
+    tombstone-retention: 30d
+    cleanup:
+      cron: "0 30 3 * * *"
+  callback:
+    max-attempts: 3
+    backoff: [60s, 300s, 1800s]
+    success-statuses: [200, 201, 202, 204]
+    retryable-statuses: [408, 425, 429, 500, 502, 503, 504]
+    non-retryable-statuses: [400, 401, 403, 404, 410, 422]
+    timeout: 15s
+    hmac-default-algorithm: HmacSHA256
+    allowed-algorithms: [HmacSHA256, HmacSHA512]
+    allow-http: false
+    block-private-networks: true
+    worker:
+      poll-interval: 10s
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      dssValidator:
+        failureRateThreshold: 50
+        slidingWindowSize: 20
+        waitDurationInOpenState: 60s
+        slowCallDurationThreshold: 30s
+        slowCallRateThreshold: 80
+        permittedNumberOfCallsInHalfOpenState: 3
+        registerHealthIndicator: true
+
+logging:
+  level:
+    eu.europa.esig: WARN
+    org.toresoft.signverify: INFO

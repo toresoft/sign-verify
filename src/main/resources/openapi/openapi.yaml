@@ -1,0 +1,13 @@
+openapi: 3.0.3
+info:
+  title: sign-verify-2 API
+  version: 1.0.0
+  description: Signature verification service API
+paths:
+  /actuator/health:
+    get:
+      operationId: health
+      tags: [Internal]
+      responses:
+        '200':
+          description: OK
