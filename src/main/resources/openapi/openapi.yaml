@@ -80,6 +80,81 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ApiKeyView' }
 
+  /api/v1/profiles:
+    get:
+      tags: [Profiles]
+      operationId: listProfiles
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 0 } }
+        - { name: size, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProfilePage' }
+    post:
+      tags: [Profiles]
+      operationId: createProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProfileCreateRequest' }
+      responses:
+        '201':
+          description: created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProfileView' }
+  /api/v1/profiles/{id}:
+    get:
+      tags: [Profiles]
+      operationId: getProfile
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProfileView' }
+    put:
+      tags: [Profiles]
+      operationId: updateProfile
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProfileUpdateRequest' }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProfileView' }
+    delete:
+      tags: [Profiles]
+      operationId: deleteProfile
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: deleted }
+  /api/v1/profiles/{id}/default:
+    post:
+      tags: [Profiles]
+      operationId: setDefaultProfile
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProfileView' }
+
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -155,3 +230,35 @@ components:
             content:
               type: array
               items: { $ref: '#/components/schemas/ApiKeyView' }
+
+    ProfileView:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        preset: { type: string, enum: [BASIC, STANDARD, STRICT, CUSTOM] }
+        isDefault: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ProfileCreateRequest:
+      type: object
+      required: [name, preset]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        description: { type: string, nullable: true }
+        preset: { type: string, enum: [BASIC, STANDARD, STRICT, CUSTOM] }
+        policyXml: { type: string, nullable: true, description: "Required when preset=CUSTOM" }
+    ProfileUpdateRequest:
+      type: object
+      properties:
+        description: { type: string, nullable: true }
+        policyXml: { type: string, nullable: true }
+    ProfilePage:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          properties:
+            content:
+              type: array
+              items: { $ref: '#/components/schemas/ProfileView' }
