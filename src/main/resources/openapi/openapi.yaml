@@ -205,6 +205,61 @@ paths:
             application/zip:
               schema: { type: string, format: binary }
 
+  /api/v1/tsl/status:
+    get:
+      tags: [Tsl]
+      operationId: tslStatus
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { type: object }
+  /api/v1/tsl/refresh:
+    post:
+      tags: [Tsl]
+      operationId: tslForceRefresh
+      responses:
+        '202':
+          description: scheduled
+          content:
+            application/json:
+              schema: { type: object }
+  /api/v1/tsl/certificates:
+    get:
+      tags: [Tsl]
+      operationId: listTrustedCertificates
+      parameters:
+        - { name: ski, in: query, schema: { type: string } }
+        - { name: aki, in: query, schema: { type: string } }
+        - { name: subjectCn, in: query, schema: { type: string } }
+        - { name: subjectDn, in: query, schema: { type: string } }
+        - { name: issuerCn, in: query, schema: { type: string } }
+        - { name: issuerDn, in: query, schema: { type: string } }
+        - { name: country, in: query, schema: { type: string } }
+        - { name: tspName, in: query, schema: { type: string } }
+        - { name: tspServiceType, in: query, schema: { type: string } }
+        - { name: tspServiceStatus, in: query, schema: { type: string } }
+        - { name: serialNumber, in: query, schema: { type: string } }
+        - { name: validAt, in: query, schema: { type: string, format: date-time } }
+        - { name: includeRemoved, in: query, schema: { type: boolean, default: false } }
+        - { name: page, in: query, schema: { type: integer, default: 0 } }
+        - { name: size, in: query, schema: { type: integer, default: 50 } }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { type: object }
+  /api/v1/tsl/certificates/{id}:
+    get:
+      tags: [Tsl]
+      operationId: getTrustedCertificate
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { type: object } } } }
+
 components:
   securitySchemes:
     ApiKeyAuth:
