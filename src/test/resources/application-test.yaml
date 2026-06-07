@@ -22,3 +22,4 @@ app:
   security:
     oauth:
       enabled: false
+    bootstrap-key-file: ${java.io.tmpdir}/sign-verify-test/bootstrap-api-key.txt

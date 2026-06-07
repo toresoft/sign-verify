@@ -27,8 +27,11 @@ class VerificationProfileRepositoryTest {
     em.flush();
     em.clear();
 
-    assertThat(repo.findByIsDefaultTrue()).isPresent().get()
-        .extracting(VerificationProfile::getName).isEqualTo("STANDARD");
+    assertThat(repo.findByIsDefaultTrue())
+        .isPresent()
+        .get()
+        .extracting(VerificationProfile::getName)
+        .isEqualTo("STANDARD");
   }
 
   private VerificationProfile newProfile(String name, ProfilePreset preset, boolean isDefault) {

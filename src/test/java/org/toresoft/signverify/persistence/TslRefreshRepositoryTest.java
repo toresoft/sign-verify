@@ -27,8 +27,11 @@ class TslRefreshRepositoryTest {
     repo.saveAll(java.util.List.of(older, newer));
     em.flush();
 
-    assertThat(repo.findTopByOrderByStartedAtDesc()).isPresent().get()
-        .extracting(TslRefresh::getId).isEqualTo(newer.getId());
+    assertThat(repo.findTopByOrderByStartedAtDesc())
+        .isPresent()
+        .get()
+        .extracting(TslRefresh::getId)
+        .isEqualTo(newer.getId());
   }
 
   private TslRefresh newRefresh(Instant startedAt) {

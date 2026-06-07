@@ -13,7 +13,8 @@ import org.toresoft.signverify.domain.model.ValidationJob;
 
 public interface ValidationJobRepository extends JpaRepository<ValidationJob, UUID> {
 
-  @Query("""
+  @Query(
+      """
       SELECT COUNT(j) FROM ValidationJob j
        WHERE j.requestedByPrincipalType = :type
          AND j.requestedByPrincipalId = :id
@@ -21,26 +22,28 @@ public interface ValidationJobRepository extends JpaRepository<ValidationJob, UU
       """)
   long countActiveByPrincipal(@Param("type") PrincipalType type, @Param("id") String id);
 
-  @Query("""
+  @Query(
+      """
       SELECT COUNT(j) FROM ValidationJob j
        WHERE j.status IN ('PENDING','RUNNING')
       """)
   long countActiveGlobal();
 
-  @Query("""
+  @Query(
+      """
       SELECT j FROM ValidationJob j
        WHERE j.status = 'PENDING'
          AND j.pickupAttempts < :maxAttempts
        ORDER BY j.createdAt ASC
       """)
-  List<ValidationJob> findPickablePending(
-      @Param("maxAttempts") int maxAttempts, Pageable pageable);
+  List<ValidationJob> findPickablePending(@Param("maxAttempts") int maxAttempts, Pageable pageable);
 
   default List<ValidationJob> findPickablePending(int maxAttempts, int limit) {
     return findPickablePending(maxAttempts, PageRequest.of(0, limit));
   }
 
-  @Query("""
+  @Query(
+      """
       SELECT j FROM ValidationJob j
        WHERE j.status IN ('COMPLETED','FAILED')
          AND j.callbackUrl IS NOT NULL
@@ -49,9 +52,7 @@ public interface ValidationJobRepository extends JpaRepository<ValidationJob, UU
        ORDER BY j.nextCallbackAt ASC
       """)
   List<ValidationJob> findCallbacksDue(
-      @Param("now") Instant now,
-      @Param("maxAttempts") int maxAttempts,
-      Pageable pageable);
+      @Param("now") Instant now, @Param("maxAttempts") int maxAttempts, Pageable pageable);
 
   default List<ValidationJob> findCallbacksDue(Instant now, int maxAttempts, int limit) {
     return findCallbacksDue(now, maxAttempts, PageRequest.of(0, limit));
