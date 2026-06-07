@@ -10,6 +10,10 @@ public enum JobStatus {
   DELETED;
 
   public boolean isTerminal() {
-    return this == COMPLETED || this == FAILED || this == DELIVERED || this == DELIVERY_FAILED;
+    return this == COMPLETED
+        || this == FAILED
+        || this == DELIVERED
+        || this == DELIVERY_FAILED
+        || this == DELETED;
   }
 }

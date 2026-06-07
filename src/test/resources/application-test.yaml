@@ -45,6 +45,11 @@ app:
     max-pending-global: 100
     job-ttl: PT24H
     max-pickup-attempts: 3
+    input-retention: P7D
+    result-retention: P30D
+    tombstone-retention: P90D
+    cleanup:
+      cron: "0 0 3 * * *"
     worker:
       poll-interval: PT60S
   callback:
