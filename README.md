@@ -77,15 +77,21 @@ openssl rand -base64 32
 
 ## CI/CD — publishing to Docker Hub
 
-`.gitlab-ci.yml` runs `validate → test → build → package → security`. The **package**
-stage builds the image and pushes to Docker Hub as `toresoft/sign-verify`:
+Two equivalent pipelines are provided — use whichever host you push to:
+
+- **GitLab CI** — `.gitlab-ci.yml`
+- **GitHub Actions** — `.github/workflows/ci.yml`
+
+Both run `validate → test → build → package → security` and the **package** stage builds
+the image and pushes to Docker Hub as `toresoft/sign-verify`:
 
 - every default-branch pipeline → `:<short-sha>` and `:latest`
 - every git tag `vX.Y.Z` → `:<short-sha>` and `:<tag>`
 
-Configure these masked CI/CD variables (Settings → CI/CD → Variables):
+Configure these credentials — on GitLab as masked CI/CD variables (Settings → CI/CD →
+Variables), on GitHub as repository secrets (Settings → Secrets and variables → Actions):
 
-| Variable | Value |
+| Name | Value |
 |---|---|
 | `DOCKERHUB_USERNAME` | Docker Hub account/namespace |
 | `DOCKERHUB_TOKEN` | Docker Hub access token (Account → Security) |
