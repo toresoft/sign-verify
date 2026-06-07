@@ -392,6 +392,7 @@ components:
         name: { type: string }
         description: { type: string, nullable: true }
         preset: { type: string, enum: [BASIC, STANDARD, STRICT, CUSTOM] }
+        policyXml: { type: string, nullable: true }
         isDefault: { type: boolean }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }

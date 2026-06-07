@@ -91,6 +91,10 @@ public class VerificationProfileController implements ProfilesApi {
             ? JsonNullable.of(p.getDescription())
             : JsonNullable.<String>undefined());
     v.setPreset(ProfileView.PresetEnum.valueOf(p.getPreset().name()));
+    v.setPolicyXml(
+        p.getPolicyXml() != null
+            ? JsonNullable.of(p.getPolicyXml())
+            : JsonNullable.<String>undefined());
     v.setIsDefault(p.getIsDefault());
     v.setCreatedAt(p.getCreatedAt().atOffset(ZoneOffset.UTC));
     v.setUpdatedAt(p.getUpdatedAt().atOffset(ZoneOffset.UTC));
