@@ -74,15 +74,22 @@ package:docker:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
     - if: '$CI_COMMIT_TAG'
   before_script:
-    # Strip any stray whitespace/newlines from the credentials (a common copy-paste
-    # artefact that yields "malformed HTTP Authorization header") and avoid echo's
-    # trailing newline by piping the token with printf.
+    # Strip stray whitespace from credentials, then diagnose before logging in.
+    # The diagnostics never print secret values — only lengths, charset validity and
+    # the Docker Hub API's own (clear) error message, which docker login hides behind
+    # the generic "malformed HTTP Authorization header".
     - |
-      DOCKERHUB_USERNAME="$(printf %s "$DOCKERHUB_USERNAME" | tr -d '[:space:]')"
-      if [ -z "$DOCKERHUB_USERNAME" ] || [ -z "$(printf %s "$DOCKERHUB_TOKEN" | tr -d '[:space:]')" ]; then
-        echo "DOCKERHUB_USERNAME/DOCKERHUB_TOKEN are not set (check CI/CD Variables: Protected flag vs ref, scope)"; exit 1
-      fi
-      printf %s "$DOCKERHUB_TOKEN" | tr -d '[:space:]' | docker login -u "$DOCKERHUB_USERNAME" --password-stdin docker.io
+      apk add --no-cache curl >/dev/null 2>&1 || true
+      U="$(printf %s "$DOCKERHUB_USERNAME" | tr -d '[:space:]')"
+      T="$(printf %s "$DOCKERHUB_TOKEN" | tr -d '[:space:]')"
+      echo "diag: user_len=${#U} token_len=${#T}"
+      printf %s "$U" | LC_ALL=C grep -qE '^[A-Za-z0-9._-]+$' && echo "diag: user_charset=clean" || echo "diag: user_charset=HAS_UNEXPECTED_CHARS"
+      printf %s "$T" | LC_ALL=C grep -qE '^[A-Za-z0-9_-]+$' && echo "diag: token_charset=clean" || echo "diag: token_charset=HAS_UNEXPECTED_CHARS"
+      if [ -z "$U" ] || [ -z "$T" ]; then echo "FATAL: credentials empty (check CI/CD Variables: Protected vs ref, scope, type=Variable)"; exit 1; fi
+      code=$(curl -s -o /tmp/login.json -w '%{http_code}' -H 'Content-Type: application/json' -d "{\"username\":\"$U\",\"password\":\"$T\"}" https://hub.docker.com/v2/users/login/)
+      echo "diag: hub_api_login_http=$code"
+      grep -o '"detail":"[^"]*"' /tmp/login.json 2>/dev/null || true
+      printf %s "$T" | docker login -u "$U" --password-stdin docker.io
   script:
     - docker build -t "$IMAGE_NAME:$CI_COMMIT_SHORT_SHA" .
     - docker push "$IMAGE_NAME:$CI_COMMIT_SHORT_SHA"
