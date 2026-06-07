@@ -1,0 +1,13 @@
+# Containerised development profile (used by docker-compose.yml). NOT for production.
+# Storage/cache/bootstrap directories inherit the base defaults (/var/lib/sign-verify/*),
+# which the Dockerfile creates and owns; the datasource is supplied via SPRING_DATASOURCE_*.
+app:
+  security:
+    oauth:
+      enabled: false
+    # Dev-only master key (base64-encoded 32 bytes). DO NOT use in production.
+    master-key: ${APP_SECRET_MASTER_KEY:jmXybkAUJpitU/086qz5mmCmT7DoMqibeEfZ6XwMF9I=}
+  tsl:
+    refresh:
+      # Skip the (network-bound) EU LOTL/TSL load for offline local development.
+      startup-mode: SKIP

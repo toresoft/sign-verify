@@ -3,7 +3,8 @@ app:
     oauth:
       enabled: false
     bootstrap-key-file: ./target/bootstrap-api-key.txt
-    master-key: ZGV2LWRldi1kZXYtZGV2LWRldi1kZXYtZGV2LWRldi1kZXYtZGV2LWRldi1kZXY=
+    # Dev-only master key (base64-encoded 32 bytes). DO NOT use in production.
+    master-key: jmXybkAUJpitU/086qz5mmCmT7DoMqibeEfZ6XwMF9I=
   storage:
     jobs-dir: ./target/jobs
   dss:

@@ -1,0 +1,44 @@
+# Local development stack: the service (built from source) + PostgreSQL.
+# Usage:
+#   docker compose up --build
+#   # first boot writes the bootstrap API key inside the svdata volume:
+#   docker compose exec app cat /var/lib/sign-verify/bootstrap-api-key.txt
+name: sign-verify-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: signverify
+      POSTGRES_USER: signverify
+      POSTGRES_PASSWORD: signverify
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U signverify -d signverify"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/signverify
+      SPRING_DATASOURCE_USERNAME: signverify
+      SPRING_DATASOURCE_PASSWORD: signverify
+    ports:
+      - "8080:8080"
+    volumes:
+      - svdata:/var/lib/sign-verify
+
+volumes:
+  pgdata:
+  svdata:

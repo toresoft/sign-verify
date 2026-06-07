@@ -1,0 +1,51 @@
+# Production-oriented runtime for the published Docker Hub image.
+# This file shows a HARDENED way to run the container; it expects an EXTERNAL,
+# managed PostgreSQL (set SPRING_DATASOURCE_* in a .env file — see .env.example).
+#
+#   docker compose -f docker-compose.prod.yml up -d
+name: sign-verify
+
+services:
+  app:
+    image: toresoft/sign-verify:latest
+    restart: unless-stopped
+    environment:
+      # --- Database (external/managed) ---
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      # --- Secrets / auth ---
+      APP_SECRET_MASTER_KEY: ${APP_SECRET_MASTER_KEY}
+      APP_SECURITY_OAUTH_ISSUER_URI: ${APP_SECURITY_OAUTH_ISSUER_URI}
+      APP_OJ_KEYSTORE_PASSWORD: ${APP_OJ_KEYSTORE_PASSWORD}
+    ports:
+      - "8080:8080"
+    # --- Hardening ---
+    read_only: true                 # immutable root filesystem
+    tmpfs:
+      - /tmp:size=128m,mode=1777     # multipart uploads / scratch space
+    security_opt:
+      - no-new-privileges:true       # block privilege escalation (setuid)
+    cap_drop:
+      - ALL                          # drop all Linux capabilities
+    volumes:
+      - svdata:/var/lib/sign-verify  # only writable persistent path
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "2.0"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health/readiness"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  svdata:

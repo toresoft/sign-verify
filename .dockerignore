@@ -1,0 +1,28 @@
+# Build output
+target/
+
+# VCS & IDE
+.git
+.gitignore
+.gitattributes
+.idea
+.vscode
+*.iml
+*.iws
+*.ipr
+
+# Docs & local tooling (not needed inside the image)
+docs/
+README.md
+Dockerfile
+.dockerignore
+docker-compose*.yml
+.gitlab-ci.yml
+.github/
+
+# Local secrets / env
+.env
+.env.*
+
+# Logs
+*.log

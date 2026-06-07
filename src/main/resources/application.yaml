@@ -90,13 +90,15 @@ app:
       cron: "0 30 3 * * *"
   callback:
     max-attempts: 3
-    backoff: [60s, 300s, 1800s]
-    success-statuses: [200, 201, 202, 204]
-    retryable-statuses: [408, 425, 429, 500, 502, 503, 504]
-    non-retryable-statuses: [400, 401, 403, 404, 410, 422]
+    # Comma-separated form so @Value("${...}") List<...> bindings resolve (YAML
+    # sequences are stored as indexed keys and cannot be injected via @Value).
+    backoff: 60s,300s,1800s
+    success-statuses: 200,201,202,204
+    retryable-statuses: 408,425,429,500,502,503,504
+    non-retryable-statuses: 400,401,403,404,410,422
     timeout: 15s
     hmac-default-algorithm: HmacSHA256
-    allowed-algorithms: [HmacSHA256, HmacSHA512]
+    allowed-algorithms: HmacSHA256,HmacSHA512
     allow-http: false
     block-private-networks: true
     worker:
