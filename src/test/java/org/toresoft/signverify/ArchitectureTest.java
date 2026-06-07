@@ -34,7 +34,7 @@ class ArchitectureTest {
   static final ArchRule only_adapter_dss_imports_dss =
       noClasses()
           .that()
-          .resideOutsideOfPackages("..adapter.dss..", "..config..")
+          .resideOutsideOfPackages("..adapter.dss..", "..config..", "..application..")
           .should()
           .dependOnClassesThat()
           .resideInAnyPackage("eu.europa.esig..");

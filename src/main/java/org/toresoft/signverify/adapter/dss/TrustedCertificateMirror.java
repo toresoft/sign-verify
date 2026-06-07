@@ -1,4 +1,4 @@
-package org.toresoft.signverify.application;
+package org.toresoft.signverify.adapter.dss;
 
 import eu.europa.esig.dss.model.tsl.TrustProperties;
 import eu.europa.esig.dss.model.tsl.TrustService;
@@ -21,7 +21,9 @@ public class TrustedCertificateMirror {
 
   private final TrustedCertificateRepository repo;
 
-  public TrustedCertificateMirror(TrustedCertificateRepository repo) { this.repo = repo; }
+  public TrustedCertificateMirror(TrustedCertificateRepository repo) {
+    this.repo = repo;
+  }
 
   @Transactional
   public Diff sync(TrustedListsCertificateSource src) {
@@ -61,7 +63,8 @@ public class TrustedCertificateMirror {
     return new Diff(added, removed, unchanged);
   }
 
-  private TrustedCertificate newEntity(CertificateToken t, TrustedListsCertificateSource src, String fp, Instant now) {
+  private TrustedCertificate newEntity(
+      CertificateToken t, TrustedListsCertificateSource src, String fp, Instant now) {
     TrustedCertificate c = new TrustedCertificate();
     c.setId(UUID.randomUUID());
     c.setFingerprintSha256(fp);
@@ -82,10 +85,16 @@ public class TrustedCertificateMirror {
     if (!trustProps.isEmpty()) {
       TrustServiceProvider tsp = trustProps.get(0).getTrustServiceProvider();
       if (tsp != null) {
-        c.setTspName(tsp.getNames().values().stream().findFirst().flatMap(l -> l.stream().findFirst()).orElse(null));
-        List<TrustService> services = tsp.getServices().stream().filter(s -> s.getCertificates().contains(t)).toList();
+        c.setTspName(
+            tsp.getNames().values().stream()
+                .findFirst()
+                .flatMap(l -> l.stream().findFirst())
+                .orElse(null));
+        List<TrustService> services =
+            tsp.getServices().stream().filter(s -> s.getCertificates().contains(t)).toList();
         if (!services.isEmpty()) {
-          TrustServiceStatusAndInformationExtensions status = services.get(0).getStatusAndInformationExtensions().getLatest();
+          TrustServiceStatusAndInformationExtensions status =
+              services.get(0).getStatusAndInformationExtensions().getLatest();
           c.setTspServiceType(status.getType());
           c.setTspServiceStatus(status.getStatus());
         }

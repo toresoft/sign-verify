@@ -13,7 +13,6 @@ import eu.europa.esig.dss.spi.x509.aia.DefaultAIASource;
 import eu.europa.esig.dss.tsl.job.TLValidationJob;
 import eu.europa.esig.dss.tsl.source.LOTLSource;
 import eu.europa.esig.dss.tsl.source.TLSource;
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -47,7 +46,8 @@ public class DssConfiguration {
   }
 
   @Bean
-  public FileCacheDataLoader fileCacheDataLoader(@Value("${app.dss.cache-dir}") String cacheDir) throws IOException {
+  public FileCacheDataLoader fileCacheDataLoader(@Value("${app.dss.cache-dir}") String cacheDir)
+      throws IOException {
     Path dir = Path.of(cacheDir);
     Files.createDirectories(dir);
     FileCacheDataLoader loader = new FileCacheDataLoader();
@@ -62,7 +62,8 @@ public class DssConfiguration {
       TrustedListsCertificateSource tslSource,
       FileCacheDataLoader dataLoader,
       TslProperties props,
-      ResourceLoader resourceLoader) throws Exception {
+      ResourceLoader resourceLoader)
+      throws Exception {
 
     TLValidationJob job = new TLValidationJob();
     job.setOnlineDataLoader(dataLoader);
@@ -89,10 +90,12 @@ public class DssConfiguration {
     return job;
   }
 
-  private CommonCertificateSource loadKeystoreSource(TslProperties.Source s, ResourceLoader rl) throws Exception {
+  private CommonCertificateSource loadKeystoreSource(TslProperties.Source s, ResourceLoader rl)
+      throws Exception {
     if (s.getOjKeystorePath() == null) return new CommonCertificateSource();
-    String pwd = System.getenv(s.getOjKeystorePasswordEnv() == null ? "" : s.getOjKeystorePasswordEnv());
-    if (pwd == null) pwd = "";
+    String envVar = s.getOjKeystorePasswordEnv();
+    String pwd = (envVar != null && !envVar.isBlank()) ? System.getenv(envVar) : null;
+    if (pwd == null || pwd.isBlank()) pwd = "changeit"; // fallback per dev/test
     KeyStore ks = KeyStore.getInstance("PKCS12");
     try (var in = rl.getResource(s.getOjKeystorePath()).getInputStream()) {
       ks.load(in, pwd.toCharArray());

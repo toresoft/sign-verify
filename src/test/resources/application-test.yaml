@@ -24,3 +24,19 @@ app:
     oauth:
       enabled: false
     bootstrap-key-file: ${java.io.tmpdir}/sign-verify-test/bootstrap-api-key.txt
+    master-key: ZGV2LWRldi1kZXYtZGV2LWRldi1kZXYtZGV2LWRldi1kZXYtZGV2LWRldi1kZXY=
+  storage:
+    jobs-dir: ${java.io.tmpdir}/sign-verify-test/jobs
+  dss:
+    cache-dir: ${java.io.tmpdir}/sign-verify-test/dss-cache
+  tsl:
+    refresh:
+      startup-mode: SKIP
+    sources:
+      - id: eu-lotl
+        type: LOTL
+        url: https://ec.europa.eu/tools/lotl/eu-lotl.xml
+        pivot-support: true
+        oj-keystore-path: classpath:keystore/oj-keystore.p12
+        oj-keystore-password-env: TEST_KEYSTORE_PASSWORD
+        oj-url: https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv:OJ.C_.2019.276.01.0001.01.ENG
