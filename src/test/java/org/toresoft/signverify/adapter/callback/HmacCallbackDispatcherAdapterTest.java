@@ -173,6 +173,51 @@ class HmacCallbackDispatcherAdapterTest {
     assertThat(result.errorMessage()).isEqualTo("private_network_blocked");
   }
 
+  // ---------- Test 6b: cloud metadata endpoint blocked (SSRF) ----------
+
+  @Test
+  void dispatch_blocksCloudMetadataEndpoint() {
+    HmacCallbackDispatcherAdapter blocker =
+        new HmacCallbackDispatcherAdapter(Duration.ofSeconds(5), true, true);
+    // 169.254.169.254 is the AWS/GCP/Azure metadata endpoint (link-local). Must be rejected.
+    String url = "http://169.254.169.254/latest/meta-data/";
+
+    DispatchResult result =
+        blocker.dispatch(url, "HmacSHA256", SECRET, BODY, JOB_ID, DELIVERY_ID, 1);
+
+    assertThat(result.statusCode()).isEqualTo(0);
+    assertThat(result.errorMessage()).isEqualTo("private_network_blocked");
+  }
+
+  // ---------- Test 6c: loopback blocked by IP and by name (SSRF) ----------
+
+  @Test
+  void dispatch_blocksLoopbackByIp() {
+    HmacCallbackDispatcherAdapter blocker =
+        new HmacCallbackDispatcherAdapter(Duration.ofSeconds(5), true, true);
+
+    DispatchResult result =
+        blocker.dispatch(
+            "http://127.0.0.1:9/cb", "HmacSHA256", SECRET, BODY, JOB_ID, DELIVERY_ID, 1);
+
+    assertThat(result.statusCode()).isEqualTo(0);
+    assertThat(result.errorMessage()).isEqualTo("private_network_blocked");
+  }
+
+  @Test
+  void dispatch_blocksLocalhostByName() {
+    HmacCallbackDispatcherAdapter blocker =
+        new HmacCallbackDispatcherAdapter(Duration.ofSeconds(5), true, true);
+    // "localhost" must be resolved to a loopback address and rejected.
+    String url = baseUrl.replace("127.0.0.1", "localhost") + "/cb";
+
+    DispatchResult result =
+        blocker.dispatch(url, "HmacSHA256", SECRET, BODY, JOB_ID, DELIVERY_ID, 1);
+
+    assertThat(result.statusCode()).isEqualTo(0);
+    assertThat(result.errorMessage()).isEqualTo("private_network_blocked");
+  }
+
   // ---------- Test 7: connection refused ----------
 
   @Test

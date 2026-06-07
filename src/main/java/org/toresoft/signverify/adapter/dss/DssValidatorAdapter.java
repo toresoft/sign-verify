@@ -1,6 +1,7 @@
 package org.toresoft.signverify.adapter.dss;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import eu.europa.esig.dss.enumerations.Indication;
 import eu.europa.esig.dss.model.InMemoryDocument;
 import eu.europa.esig.dss.model.policy.ValidationPolicy;
 import eu.europa.esig.dss.simplereport.SimpleReport;
@@ -10,6 +11,7 @@ import eu.europa.esig.dss.validation.policy.ValidationPolicyLoader;
 import eu.europa.esig.dss.validation.reports.Reports;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.EnumMap;
 import java.util.Map;
 import org.springframework.stereotype.Component;
@@ -46,7 +48,7 @@ public class DssValidatorAdapter implements SignatureValidatorPort {
     try {
       policy =
           ValidationPolicyLoader.fromValidationPolicy(
-                  new ByteArrayInputStream(req.policyXml().getBytes()))
+                  new ByteArrayInputStream(req.policyXml().getBytes(StandardCharsets.UTF_8)))
               .create();
     } catch (Exception e) {
       throw AppException.badRequest("invalid validation policy: " + e.getMessage());
@@ -69,21 +71,49 @@ public class DssValidatorAdapter implements SignatureValidatorPort {
       throw new IllegalStateException("report serialization", e);
     }
 
-    String firstId = simple.getFirstSignatureId();
+    // For multi-signature documents the top-level outcome reflects the worst signature, so a single
+    // invalid signature can never be masked by a passing one appearing first.
+    String reportingId = worstSignatureId(simple);
     String format =
-        firstId != null && simple.getSignatureFormat(firstId) != null
-            ? simple.getSignatureFormat(firstId).toString()
+        reportingId != null && simple.getSignatureFormat(reportingId) != null
+            ? simple.getSignatureFormat(reportingId).toString()
             : "UNKNOWN";
     String indication =
-        firstId != null && simple.getIndication(firstId) != null
-            ? simple.getIndication(firstId).toString()
+        reportingId != null && simple.getIndication(reportingId) != null
+            ? simple.getIndication(reportingId).toString()
             : "INDETERMINATE";
     String subIndication =
-        firstId != null && simple.getSubIndication(firstId) != null
-            ? simple.getSubIndication(firstId).toString()
+        reportingId != null && simple.getSubIndication(reportingId) != null
+            ? simple.getSubIndication(reportingId).toString()
             : null;
     return new ValidationResult(
         format, indication, subIndication, simple.getSignaturesCount(), out);
+  }
+
+  /**
+   * Selects the signature with the worst (least favourable) indication for the top-level outcome.
+   */
+  private String worstSignatureId(SimpleReport simple) {
+    String worstId = simple.getFirstSignatureId();
+    int worstRank = -1;
+    for (String id : simple.getSignatureIdList()) {
+      int rank = indicationRank(simple.getIndication(id));
+      if (rank > worstRank) {
+        worstRank = rank;
+        worstId = id;
+      }
+    }
+    return worstId;
+  }
+
+  private int indicationRank(Indication indication) {
+    if (indication == null) return 2;
+    return switch (indication) {
+      case TOTAL_FAILED, FAILED -> 3;
+      case INDETERMINATE -> 2;
+      case TOTAL_PASSED, PASSED -> 0;
+      default -> 1;
+    };
   }
 
   public ValidationResult fallback(ValidationRequest req, Throwable t) {

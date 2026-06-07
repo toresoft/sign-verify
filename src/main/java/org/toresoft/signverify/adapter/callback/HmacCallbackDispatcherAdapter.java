@@ -1,6 +1,8 @@
 package org.toresoft.signverify.adapter.callback;
 
+import java.net.InetAddress;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -67,27 +69,37 @@ public class HmacCallbackDispatcherAdapter implements CallbackDispatcherPort {
     }
   }
 
+  /**
+   * SSRF guard. Resolves the host to its actual IP address(es) and rejects any that fall in a
+   * non-routable / internal range. Resolving (instead of string-matching the hostname) blocks cloud
+   * metadata endpoints (169.254.169.254, link-local), decimal/octal/hex IP encodings, IPv6
+   * loopback, and DNS names that point at private space. A host that cannot be resolved is treated
+   * as private (fail closed).
+   */
   private boolean isPrivate(String host) {
-    if (host == null) return true;
-    return host.startsWith("10.")
-        || host.startsWith("192.168.")
-        || host.startsWith("172.16.")
-        || host.startsWith("172.17.")
-        || host.startsWith("172.18.")
-        || host.startsWith("172.19.")
-        || host.startsWith("172.20.")
-        || host.startsWith("172.21.")
-        || host.startsWith("172.22.")
-        || host.startsWith("172.23.")
-        || host.startsWith("172.24.")
-        || host.startsWith("172.25.")
-        || host.startsWith("172.26.")
-        || host.startsWith("172.27.")
-        || host.startsWith("172.28.")
-        || host.startsWith("172.29.")
-        || host.startsWith("172.30.")
-        || host.startsWith("172.31.")
-        || host.equals("localhost")
-        || host.equals("127.0.0.1");
+    if (host == null || host.isBlank()) return true;
+    try {
+      InetAddress[] addresses = InetAddress.getAllByName(host);
+      if (addresses.length == 0) return true;
+      for (InetAddress addr : addresses) {
+        if (addr.isLoopbackAddress()
+            || addr.isAnyLocalAddress()
+            || addr.isLinkLocalAddress()
+            || addr.isSiteLocalAddress()
+            || addr.isMulticastAddress()
+            || isUniqueLocalIpv6(addr)) {
+          return true;
+        }
+      }
+      return false;
+    } catch (UnknownHostException e) {
+      return true;
+    }
+  }
+
+  /** IPv6 Unique Local Addresses (fc00::/7) are private but not flagged by isSiteLocalAddress(). */
+  private boolean isUniqueLocalIpv6(InetAddress addr) {
+    byte[] a = addr.getAddress();
+    return a.length == 16 && (a[0] & 0xfe) == 0xfc;
   }
 }

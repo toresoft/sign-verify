@@ -40,10 +40,17 @@ public class ApiKeyService {
     if (repo.findByName(name).isPresent()) {
       throw AppException.conflict("name already taken");
     }
-    byte[] r = new byte[36];
-    RND.nextBytes(r);
-    String body = B64.encodeToString(r);
-    String prefix = body.substring(0, 8);
+
+    String body;
+    String prefix;
+    // Regenerate on the (astronomically rare) prefix collision so the unique constraint never
+    // surfaces as a 500 to the caller.
+    do {
+      byte[] r = new byte[36];
+      RND.nextBytes(r);
+      body = B64.encodeToString(r);
+      prefix = body.substring(0, 8);
+    } while (repo.findByKeyPrefix(prefix).isPresent());
     String plaintext = "sv_" + prefix + "_" + body;
 
     ApiKey k = new ApiKey();
@@ -80,7 +87,9 @@ public class ApiKeyService {
 
   private void enforceLastPrivilegedInvariant(ApiKey k) {
     if (k.getRole() == Role.PRIVILEGED && k.isEnabled()) {
-      long count = repo.countByRoleAndEnabled(Role.PRIVILEGED, true);
+      // Pessimistic lock serializes concurrent removals, avoiding a TOCTOU race that could leave
+      // zero enabled privileged keys (lock-out).
+      long count = repo.lockEnabledIdsByRole(Role.PRIVILEGED).size();
       if (count <= 1) {
         throw AppException.conflict("cannot remove last enabled privileged api key");
       }

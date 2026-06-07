@@ -10,21 +10,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commit git
 - Non aggiungere mai il footer Co-Authored-By: Claude nei messaggi di commit.
 
-## Repository Status
+## Repository Overview
 
-This is a **freshly scaffolded Maven project** with no source code yet. The standard Maven directory layout exists (`src/main/java`, `src/main/resources`, `src/test/java`) but is empty. There is no README, no application entry point, and no committed dependencies.
+Spring Boot service that **verifies digital signatures** under the EU eIDAS framework
+(PAdES / CAdES / XAdES / JAdES / ASiC) using the **DSS** library and EU Trusted Lists (LOTL/TSL).
+Artifact coordinates: `org.toresoft:sign-verify-2:1.0.0-SNAPSHOT`.
 
-The artifact coordinates are `org.toresoft:sign-verify-2:1.0-SNAPSHOT`. The project name suggests an intended scope around digital signature creation and verification, but no code is present to confirm the design.
+Design and implementation plan live under `docs/superpowers/` (in Italian):
+- `docs/superpowers/specs/2026-06-07-sign-verify-design.md`
+- `docs/superpowers/plans/2026-06-07-sign-verify-implementation.md`
 
 ## Build Configuration
 
 - **Build tool:** Maven (no wrapper committed — use a system `mvn`)
-- **Java source/target:** 26 (set in `pom.xml` via `maven.compiler.source` / `maven.compiler.target`)
-- **Source encoding:** UTF-8
-- **Dependencies:** none declared yet
-- **Plugins:** none declared yet (relying on Maven defaults)
+- **Java:** 21 (`maven.compiler.source`/`target` in `pom.xml`)
+- **Parent:** `spring-boot-starter-parent` 3.4.1
+- **Key deps:** DSS 6.4 (`dss-bom`), Spring Web/Data-JPA/Security/OAuth2-resource-server/Actuator,
+  Flyway, PostgreSQL (runtime) + H2 (runtime/test), Resilience4j, ShedLock, Caffeine,
+  Micrometer/Prometheus, springdoc-openapi.
+- **Build plugins:** OpenAPI Generator (design-first: interfaces from `openapi.yaml`),
+  Spotless (Google Java Format), JaCoCo, Failsafe.
 
-Java 26 is a recent release. Verify the local toolchain (`java -version`, `mvn -v`) supports it before adding code that uses preview or recent-release language features.
+The local toolchain is provided via SDKMAN (`mvn`/`java` live under `~/.sdkman`). If `mvn` is not on
+`PATH`, run `source ~/.sdkman/bin/sdkman-init.sh` first.
 
 ## Common Commands
 
@@ -32,34 +40,60 @@ Java 26 is a recent release. Verify the local toolchain (`java -version`, `mvn -
 # Compile
 mvn compile
 
-# Run tests (none exist yet — will be a no-op until tests are added)
+# Unit + integration tests (Testcontainers Postgres for IT)
 mvn test
 
-# Run a single test class once tests exist
-mvn test -Dtest=FullyQualifiedTestClassName
+# Single test class / method
+mvn test -Dtest=DssValidatorAdapterTest
+mvn test -Dtest=ApiKeyServiceTest#create
 
-# Run a single test method
-mvn test -Dtest=ClassName#methodName
+# Full verify (Failsafe IT + Spotless check + JaCoCo report)
+mvn verify
+
+# Format code
+mvn spotless:apply
 
 # Package
 mvn package
-
-# Clean
-mvn clean
 ```
 
-No test framework dependency is declared yet — adding tests requires first adding JUnit (or another framework) to `pom.xml`.
+Run locally with the `dev` profile (OAuth off, test master-key, TSL refresh skipped):
+`mvn spring-boot:run -Dspring-boot.run.profiles=dev`.
 
-## When Adding Code
+## Architecture
 
-Because the project is empty, the first meaningful additions will set conventions for everything that follows. Before writing code:
+Hexagonal (ports & adapters), enforced by ArchUnit (`ArchitectureTest`). Root package
+`org.toresoft.signverify`:
 
-1. Confirm with the user the intended scope (which signature standards: PKCS#7 / CAdES / PAdES / XAdES / JWS / raw RSA-PSS / Ed25519, etc.) — the package layout and dependency choices follow from this.
-2. Decide on the crypto provider (JCA default, BouncyCastle, etc.) and add it to `pom.xml` before writing implementation code that depends on it.
-3. Add a test framework dependency (JUnit 5 is the conventional default for a new Java project) and the Surefire plugin version appropriate for Java 26 if the default does not work.
-4. Establish the root package (likely `org.toresoft.signverify` based on the `groupId`) before scattering classes.
+- `api/` — REST controllers (thin) + `GlobalExceptionHandler` (RFC 9457 `problem+json`).
+  API contract is **design-first**: edit `src/main/resources/openapi/openapi.yaml`; the generator
+  produces interfaces/DTOs under `api.spi` / `api.dto`. `OpenApiContractIT` guards the contract.
+- `application/` — services orchestrating use cases (verification, profiles, API keys, async jobs,
+  callbacks, audit, TSL, cleanup/refresh schedulers).
+- `domain/model`, `domain/port`, `domain/exception` — entities/enums, ports (interfaces), `AppException`.
+- `adapter/` — port implementations: `dss/` (validation + extraction + TSL mirror),
+  `crypto/` (AES-256-GCM cipher, bcrypt hasher), `callback/` (HMAC-signed webhook dispatcher),
+  `storage/` (filesystem job storage).
+- `persistence/` — Spring Data JPA repositories.
+- `security/` — API-key auth filter, OAuth principal converter, bootstrap key generator.
+- `config/` — Security, DSS, metrics, scheduler, TSL properties.
 
-## IDE / Tooling Notes
+DB schema is owned by **Flyway** (`src/main/resources/db/migration`); Hibernate runs with
+`ddl-auto: validate`. Add a new `V__*.sql` migration rather than relying on Hibernate to alter schema.
 
-- `.idea/` files are committed for IntelliJ project recognition; `.gitignore` excludes most generated IntelliJ files (`*.iml`, `modules.xml`, `libraries/`, etc.).
-- `.mvn/` directory exists but is empty (no Maven Wrapper installed). If reproducible builds across machines matter, run `mvn wrapper:wrapper` to add `mvnw` / `mvnw.cmd`.
+## Authentication & Authorization
+
+- Two mechanisms: **API key** (`X-API-Key: sv_<prefix>_<body>`, bcrypt-hashed, prefix indexed+unique)
+  and optional **OAuth2 JWT** (`app.security.oauth.enabled`). Stateless, CSRF disabled (API only).
+- Roles: `PRIVILEGED` / standard; `@EnableMethodSecurity` guards privileged endpoints.
+- A `PRIVILEGED` bootstrap key is generated on first startup if none exists and written to
+  `app.security.bootstrap-key-file` (0600). The "last enabled privileged key" cannot be removed.
+- Secrets (e.g. callback HMAC secrets) are encrypted at rest with `app.security.master-key`
+  (base64, 256-bit).
+
+## Conventions
+
+- Strict type hints; constructor injection; controllers never leak entities — map to DTOs.
+- Custom errors extend/produce `AppException` → emitted as `application/problem+json`.
+- Commit messages and code comments in English; specs/plans in Italian.
+- Run `mvn spotless:apply` before committing (Google Java Format is enforced in `verify`).

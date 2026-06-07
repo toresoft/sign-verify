@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -38,7 +39,7 @@ class ApiKeyServiceTest {
     only.setKeyHash("h");
     only.setCreatedAt(Instant.now());
     when(repo.findById(id)).thenReturn(Optional.of(only));
-    when(repo.countByRoleAndEnabled(Role.PRIVILEGED, true)).thenReturn(1L);
+    when(repo.lockEnabledIdsByRole(Role.PRIVILEGED)).thenReturn(List.of(id));
 
     assertThatThrownBy(() -> service.delete(id, admin))
         .isInstanceOf(AppException.class)
@@ -58,7 +59,7 @@ class ApiKeyServiceTest {
     k.setKeyHash("h");
     k.setCreatedAt(Instant.now());
     when(repo.findById(id)).thenReturn(Optional.of(k));
-    when(repo.countByRoleAndEnabled(Role.PRIVILEGED, true)).thenReturn(2L);
+    when(repo.lockEnabledIdsByRole(Role.PRIVILEGED)).thenReturn(List.of(id, UUID.randomUUID()));
 
     service.delete(id, admin);
     verify(repo).deleteById(id);
