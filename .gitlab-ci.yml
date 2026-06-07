@@ -74,7 +74,15 @@ package:docker:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
     - if: '$CI_COMMIT_TAG'
   before_script:
-    - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin docker.io
+    # Strip any stray whitespace/newlines from the credentials (a common copy-paste
+    # artefact that yields "malformed HTTP Authorization header") and avoid echo's
+    # trailing newline by piping the token with printf.
+    - |
+      DOCKERHUB_USERNAME="$(printf %s "$DOCKERHUB_USERNAME" | tr -d '[:space:]')"
+      if [ -z "$DOCKERHUB_USERNAME" ] || [ -z "$(printf %s "$DOCKERHUB_TOKEN" | tr -d '[:space:]')" ]; then
+        echo "DOCKERHUB_USERNAME/DOCKERHUB_TOKEN are not set (check CI/CD Variables: Protected flag vs ref, scope)"; exit 1
+      fi
+      printf %s "$DOCKERHUB_TOKEN" | tr -d '[:space:]' | docker login -u "$DOCKERHUB_USERNAME" --password-stdin docker.io
   script:
     - docker build -t "$IMAGE_NAME:$CI_COMMIT_SHORT_SHA" .
     - docker push "$IMAGE_NAME:$CI_COMMIT_SHORT_SHA"
