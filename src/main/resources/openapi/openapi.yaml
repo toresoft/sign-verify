@@ -178,6 +178,33 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/VerificationResponse' }
 
+  /api/v1/extractions:
+    post:
+      tags: [Extractions]
+      operationId: extract
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '200':
+          description: ok (binary diretto o zip)
+          headers:
+            X-Signature-Format:
+              schema: { type: string }
+            X-Document-Count:
+              schema: { type: integer }
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+            application/zip:
+              schema: { type: string, format: binary }
+
 components:
   securitySchemes:
     ApiKeyAuth:
