@@ -8,13 +8,12 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.Optional;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.toresoft.signverify.domain.model.ApiKey;
 import org.toresoft.signverify.domain.port.PasswordHasherPort;
 import org.toresoft.signverify.persistence.ApiKeyRepository;
 
-@Component
+@org.springframework.stereotype.Component
 public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 
   public static final String HEADER = "X-API-Key";

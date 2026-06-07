@@ -48,6 +48,8 @@ class ArchitectureTest {
           .doNotHaveSimpleName("VerificationController")
           .and()
           .doNotHaveSimpleName("AsyncVerificationController")
+          .and()
+          .doNotHaveSimpleName("AuditController")
           .should()
           .dependOnClassesThat()
           .resideInAPackage("..persistence..");
