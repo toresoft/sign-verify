@@ -178,6 +178,38 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/VerificationResponse' }
 
+  /api/v1/verifications/async:
+    post:
+      tags: [Verifications]
+      operationId: verifyAsync
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                metadata: { type: string }
+      responses:
+        '202':
+          description: accepted
+          content:
+            application/json:
+              schema: { type: object }
+
+  /api/v1/verifications/jobs/{jobId}:
+    get:
+      tags: [Verifications]
+      operationId: getJob
+      parameters:
+        - { name: jobId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { type: object } } } }
+        '404': { description: not found }
+        '410': { description: gone }
+
   /api/v1/extractions:
     post:
       tags: [Extractions]
