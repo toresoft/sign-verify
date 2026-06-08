@@ -271,7 +271,23 @@ docker push toresoft/sign-verify:dev
 
 ---
 
-## 7. References
+## 7. Detailed usage guide
+
+In-depth usage documentation lives under `docs/`, in English (`docs/en/`) and
+Italian (`docs/it/`), with Mermaid diagrams. Indexes:
+[`docs/en/README.md`](docs/en/README.md) · [`docs/it/README.md`](docs/it/README.md).
+
+| Topic | 🇬🇧 English | 🇮🇹 Italiano |
+|-------|------------|-------------|
+| Build & configuration | [01](docs/en/01-build-configuration.md) | [01](docs/it/01-build-configurazione.md) |
+| Docker & configuration | [02](docs/en/02-docker.md) | [02](docs/it/02-docker.md) |
+| Authentication (API keys, OAuth) | [03](docs/en/03-authentication.md) | [03](docs/it/03-autenticazione.md) |
+| Trusted Certificates (TSL) | [04](docs/en/04-trusted-certificates.md) | [04](docs/it/04-trusted-certificates.md) |
+| Signature verification (sync/async) | [05](docs/en/05-signature-verification.md) | [05](docs/it/05-verifica-firme.md) |
+| File extraction | [06](docs/en/06-file-extraction.md) | [06](docs/it/06-estrazione-file.md) |
+| Logging & audit | [07](docs/en/07-logging-audit.md) | [07](docs/it/07-log-audit.md) |
+
+## 8. References
 
 - API: OpenAPI contract in `src/main/resources/openapi/openapi.yaml` —
   Swagger UI at `/swagger-ui/index.html`
