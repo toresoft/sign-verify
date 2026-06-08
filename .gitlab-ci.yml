@@ -155,8 +155,22 @@ security:image-scan:
 
 security:dependency-scan:
   stage: security
+  # Persist the OWASP NVD datastore between runs. Without it the job re-downloads
+  # ~356k CVEs every time; a throttled/aborted download corrupts the H2 store
+  # (odc.mv.db) and the analysis fails ("The database has been closed").
+  cache:
+    key: dependency-check-nvd-data
+    paths:
+      - .dependency-check-data/
+  variables:
+    # An NVD API key (CI/CD variable, masked) avoids HTTP 429 rate limiting.
+    # Get one free: https://nvd.nist.gov/developers/request-an-api-key
+    DC_OPTS: >-
+      -DdataDirectory=.dependency-check-data
+      -DnvdApiKey=$NVD_API_KEY
+      -DnvdApiDelay=6000
   script:
-    - mvn $MAVEN_CLI_OPTS -DskipTests org.owasp:dependency-check-maven:check
+    - mvn $MAVEN_CLI_OPTS -DskipTests $DC_OPTS org.owasp:dependency-check-maven:check
   artifacts:
     when: always
     paths:
