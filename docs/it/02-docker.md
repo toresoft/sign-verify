@@ -3,8 +3,13 @@
 ← [1. Build](01-build-configurazione.md) · [Indice](README.md) · → [3. Autenticazione](03-autenticazione.md)
 
 Il servizio viene distribuito come immagine Docker
-**`toresoft/sign-verify`** (Docker Hub). L'immagine è costruita con un
-`Dockerfile` multi-stage e una runtime **Alpine** non-root e hardenizzata.
+**[`toresoft/sign-verify`](https://hub.docker.com/r/toresoft/sign-verify)**
+(registry: Docker Hub). L'immagine è costruita con un `Dockerfile` multi-stage e
+una runtime **Alpine** non-root e hardenizzata.
+
+```bash
+docker pull toresoft/sign-verify:latest
+```
 
 ## 2.1 Anatomia dell'immagine
 

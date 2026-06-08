@@ -5,6 +5,8 @@ Guida operativa al servizio **sign-verify**: verifica di firme digitali eIDAS
 **EU Trusted Lists** (LOTL/TSL).
 
 > 🇬🇧 English version: [`docs/en/README.md`](../en/README.md)
+>
+> 🐳 Immagine Docker sul registry: **[`toresoft/sign-verify`](https://hub.docker.com/r/toresoft/sign-verify)** (Docker Hub)
 
 ## Indice
 

@@ -5,6 +5,8 @@ verification (PAdES / CAdES / XAdES / JAdES / ASiC) built on the **DSS 6.4**
 library and the **EU Trusted Lists** (LOTL/TSL).
 
 > 🇮🇹 Versione italiana: [`docs/it/README.md`](../it/README.md)
+>
+> 🐳 Docker image on the registry: **[`toresoft/sign-verify`](https://hub.docker.com/r/toresoft/sign-verify)** (Docker Hub)
 
 ## Table of contents
 

@@ -2,9 +2,14 @@
 
 ← [1. Build](01-build-configuration.md) · [Index](README.md) · → [3. Authentication](03-authentication.md)
 
-The service ships as the Docker image **`toresoft/sign-verify`** (Docker Hub).
-The image is built with a multi-stage `Dockerfile` and a hardened, non-root
-**Alpine** runtime.
+The service ships as the Docker image
+**[`toresoft/sign-verify`](https://hub.docker.com/r/toresoft/sign-verify)**
+(registry: Docker Hub). The image is built with a multi-stage `Dockerfile` and a
+hardened, non-root **Alpine** runtime.
+
+```bash
+docker pull toresoft/sign-verify:latest
+```
 
 ## 2.1 Image anatomy
 

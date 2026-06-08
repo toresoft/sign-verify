@@ -105,6 +105,37 @@ package:docker:
       fi
 
 # --------------------------------------------------------------------------- #
+# package  → push DOCKERHUB.md as the Docker Hub repository description         #
+#   Updates the registry overview (full_description) shown on the image page.  #
+#   Reuses DOCKERHUB_USERNAME / DOCKERHUB_TOKEN. Default-branch only.          #
+# --------------------------------------------------------------------------- #
+package:dockerhub-readme:
+  stage: package
+  image: alpine:3
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      changes:
+        - DOCKERHUB.md
+  script:
+    - apk add --no-cache curl jq >/dev/null
+    - |
+      U="$(printf %s "$DOCKERHUB_USERNAME" | tr -d '[:space:]')"
+      T="$(printf %s "$DOCKERHUB_TOKEN"   | tr -d '[:space:]')"
+      if [ -z "$U" ] || [ -z "$T" ]; then echo "FATAL: Docker Hub credentials missing"; exit 1; fi
+      JWT=$(curl -s -H 'Content-Type: application/json' \
+        -d "{\"username\":\"$U\",\"password\":\"$T\"}" \
+        https://hub.docker.com/v2/users/login/ | jq -r .token)
+      if [ -z "$JWT" ] || [ "$JWT" = "null" ]; then echo "FATAL: Docker Hub login failed"; exit 1; fi
+      # jq -Rs serializes the whole file into a safely-escaped JSON string.
+      BODY=$(jq -Rs '{full_description: .}' DOCKERHUB.md)
+      code=$(curl -s -o /tmp/resp.json -w '%{http_code}' -X PATCH \
+        -H "Authorization: JWT $JWT" -H 'Content-Type: application/json' \
+        -d "$BODY" \
+        "https://hub.docker.com/v2/repositories/${IMAGE_NAME#docker.io/}/")
+      echo "dockerhub readme update http=$code"
+      [ "$code" = "200" ] || { cat /tmp/resp.json; exit 1; }
+
+# --------------------------------------------------------------------------- #
 # security                                                                     #
 # --------------------------------------------------------------------------- #
 security:image-scan:
