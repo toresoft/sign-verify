@@ -1,5 +1,10 @@
 # sign-verify
 
+[![pipeline](https://gitlab.com/toresoft/sign-verify/badges/main/pipeline.svg)](https://gitlab.com/toresoft/sign-verify/-/pipelines)
+[![coverage](https://gitlab.com/toresoft/sign-verify/badges/main/coverage.svg)](https://gitlab.com/toresoft/sign-verify/-/commits/main)
+[![docker](https://img.shields.io/docker/v/toresoft/sign-verify?sort=semver&label=docker)](https://hub.docker.com/r/toresoft/sign-verify)
+[![license](https://img.shields.io/badge/license-Apache--2.0-blue)](https://www.apache.org/licenses/LICENSE-2.0)
+
 > 🇮🇹 **Questo documento è in italiano.** · 🇬🇧 [Read this in English](README.md)
 
 > Servizio REST per la **verifica di firme elettroniche eIDAS** (PAdES, CAdES, XAdES, JAdES, ASiC) basato su Spring Boot 3.4 e sulla libreria europea **DSS 6.4**, con gestione delle Trusted List UE (LOTL/TSL).
