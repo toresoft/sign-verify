@@ -12,7 +12,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.4.1</version>
+        <version>3.5.14</version>
         <relativePath/>
     </parent>
 
@@ -21,6 +21,10 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- Override Spring Boot's managed Tomcat (10.1.54) to close 2026 CVEs fixed in 10.1.55. -->
+        <tomcat.version>10.1.55</tomcat.version>
+        <!-- Override Spring Boot's managed PostgreSQL driver (42.7.10) for CVE-2026-42198. -->
+        <postgresql.version>42.7.11</postgresql.version>
         <dss.version>6.4</dss.version>
         <resilience4j.version>2.2.0</resilience4j.version>
         <shedlock.version>5.16.0</shedlock.version>
@@ -161,10 +165,16 @@
             <artifactId>dss-utils-apache-commons</artifactId>
         </dependency>
 
-        <!-- BouncyCastle (DSS dep, esplicita) -->
+        <!-- BouncyCastle (DSS deps, esplicite). Pin newer than the DSS BOM to clear known CVEs. -->
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.84</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk18on</artifactId>
+            <version>1.84</version>
         </dependency>
 
         <!-- Commons Lang3 (DSS 6.4 requires Strings class introduced in 3.18.0) -->

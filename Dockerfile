@@ -16,18 +16,17 @@ RUN mvn -B -e -ntp -DskipTests clean package \
 
 # =============================================================================
 # Runtime stage — minimal, non-root, hardened.
+# Alpine base keeps the OS attack surface (and CVE count) far lower than the
+# glibc/Ubuntu images; the HEALTHCHECK uses BusyBox wget, so no extra package
+# is installed.
 # =============================================================================
-FROM eclipse-temurin:21-jre-jammy AS runtime
+FROM eclipse-temurin:21-jre-alpine AS runtime
 
 # - Apply OS security updates.
-# - Install only curl (needed by HEALTHCHECK), no recommended extras.
 # - Create an unprivileged user and the writable data directory up front.
-RUN apt-get update \
- && apt-get upgrade -y \
- && apt-get install -y --no-install-recommends curl \
- && rm -rf /var/lib/apt/lists/* \
- && groupadd -g 10001 app \
- && useradd -u 10001 -g app -s /usr/sbin/nologin -M app \
+RUN apk upgrade --no-cache \
+ && addgroup -g 10001 app \
+ && adduser -u 10001 -G app -s /sbin/nologin -D -H app \
  && mkdir -p /var/lib/sign-verify/dss-cache /var/lib/sign-verify/jobs \
  && chown -R app:app /var/lib/sign-verify
 
@@ -49,7 +48,7 @@ EXPOSE 8080
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError"
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
-  CMD curl -fsS http://localhost:8080/actuator/health/liveness || exit 1
+  CMD wget -q -O /dev/null http://localhost:8080/actuator/health/liveness || exit 1
 
 # Exec form → app is PID 1 and receives SIGTERM for graceful shutdown.
 ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]
