@@ -68,7 +68,7 @@ app:
         pivot-support: true
         oj-keystore-path: classpath:keystore/oj-keystore.p12
         oj-keystore-password-env: APP_OJ_KEYSTORE_PASSWORD
-        oj-url: https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv:OJ.C_.2019.276.01.0001.01.ENG
+        oj-url: https://eur-lex.europa.eu/eli/C/2026/1944/oj
     refresh:
       cron: "0 0 2 * * *"
       timezone: Europe/Rome

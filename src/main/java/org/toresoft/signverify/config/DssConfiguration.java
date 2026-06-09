@@ -29,6 +29,9 @@ import org.springframework.core.io.ResourceLoader;
 @EnableConfigurationProperties(TslProperties.class)
 public class DssConfiguration {
 
+  private static final org.slf4j.Logger log =
+      org.slf4j.LoggerFactory.getLogger(DssConfiguration.class);
+
   @Bean
   public TrustedListsCertificateSource trustedListsCertificateSource() {
     return new TrustedListsCertificateSource();
@@ -101,13 +104,29 @@ public class DssConfiguration {
       ks.load(in, pwd.toCharArray());
     }
     CommonCertificateSource src = new CommonCertificateSource();
+    int loaded = 0;
     var aliases = ks.aliases();
     while (aliases.hasMoreElements()) {
       String a = aliases.nextElement();
       var cert = ks.getCertificate(a);
       if (cert instanceof java.security.cert.X509Certificate x) {
         src.addCertificate(new CertificateToken(x));
+        loaded++;
       }
+    }
+    if (loaded == 0) {
+      log.warn(
+          "OJ keystore '{}' for LOTL '{}' contains no X.509 certificate: the LOTL signature cannot"
+              + " be validated (pivots will fail with NO_CERTIFICATE_CHAIN_FOUND). Rebuild it with"
+              + " scripts/update-oj-keystore.sh.",
+          s.getOjKeystorePath(),
+          s.getUrl());
+    } else {
+      log.info(
+          "Loaded {} OJ signing certificate(s) from keystore '{}' for LOTL '{}'",
+          loaded,
+          s.getOjKeystorePath(),
+          s.getUrl());
     }
     return src;
   }

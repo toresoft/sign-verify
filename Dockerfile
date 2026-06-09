@@ -32,6 +32,23 @@ RUN apk upgrade --no-cache \
 
 WORKDIR /app
 
+# Add the public intermediate CA certificates that some national TSL endpoints
+# omit from their TLS chain (e.g. eidas.gov.ie sends only the leaf). Their roots
+# are already in cacerts; without the intermediates DSS fails to download those
+# Trusted Lists with "PKIX path building failed". Imported into the JRE truststore
+# so the default JSSE trust manager (used by DSS's HTTP client) can build the path.
+# Runs as root, before dropping privileges. See docker/tls-certs/README.md.
+COPY docker/tls-certs/*.pem /tmp/tls-certs/
+RUN set -eu; \
+    cacerts="$JAVA_HOME/lib/security/cacerts"; \
+    for c in /tmp/tls-certs/*.pem; do \
+      alias="extra-$(basename "$c" .pem)"; \
+      keytool -importcert -noprompt -trustcacerts \
+        -keystore "$cacerts" -storepass changeit \
+        -alias "$alias" -file "$c"; \
+    done; \
+    rm -rf /tmp/tls-certs
+
 # Copy the exploded layers most-stable-first so image layers cache well.
 COPY --from=build --chown=app:app /build/target/extracted/dependencies/ ./
 COPY --from=build --chown=app:app /build/target/extracted/spring-boot-loader/ ./
