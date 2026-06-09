@@ -17,6 +17,20 @@ import org.toresoft.signverify.persistence.TrustedCertificateRepository;
 @Component
 public class TrustedCertificateMirror {
 
+  // Maximum lengths of the bounded VARCHAR columns of trusted_certificate (see the
+  // Flyway schema / TrustedCertificate entity). Scalar values extracted from a
+  // certificate are truncated to these so that a single non-standard certificate
+  // (e.g. a countryName longer than the spec allows) cannot overflow a column and
+  // abort the whole TSL sync transaction. subject_dn / issuer_dn / tsl_url /
+  // certificate_der_b64 are TEXT and need no truncation.
+  private static final int LEN_SKI = 64;
+  private static final int LEN_CN = 255;
+  private static final int LEN_SERIAL = 80;
+  private static final int LEN_COUNTRY = 8;
+  private static final int LEN_TSP_NAME = 255;
+  private static final int LEN_TSP_TYPE = 255;
+  private static final int LEN_TSP_STATUS = 80;
+
   public record Diff(int added, int removed, int unchanged) {}
 
   private final TrustedCertificateRepository repo;
@@ -68,13 +82,13 @@ public class TrustedCertificateMirror {
     TrustedCertificate c = new TrustedCertificate();
     c.setId(UUID.randomUUID());
     c.setFingerprintSha256(fp);
-    c.setSki(extractSki(t));
-    c.setSubjectDn(t.getSubject().getRFC2253());
-    c.setSubjectCn(extractCn(t.getSubject().getRFC2253()));
-    c.setIssuerDn(t.getIssuer().getRFC2253());
-    c.setIssuerCn(extractCn(t.getIssuer().getRFC2253()));
-    c.setSerialNumber(t.getSerialNumber().toString(16));
-    c.setCountry(extractCountry(t.getSubject().getRFC2253()));
+    c.setSki(trunc(extractSki(t), LEN_SKI));
+    c.setSubjectDn(t.getSubject().getRFC2253()); // TEXT column, no limit
+    c.setSubjectCn(trunc(extractCn(t.getSubject().getRFC2253()), LEN_CN));
+    c.setIssuerDn(t.getIssuer().getRFC2253()); // TEXT column, no limit
+    c.setIssuerCn(trunc(extractCn(t.getIssuer().getRFC2253()), LEN_CN));
+    c.setSerialNumber(trunc(t.getSerialNumber().toString(16), LEN_SERIAL));
+    c.setCountry(trunc(extractCountry(t.getSubject().getRFC2253()), LEN_COUNTRY));
     c.setValidFrom(t.getNotBefore().toInstant());
     c.setValidTo(t.getNotAfter().toInstant());
     c.setCertificateDerB64(Base64.getEncoder().encodeToString(t.getEncoded()));
@@ -86,17 +100,19 @@ public class TrustedCertificateMirror {
       TrustServiceProvider tsp = trustProps.get(0).getTrustServiceProvider();
       if (tsp != null) {
         c.setTspName(
-            tsp.getNames().values().stream()
-                .findFirst()
-                .flatMap(l -> l.stream().findFirst())
-                .orElse(null));
+            trunc(
+                tsp.getNames().values().stream()
+                    .findFirst()
+                    .flatMap(l -> l.stream().findFirst())
+                    .orElse(null),
+                LEN_TSP_NAME));
         List<TrustService> services =
             tsp.getServices().stream().filter(s -> s.getCertificates().contains(t)).toList();
         if (!services.isEmpty()) {
           TrustServiceStatusAndInformationExtensions status =
               services.get(0).getStatusAndInformationExtensions().getLatest();
-          c.setTspServiceType(status.getType());
-          c.setTspServiceStatus(status.getStatus());
+          c.setTspServiceType(trunc(status.getType(), LEN_TSP_TYPE));
+          c.setTspServiceStatus(trunc(status.getStatus(), LEN_TSP_STATUS));
         }
       }
     }
@@ -146,5 +162,11 @@ public class TrustedCertificateMirror {
       if (t.toUpperCase(Locale.ROOT).startsWith("C=")) return t.substring(2);
     }
     return null;
+  }
+
+  /** Truncates {@code s} to at most {@code max} characters (null-safe). */
+  private static String trunc(String s, int max) {
+    if (s == null || s.length() <= max) return s;
+    return s.substring(0, max);
   }
 }
