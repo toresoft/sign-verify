@@ -19,13 +19,13 @@ public class TrustedCertificate {
   @Column(length = 64)
   private String aki;
 
-  @Column(name = "subject_dn", length = 500)
+  @Column(name = "subject_dn", columnDefinition = "TEXT")
   private String subjectDn;
 
   @Column(name = "subject_cn", length = 255)
   private String subjectCn;
 
-  @Column(name = "issuer_dn", length = 500)
+  @Column(name = "issuer_dn", columnDefinition = "TEXT")
   private String issuerDn;
 
   @Column(name = "issuer_cn", length = 255)
@@ -55,7 +55,7 @@ public class TrustedCertificate {
   @Column(name = "certificate_der_b64", nullable = false, columnDefinition = "TEXT")
   private String certificateDerB64;
 
-  @Column(name = "tsl_url", length = 500)
+  @Column(name = "tsl_url", columnDefinition = "TEXT")
   private String tslUrl;
 
   @Column(name = "last_seen_at", nullable = false)
