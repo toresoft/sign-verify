@@ -103,9 +103,14 @@ package:docker:
       if [ -n "$CI_COMMIT_TAG" ]; then
         docker tag "$IMAGE_NAME:$CI_COMMIT_SHORT_SHA" "$IMAGE_NAME:$CI_COMMIT_TAG"
         docker push "$IMAGE_NAME:$CI_COMMIT_TAG"
+        # A tagged release is the newest published version, so move :latest to it.
+        # On a tag pipeline CI_COMMIT_BRANCH is empty, so the branch block below
+        # does not run — without this, :latest would never follow release tags.
+        docker tag "$IMAGE_NAME:$CI_COMMIT_SHORT_SHA" "$IMAGE_NAME:latest"
+        docker push "$IMAGE_NAME:latest"
       fi
     - |
-      if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
+      if [ -z "$CI_COMMIT_TAG" ] && [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
         docker tag "$IMAGE_NAME:$CI_COMMIT_SHORT_SHA" "$IMAGE_NAME:latest"
         docker push "$IMAGE_NAME:latest"
       fi
