@@ -165,7 +165,9 @@
             <artifactId>dss-utils-apache-commons</artifactId>
         </dependency>
 
-        <!-- BouncyCastle (DSS deps, esplicite). Pin newer than the DSS BOM to clear known CVEs. -->
+        <!-- BouncyCastle (DSS deps, esplicite). Pin newer than the DSS BOM to clear known CVEs.
+             Registered as a JCA provider at startup (BouncyCastleProviderConfig) so DSS can parse
+             legacy EU TSL certificates whose RSA key encoding the default JDK provider rejects. -->
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk18on</artifactId>
