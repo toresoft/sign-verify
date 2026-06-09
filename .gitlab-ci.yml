@@ -3,9 +3,9 @@ stages: [validate, test, package, security]
 # --------------------------------------------------------------------------- #
 # workflow:rules — elimina doppia pipeline branch+tag                          #
 #   Quando si crea un tag da main, GitLab avvia 2 pipeline. Questa regola      #
-#   garantisce che i job package/security partano solo una volta:              #
-#   - su tag (rilascio)                                                        #
-#   - su default branch (main) ma NON se è anche un tag                        #
+#   garantisce che la pipeline parta solo una volta:                           #
+#   - su tag (rilascio completo)                                               #
+#   - su default branch (main) ma solo validate+test (no package/security)     #
 # --------------------------------------------------------------------------- #
 workflow:
   rules:
@@ -102,7 +102,6 @@ package:docker:
     DOCKER_TLS_CERTDIR: ""
   rules:
     - if: '$CI_COMMIT_TAG'
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
   before_script:
     # Strip stray whitespace from credentials, then diagnose before logging in.
     # The diagnostics never print secret values — only lengths, charset validity and
@@ -186,7 +185,6 @@ security:image-scan:
   needs: ["package:docker"]
   rules:
     - if: '$CI_COMMIT_TAG'
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
   variables:
     TRIVY_USERNAME: "$DOCKERHUB_USERNAME"
     TRIVY_PASSWORD: "$DOCKERHUB_TOKEN"
@@ -197,6 +195,8 @@ security:image-scan:
 security:dependency-scan:
   stage: security
   needs: ["test:verify"]
+  rules:
+    - if: '$CI_COMMIT_TAG'
   # Persist the OWASP NVD datastore between runs. Without it the job re-downloads
   # ~356k CVEs every time; a throttled/aborted download corrupts the H2 store
   # (odc.mv.db) and the analysis fails ("The database has been closed").
