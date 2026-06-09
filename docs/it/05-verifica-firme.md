@@ -4,6 +4,7 @@
 
 - [4.1 Introduzione](#41-introduzione)
 - [4.2 Profili di validazione](#42-profili-di-validazione)
+  - [Formato della policy XML](#formato-della-policy-xml)
 - [4.3 API di verifica sincrona](#43-api-di-verifica-sincrona)
 - [4.4 API di verifica asincrona](#44-api-di-verifica-asincrona)
 
@@ -67,6 +68,118 @@ qualificazione, timestamp, ecc.).
 
 All'avvio, se non esiste alcun profilo, viene seminato il profilo **STANDARD**
 (`isDefault = true`).
+
+### Formato della policy XML
+
+La policy è un documento XML nel **namespace DSS**
+`http://dss.esig.europa.eu/validation/policy`, con radice
+`<ConstraintsParameters>`. È lo stesso formato usato dalla libreria DSS (cfr.
+*DSS — Validation policy*); i file `policy/BASIC.xml`, `policy/STANDARD.xml`,
+`policy/STRICT.xml` sono esempi completi inclusi nel servizio.
+
+#### Il concetto chiave: l'attributo `Level`
+
+Quasi ogni vincolo porta un attributo `Level` che ne stabilisce la severità.
+Determina **come** un controllo fallito influisce sull'esito (`indication` /
+`subIndication`):
+
+| `Level` | Significato | Effetto sull'esito |
+|---------|-------------|--------------------|
+| `FAIL` | Vincolo obbligatorio | Se non soddisfatto → `TOTAL_FAILED` / `INDETERMINATE` |
+| `WARN` | Avviso | Non blocca l'esito; segnalato nel report |
+| `INFORM` | Informativo | Solo informazione nel report |
+| `IGNORE` | Disattivato | Il controllo non viene eseguito |
+
+Rendere un profilo più severo significa alzare il `Level` di alcuni vincoli
+(es. `WARN` → `FAIL`); rilassarlo significa abbassarlo (es. `FAIL` → `IGNORE`).
+È esattamente ciò che fanno gli [override al volo](#override-al-volo), che
+portano selettivamente alcuni vincoli a `IGNORE`.
+
+#### Struttura del documento
+
+I vincoli sono raggruppati in sezioni tematiche, valutate da DSS nelle varie
+fasi della validazione:
+
+| Sezione | Vincoli su |
+|---------|-----------|
+| `<ContainerConstraints>` | Contenitori ASiC-S / ASiC-E (tipi accettati, manifest, file firmati) |
+| `<PDFAConstraints>` | Conformità PDF/A (per PAdES) |
+| `<SignatureConstraints>` | La firma e la sua catena di certificati (blocco principale) |
+| `<CounterSignatureConstraints>` | Eventuali contro-firme |
+| `<Timestamp>` | Marche temporali (TSA) |
+| `<Revocation>` | Dati di revoca (CRL / OCSP) |
+| `<EvidenceRecord>` | Evidence record (RFC 4998 / 6283) |
+| `<Cryptographic>` | Algoritmi e dimensioni di chiave ammessi + scadenze |
+| `<Model Value="…"/>` | Modello di validazione: `SHELL`, `CHAIN` o `HYBRID` |
+| `<eIDAS>` | Vincoli sulle Trusted List (freschezza, firma, versione TL) |
+
+Dentro `<SignatureConstraints>` i controlli sui certificati sono a loro volta
+annidati in `<BasicSignatureConstraints>` → `<SigningCertificate>` (il
+certificato del firmatario) e `<CACertificate>` (gli emittenti della catena),
+più `<SignedAttributes>` per gli attributi firmati (es. `SigningTime`).
+
+#### Forme dei vincoli
+
+- **Vincolo semplice** — solo `Level`:
+  ```xml
+  <SignatureIntact Level="FAIL" />
+  ```
+- **Vincolo con elenco di valori** — uno o più `<Id>` ammessi:
+  ```xml
+  <AcceptableContainerTypes Level="FAIL">
+      <Id>ASiC-S</Id>
+      <Id>ASiC-E</Id>
+  </AcceptableContainerTypes>
+  ```
+- **Vincolo temporale** — con `Unit` e `Value`:
+  ```xml
+  <RevocationFreshness Level="IGNORE" Unit="DAYS" Value="0" />
+  <TLFreshness Level="WARN" Unit="HOURS" Value="6" />
+  ```
+- **Sezione `<Cryptographic>`** — algoritmi di cifratura/digest ammessi,
+  dimensioni minime di chiave e date di scadenza (`<AlgoExpirationDate>`), per
+  rifiutare crittografia obsoleta (es. SHA-1, RSA-1024 oltre una certa data).
+
+#### Esempio minimale commentato
+
+```xml
+<ConstraintsParameters Name="esempio minimale"
+    xmlns="http://dss.esig.europa.eu/validation/policy">
+  <!-- Solo container ASiC-E ammessi -->
+  <ContainerConstraints>
+    <AcceptableContainerTypes Level="FAIL">
+      <Id>ASiC-E</Id>
+    </AcceptableContainerTypes>
+  </ContainerConstraints>
+  <SignatureConstraints>
+    <AcceptableFormats Level="FAIL">
+      <Id>*</Id> <!-- qualunque formato di firma -->
+    </AcceptableFormats>
+    <BasicSignatureConstraints>
+      <SignatureIntact Level="FAIL" />          <!-- la firma deve essere integra -->
+      <ProspectiveCertificateChain Level="FAIL" /> <!-- catena verso una TL -->
+      <SigningCertificate>
+        <NotExpired Level="WARN" />             <!-- non bloccante se scaduto -->
+        <NotRevoked Level="FAIL" />
+        <RevocationDataAvailable Level="IGNORE" /> <!-- non richiedere revoca -->
+      </SigningCertificate>
+    </BasicSignatureConstraints>
+  </SignatureConstraints>
+  <Cryptographic Level="FAIL">
+    <AcceptableDigestAlgo>
+      <Algo>SHA256</Algo>
+      <Algo>SHA512</Algo>
+    </AcceptableDigestAlgo>
+  </Cryptographic>
+  <Model Value="SHELL" />
+</ConstraintsParameters>
+```
+
+> Differenza fra i preset: `BASIC`, `STANDARD` e `STRICT` condividono la stessa
+> struttura ma si distinguono per i `Level` assegnati ai singoli vincoli —
+> `STRICT` promuove a `FAIL` controlli che `BASIC` lascia a `WARN`/`IGNORE`.
+> Per i dettagli completi della grammatica fare riferimento alla documentazione
+> ufficiale DSS (*Validation policy* / XSD `policy.xsd`).
 
 ### Gestione dei profili (API)
 

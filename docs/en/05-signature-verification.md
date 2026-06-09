@@ -4,6 +4,7 @@
 
 - [4.1 Introduction](#41-introduction)
 - [4.2 Validation profiles](#42-validation-profiles)
+  - [Policy XML format](#policy-xml-format)
 - [4.3 Synchronous verification API](#43-synchronous-verification-api)
 - [4.4 Asynchronous verification API](#44-asynchronous-verification-api)
 
@@ -67,6 +68,118 @@ are evaluated.
 
 At startup, if no profile exists, the **STANDARD** profile is seeded
 (`isDefault = true`).
+
+### Policy XML format
+
+The policy is an XML document in the **DSS namespace**
+`http://dss.esig.europa.eu/validation/policy`, with root
+`<ConstraintsParameters>`. It is the same format used by the DSS library (see
+*DSS — Validation policy*); the files `policy/BASIC.xml`, `policy/STANDARD.xml`
+and `policy/STRICT.xml` are complete examples bundled with the service.
+
+#### The key concept: the `Level` attribute
+
+Almost every constraint carries a `Level` attribute that sets its severity. It
+determines **how** a failed check affects the outcome (`indication` /
+`subIndication`):
+
+| `Level` | Meaning | Effect on the outcome |
+|---------|---------|-----------------------|
+| `FAIL` | Mandatory constraint | If not met → `TOTAL_FAILED` / `INDETERMINATE` |
+| `WARN` | Warning | Does not block the outcome; reported in the report |
+| `INFORM` | Informative | Information only in the report |
+| `IGNORE` | Disabled | The check is not executed |
+
+Making a profile stricter means raising the `Level` of some constraints
+(e.g. `WARN` → `FAIL`); relaxing it means lowering them (e.g. `FAIL` →
+`IGNORE`). That is exactly what the [on-the-fly overrides](#on-the-fly-overrides)
+do, selectively driving some constraints to `IGNORE`.
+
+#### Document structure
+
+Constraints are grouped into thematic sections, evaluated by DSS during the
+various validation phases:
+
+| Section | Constraints on |
+|---------|----------------|
+| `<ContainerConstraints>` | ASiC-S / ASiC-E containers (accepted types, manifest, signed files) |
+| `<PDFAConstraints>` | PDF/A compliance (for PAdES) |
+| `<SignatureConstraints>` | The signature and its certificate chain (main block) |
+| `<CounterSignatureConstraints>` | Counter-signatures, if any |
+| `<Timestamp>` | Timestamps (TSA) |
+| `<Revocation>` | Revocation data (CRL / OCSP) |
+| `<EvidenceRecord>` | Evidence records (RFC 4998 / 6283) |
+| `<Cryptographic>` | Accepted algorithms and key sizes + expiration |
+| `<Model Value="…"/>` | Validation model: `SHELL`, `CHAIN` or `HYBRID` |
+| `<eIDAS>` | Trusted List constraints (freshness, signature, TL version) |
+
+Inside `<SignatureConstraints>` the certificate checks are in turn nested under
+`<BasicSignatureConstraints>` → `<SigningCertificate>` (the signer's
+certificate) and `<CACertificate>` (the chain issuers), plus
+`<SignedAttributes>` for the signed attributes (e.g. `SigningTime`).
+
+#### Constraint shapes
+
+- **Simple constraint** — only `Level`:
+  ```xml
+  <SignatureIntact Level="FAIL" />
+  ```
+- **Constraint with a list of values** — one or more accepted `<Id>`:
+  ```xml
+  <AcceptableContainerTypes Level="FAIL">
+      <Id>ASiC-S</Id>
+      <Id>ASiC-E</Id>
+  </AcceptableContainerTypes>
+  ```
+- **Time-based constraint** — with `Unit` and `Value`:
+  ```xml
+  <RevocationFreshness Level="IGNORE" Unit="DAYS" Value="0" />
+  <TLFreshness Level="WARN" Unit="HOURS" Value="6" />
+  ```
+- **The `<Cryptographic>` section** — accepted encryption/digest algorithms,
+  minimum key sizes and expiration dates (`<AlgoExpirationDate>`), used to
+  reject obsolete cryptography (e.g. SHA-1, RSA-1024 past a given date).
+
+#### Minimal commented example
+
+```xml
+<ConstraintsParameters Name="minimal example"
+    xmlns="http://dss.esig.europa.eu/validation/policy">
+  <!-- Only ASiC-E containers allowed -->
+  <ContainerConstraints>
+    <AcceptableContainerTypes Level="FAIL">
+      <Id>ASiC-E</Id>
+    </AcceptableContainerTypes>
+  </ContainerConstraints>
+  <SignatureConstraints>
+    <AcceptableFormats Level="FAIL">
+      <Id>*</Id> <!-- any signature format -->
+    </AcceptableFormats>
+    <BasicSignatureConstraints>
+      <SignatureIntact Level="FAIL" />          <!-- the signature must be intact -->
+      <ProspectiveCertificateChain Level="FAIL" /> <!-- chain up to a TL -->
+      <SigningCertificate>
+        <NotExpired Level="WARN" />             <!-- non-blocking if expired -->
+        <NotRevoked Level="FAIL" />
+        <RevocationDataAvailable Level="IGNORE" /> <!-- do not require revocation -->
+      </SigningCertificate>
+    </BasicSignatureConstraints>
+  </SignatureConstraints>
+  <Cryptographic Level="FAIL">
+    <AcceptableDigestAlgo>
+      <Algo>SHA256</Algo>
+      <Algo>SHA512</Algo>
+    </AcceptableDigestAlgo>
+  </Cryptographic>
+  <Model Value="SHELL" />
+</ConstraintsParameters>
+```
+
+> Difference between presets: `BASIC`, `STANDARD` and `STRICT` share the same
+> structure but differ in the `Level` assigned to individual constraints —
+> `STRICT` promotes to `FAIL` checks that `BASIC` leaves at `WARN`/`IGNORE`.
+> For the full grammar refer to the official DSS documentation
+> (*Validation policy* / the `policy.xsd` XSD).
 
 ### Profile management (API)
 
