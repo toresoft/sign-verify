@@ -62,3 +62,7 @@ app:
     non-retryable-statuses: 400,401,403,404,410
     worker:
       poll-interval: PT30S
+
+# Sentry must be fully inert during tests (no network calls, no background threads)
+sentry:
+  dsn: ""

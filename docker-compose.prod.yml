@@ -18,6 +18,10 @@ services:
       APP_SECRET_MASTER_KEY: ${APP_SECRET_MASTER_KEY}
       APP_SECURITY_OAUTH_ISSUER_URI: ${APP_SECURITY_OAUTH_ISSUER_URI}
       APP_OJ_KEYSTORE_PASSWORD: ${APP_OJ_KEYSTORE_PASSWORD}
+      # --- Observability (optional) ---
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-}
     ports:
       - "8080:8080"
     # --- Hardening ---

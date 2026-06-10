@@ -124,3 +124,20 @@ logging:
   level:
     eu.europa.esig: WARN
     org.toresoft.signverify: INFO
+
+# Sentry error tracking (optional — leave SENTRY_DSN empty to disable)
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${SENTRY_ENVIRONMENT:development}
+  release: ${SENTRY_RELEASE:unknown}
+  send-default-pii: false
+  exception-resolver-order: -2147483647
+  # Expected client-error exceptions must not create Sentry issues —
+  # they are part of normal API operation and would only consume quota.
+  ignored-exceptions-for-type:
+    - org.toresoft.signverify.domain.exception.AppException
+    - org.springframework.web.bind.MethodArgumentNotValidException
+    - org.springframework.http.converter.HttpMessageNotReadableException
+    - org.springframework.web.multipart.MaxUploadSizeExceededException
+    - org.springframework.security.access.AccessDeniedException
+    - org.springframework.security.core.AuthenticationException

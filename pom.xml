@@ -35,6 +35,7 @@
         <openapi-generator.version>7.10.0</openapi-generator.version>
         <spotless.version>2.44.0</spotless.version>
         <jacoco.version>0.8.12</jacoco.version>
+        <sentry.version>8.16.0</sentry.version>
     </properties>
 
     <dependencyManagement>
@@ -50,6 +51,13 @@
                 <groupId>org.testcontainers</groupId>
                 <artifactId>testcontainers-bom</artifactId>
                 <version>${testcontainers.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.sentry</groupId>
+                <artifactId>sentry-bom</artifactId>
+                <version>${sentry.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -225,6 +233,15 @@
             <groupId>net.logstash.logback</groupId>
             <artifactId>logstash-logback-encoder</artifactId>
             <version>7.4</version>
+        </dependency>
+        <!-- Sentry (optional — empty DSN = no-op) -->
+        <dependency>
+            <groupId>io.sentry</groupId>
+            <artifactId>sentry-spring-boot-starter-jakarta</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.sentry</groupId>
+            <artifactId>sentry-logback</artifactId>
         </dependency>
 
         <!-- OpenAPI runtime -->
