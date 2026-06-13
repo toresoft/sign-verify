@@ -66,6 +66,9 @@ class ValidationWorkerTest {
         new ValidationWorker(
             repo, storage, profileService, applier, validator, om, registry, MAX_PICKUP_ATTEMPTS);
     lenient().when(registry.circuitBreaker("dssValidator")).thenReturn(circuit);
+    // By default the worker wins the atomic claim; tests that exercise the lost-race / not-pending
+    // path override this with 0.
+    lenient().when(repo.claimForProcessing(any(), any())).thenReturn(1);
   }
 
   // ---------------------------------------------------------------------
@@ -163,6 +166,7 @@ class ValidationWorkerTest {
   @Test
   void process_nonExistentJob_isNoOp() {
     UUID id = UUID.randomUUID();
+    when(repo.claimForProcessing(eq(id), any())).thenReturn(1);
     when(repo.findById(id)).thenReturn(Optional.empty());
 
     worker.process(id);
@@ -172,13 +176,14 @@ class ValidationWorkerTest {
   }
 
   @Test
-  void process_nonPendingJob_isNoOp() {
-    ValidationJob job = newPendingJob();
-    job.setStatus(JobStatus.RUNNING);
-    when(repo.findById(job.getId())).thenReturn(Optional.of(job));
+  void process_lostClaim_isNoOp() {
+    UUID id = UUID.randomUUID();
+    // Another instance already claimed the job (PENDING -> RUNNING): claim affects 0 rows.
+    when(repo.claimForProcessing(eq(id), any())).thenReturn(0);
 
-    worker.process(job.getId());
+    worker.process(id);
 
+    verify(repo, never()).findById(any());
     verify(repo, never()).save(any());
     verify(validator, never()).validate(any());
   }
@@ -217,7 +222,10 @@ class ValidationWorkerTest {
   @Test
   void process_dssUnavailable_revertsToPending() {
     ValidationJob job = newPendingJob();
-    job.setPickupAttempts(0);
+    // Post-claim state (the atomic claim already incremented the counter and set startedAt); still
+    // below the cap.
+    job.setPickupAttempts(1);
+    job.setStartedAt(java.time.Instant.now());
     when(repo.findById(job.getId())).thenReturn(Optional.of(job));
     when(storage.read(anyString())).thenReturn(new byte[] {0});
     when(profileService.getOrDefault(PROFILE_ID)).thenReturn(profile());
@@ -230,12 +238,15 @@ class ValidationWorkerTest {
     assertThat(last.getStatus()).isEqualTo(JobStatus.PENDING);
     assertThat(last.getErrorMessage()).isNull();
     assertThat(last.getCompletedAt()).isNull();
+    // The in-progress marker must be cleared so the requeued job is not seen as running.
+    assertThat(last.getStartedAt()).isNull();
   }
 
   @Test
   void process_dssUnavailableMaxAttempts_marksFailed() {
     ValidationJob job = newPendingJob();
-    job.setPickupAttempts(2);
+    // Post-claim state: the claim brought the counter up to the cap, so no further retry.
+    job.setPickupAttempts(MAX_PICKUP_ATTEMPTS);
     when(repo.findById(job.getId())).thenReturn(Optional.of(job));
     when(storage.read(anyString())).thenReturn(new byte[] {0});
     when(profileService.getOrDefault(PROFILE_ID)).thenReturn(profile());

@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.toresoft.signverify.application.TslService;
+import org.toresoft.signverify.domain.exception.AppException;
 import org.toresoft.signverify.domain.model.RefreshTrigger;
 import org.toresoft.signverify.domain.model.TrustedCertificate;
 import org.toresoft.signverify.security.Principal;
@@ -16,6 +17,8 @@ import org.toresoft.signverify.security.Principal;
 @RestController
 @RequestMapping("/api/v1/tsl")
 public class TslController {
+
+  private static final int MAX_PAGE_SIZE = 100;
 
   private final TslService tslService;
 
@@ -62,6 +65,13 @@ public class TslController {
       @RequestParam(defaultValue = "false") boolean includeRemoved,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "50") int size) {
+
+    if (page < 0) {
+      throw AppException.badRequest("page must be >= 0");
+    }
+    if (size < 1 || size > MAX_PAGE_SIZE) {
+      throw AppException.badRequest("size must be between 1 and " + MAX_PAGE_SIZE);
+    }
 
     Page<TrustedCertificate> result =
         tslService.listCertificates(

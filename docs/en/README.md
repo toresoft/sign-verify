@@ -14,6 +14,7 @@ library and the **EU Trusted Lists** (LOTL/TSL).
 |---|-------|------|
 | 1 | Build and configuration | [01-build-configuration.md](01-build-configuration.md) |
 | 1b | Docker and configuration | [02-docker.md](02-docker.md) |
+| 1c | **Docker operational guide (step-by-step)** | [02b-docker-operational-guide.md](02b-docker-operational-guide.md) |
 | 2 | Authentication (overview, API keys, OAuth) | [03-authentication.md](03-authentication.md) |
 | 3 | Trusted Certificates API (TSL) | [04-trusted-certificates.md](04-trusted-certificates.md) |
 | 4 | Signature verification: intro, profiles, sync, async | [05-signature-verification.md](05-signature-verification.md) |

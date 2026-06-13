@@ -7,6 +7,8 @@ Il servizio viene distribuito come immagine Docker
 (registry: Docker Hub). L'immagine è costruita con un `Dockerfile` multi-stage e
 una runtime **Alpine** non-root e hardenizzata.
 
+> **📘 Guida passo-passo?** Vedi [Guida operativa Docker](02b-guida-operativa-docker.md) per un percorso guidato dalla prima esecuzione alla produzione.
+
 ```bash
 docker pull toresoft/sign-verify:latest
 ```

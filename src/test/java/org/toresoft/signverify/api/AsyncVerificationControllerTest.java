@@ -201,7 +201,7 @@ class AsyncVerificationControllerTest {
         ArgumentCaptor.forClass(AsyncJobService.SubmitRequest.class);
     verify(asyncService).submit(captor.capture(), eq(owner));
     assertThat(captor.getValue().reports())
-        .containsExactlyInAnyOrder(ReportType.SIMPLE, ReportType.DIAGNOSTIC);
+        .containsExactlyInAnyOrder(ReportType.SIMPLE, ReportType.ETSI);
   }
 
   @Test

@@ -129,13 +129,19 @@ logging:
 sentry:
   dsn: ${SENTRY_DSN:}
   environment: ${SENTRY_ENVIRONMENT:development}
-  release: ${SENTRY_RELEASE:unknown}
+  release: ${SENTRY_RELEASE:}  # empty -> SDK auto-detects; set to the git tag for real release tracking
+  breadcrumb-level: ${SENTRY_BREADCRUMB_LEVEL:INFO}  # min log level captured as Sentry breadcrumbs (logback-spring.xml)
   send-default-pii: false
   exception-resolver-order: -2147483647  # Ordered.HIGHEST_PRECEDENCE — capture before GlobalExceptionHandler
   # Expected client-error exceptions must not create Sentry issues —
   # they are part of normal API operation and would only consume quota.
+  # NOTE: AppException is intentionally NOT listed here — it carries an HTTP status and its 5xx
+  # variants are real availability incidents. It is filtered by status in the SentryConfiguration
+  # @Bean (drop < 500, report >= 500); blanket-ignoring it would blind Sentry to 503s.
+  # That @Bean lives in this app's component scan, so it is present whenever Sentry can send (the
+  # starter is on the classpath and applies it); when Sentry is disabled (empty DSN, e.g. tests)
+  # nothing is sent at all, so a missing filter cannot create false 4xx issues.
   ignored-exceptions-for-type:
-    - org.toresoft.signverify.domain.exception.AppException
     - org.springframework.web.bind.MethodArgumentNotValidException
     - org.springframework.http.converter.HttpMessageNotReadableException
     - org.springframework.web.multipart.MaxUploadSizeExceededException

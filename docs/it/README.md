@@ -14,6 +14,7 @@ Guida operativa al servizio **sign-verify**: verifica di firme digitali eIDAS
 |---|-----------|------|
 | 1 | Compilazione e configurazione | [01-build-configurazione.md](01-build-configurazione.md) |
 | 1b | Docker e configurazione | [02-docker.md](02-docker.md) |
+| 1c | **Guida operativa Docker (passo-passo)** | [02b-guida-operativa-docker.md](02b-guida-operativa-docker.md) |
 | 2 | Autenticazione (panoramica, API key, OAuth) | [03-autenticazione.md](03-autenticazione.md) |
 | 3 | API Trusted Certificates (TSL) | [04-trusted-certificates.md](04-trusted-certificates.md) |
 | 4 | Verifica firme: introduzione, profili, sync, async | [05-verifica-firme.md](05-verifica-firme.md) |

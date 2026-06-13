@@ -53,8 +53,7 @@ public class AsyncVerificationController {
             ? null
             : om.writeValueAsString(meta.get("profileOverrides"));
     @SuppressWarnings("unchecked")
-    List<String> reports =
-        (List<String>) meta.getOrDefault("reports", List.of("simple", "diagnostic"));
+    List<String> reports = (List<String>) meta.getOrDefault("reports", List.of("simple", "etsi"));
     Set<ReportType> reportTypes = EnumSet.noneOf(ReportType.class);
     for (String r : reports) {
       try {

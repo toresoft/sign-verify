@@ -1,5 +1,6 @@
 package org.toresoft.signverify.application;
 
+import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Set;
@@ -90,10 +91,15 @@ public class AsyncJobService {
           "per-principal async backpressure",
           "per-principal async backpressure");
     }
+    if (req.callbackUrl() != null) {
+      validateCallbackUrl(req.callbackUrl());
+      if (req.callbackSecret() == null || req.callbackSecret().isBlank()) {
+        throw AppException.badRequest("callbackSecret is required when callbackUrl is provided");
+      }
+    }
 
     UUID jobId = UUID.randomUUID();
-    String docPath = "storage/" + jobId;
-    storage.storeInput(jobId.toString(), req.filename(), req.file());
+    String docPath = storage.storeInput(jobId.toString(), req.filename(), req.file());
 
     ValidationJob j = new ValidationJob();
     j.setId(jobId);
@@ -117,6 +123,21 @@ public class AsyncJobService {
     j.setRequestedByPrincipalId(actor.id());
     repo.save(j);
     return jobId;
+  }
+
+  /** Fail fast on malformed callback URLs at submission instead of only at dispatch time. */
+  private static void validateCallbackUrl(String url) {
+    URI uri;
+    try {
+      uri = URI.create(url);
+    } catch (IllegalArgumentException e) {
+      throw AppException.badRequest("callbackUrl is not a valid URL");
+    }
+    String scheme = uri.getScheme();
+    boolean httpScheme = "http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme);
+    if (!httpScheme || uri.getHost() == null) {
+      throw AppException.badRequest("callbackUrl must be an absolute http(s) URL");
+    }
   }
 
   private static String joinReports(Set<ReportType> reports) {

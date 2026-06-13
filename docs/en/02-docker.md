@@ -7,6 +7,8 @@ The service ships as the Docker image
 (registry: Docker Hub). The image is built with a multi-stage `Dockerfile` and a
 hardened, non-root **Alpine** runtime.
 
+> **📘 Want a walkthrough?** See [Docker operational guide](02b-docker-operational-guide.md) for a guided path from first run to production.
+
 ```bash
 docker pull toresoft/sign-verify:latest
 ```

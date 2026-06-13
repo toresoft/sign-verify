@@ -7,7 +7,9 @@ name: sign-verify
 
 services:
   app:
-    image: toresoft/sign-verify:latest
+    # Pin an immutable version tag in production for reproducible deploys / unambiguous rollbacks.
+    # Set SIGN_VERIFY_VERSION (e.g. 1.0.0) in the .env file; defaults to latest only as a fallback.
+    image: toresoft/sign-verify:${SIGN_VERIFY_VERSION:-latest}
     restart: unless-stopped
     environment:
       # --- Database (external/managed) ---
@@ -40,7 +42,7 @@ services:
           memory: 1g
           cpus: "2.0"
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health/readiness"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/actuator/health/readiness"]
       interval: 30s
       timeout: 5s
       retries: 3

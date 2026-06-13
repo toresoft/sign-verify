@@ -2,6 +2,7 @@
 <configuration>
   <springProperty name="appName" source="spring.application.name"/>
   <springProperty name="sentryDsn" source="sentry.dsn" defaultValue=""/>
+  <springProperty name="sentryBreadcrumbLevel" source="sentry.breadcrumb-level" defaultValue="INFO"/>
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
     <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
       <providers>
@@ -25,8 +26,10 @@
     </options>
     <!-- Only ERROR+ log events create Sentry issues -->
     <minimumEventLevel>ERROR</minimumEventLevel>
-    <!-- INFO+ log events become Sentry breadcrumbs for context -->
-    <minimumBreadcrumbLevel>INFO</minimumBreadcrumbLevel>
+    <!-- Log events at/above this level become Sentry breadcrumbs for context. Resolved via Spring
+         (springProperty above) so both the SENTRY_BREADCRUMB_LEVEL env var and the
+         sentry.breadcrumb-level Spring property work; defaults to INFO. Use WARN to reduce volume. -->
+    <minimumBreadcrumbLevel>${sentryBreadcrumbLevel}</minimumBreadcrumbLevel>
   </appender>
   <root level="INFO">
     <appender-ref ref="STDOUT"/>

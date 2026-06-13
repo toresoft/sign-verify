@@ -45,4 +45,5 @@ build/
 
 ### JetBrains (additional) ###
 .idea/gbrowsers.xml
+.idea/git_toolbox_prj.xml
 docs/superpowers

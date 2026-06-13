@@ -319,8 +319,39 @@
             </plugin>
 
             <plugin>
+                <!-- Exposes each dependency's resolved jar path as a ${groupId:artifactId:jar}
+                     property so Surefire can reference the Mockito agent jar below. -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>resolve-agent-paths</id>
+                        <phase>initialize</phase>
+                        <goals><goal>properties</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- Load Mockito's inline mock-maker as an explicit agent instead of relying
+                         on self-attach, which is deprecated and disallowed on recent JDKs.
+                         @{argLine} preserves the JaCoCo-injected argLine. -->
+                    <argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar}</argLine>
+                </configuration>
+            </plugin>
+
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <!-- Same Mockito agent wiring as Surefire: integration tests using
+                         @MockitoBean also need the inline mock-maker loaded explicitly.
+                         @{argLine} preserves the JaCoCo-injected argLine. -->
+                    <argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar}</argLine>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>

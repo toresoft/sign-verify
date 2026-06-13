@@ -93,17 +93,20 @@ package:docker:
   variables:
     DOCKER_TLS_CERTDIR: ""
   before_script:
-    # Strip stray whitespace from credentials, then diagnose before logging in.
-    # The diagnostics never print secret values — only lengths, charset validity and
-    # the Docker Hub API's own (clear) error message, which docker login hides behind
-    # the generic "malformed HTTP Authorization header".
+    # Strip stray whitespace from credentials, then log in.
+    # Credential metadata (lengths, charset validity) leaks entropy about the secrets and is
+    # readable by every project member in the job log, so it is gated behind CI_DEBUG and off by
+    # default. The Docker Hub API's own (clear) error message — which docker login hides behind the
+    # generic "malformed HTTP Authorization header" — is still surfaced unconditionally below.
     - |
       apk add --no-cache curl >/dev/null 2>&1 || true
       U="$(printf %s "$DOCKERHUB_USERNAME" | tr -d '[:space:]')"
       T="$(printf %s "$DOCKERHUB_TOKEN" | tr -d '[:space:]')"
-      echo "diag: user_len=${#U} token_len=${#T}"
-      printf %s "$U" | LC_ALL=C grep -qE '^[A-Za-z0-9._-]+$' && echo "diag: user_charset=clean" || echo "diag: user_charset=HAS_UNEXPECTED_CHARS"
-      printf %s "$T" | LC_ALL=C grep -qE '^[A-Za-z0-9_-]+$' && echo "diag: token_charset=clean" || echo "diag: token_charset=HAS_UNEXPECTED_CHARS"
+      if [ -n "$CI_DEBUG" ]; then
+        echo "diag: user_len=${#U} token_len=${#T}"
+        printf %s "$U" | LC_ALL=C grep -qE '^[A-Za-z0-9._-]+$' && echo "diag: user_charset=clean" || echo "diag: user_charset=HAS_UNEXPECTED_CHARS"
+        printf %s "$T" | LC_ALL=C grep -qE '^[A-Za-z0-9_-]+$' && echo "diag: token_charset=clean" || echo "diag: token_charset=HAS_UNEXPECTED_CHARS"
+      fi
       if [ -z "$U" ] || [ -z "$T" ]; then echo "FATAL: credentials empty (check CI/CD Variables: Protected vs ref, scope, type=Variable)"; exit 1; fi
       code=$(curl -s -o /tmp/login.json -w '%{http_code}' -H 'Content-Type: application/json' -d "{\"username\":\"$U\",\"password\":\"$T\"}" https://hub.docker.com/v2/users/login/)
       echo "diag: hub_api_login_http=$code"
@@ -123,11 +126,13 @@ package:docker:
 # package  → push DOCKERHUB.md as the Docker Hub repository description         #
 #   Updates the registry overview (full_description) shown on the image page.  #
 #   Reuses DOCKERHUB_USERNAME / DOCKERHUB_TOKEN. Runs on tag only.               #
+#   needs: ["test:verify"] → gated behind the tests so a failing build never     #
+#   publishes an updated Docker Hub description.                                  #
 # --------------------------------------------------------------------------- #
 package:dockerhub-readme:
   stage: package
   image: alpine:3
-  needs: []
+  needs: ["test:verify"]
   rules:
     - if: '$CI_COMMIT_TAG'
       changes:
@@ -166,7 +171,9 @@ security:image-scan:
     TRIVY_USERNAME: "$DOCKERHUB_USERNAME"
     TRIVY_PASSWORD: "$DOCKERHUB_TOKEN"
   script:
-    - trivy image --no-progress --severity HIGH,CRITICAL --exit-code 0 "$IMAGE_NAME:$CI_COMMIT_SHORT_SHA"
+    # --exit-code 1 makes the job fail when HIGH/CRITICAL CVEs are found; allow_failure keeps it
+    # non-blocking but surfaces it as a visible "allowed failure" instead of a silent pass.
+    - trivy image --no-progress --severity HIGH,CRITICAL --exit-code 1 "$IMAGE_NAME:$CI_COMMIT_SHORT_SHA"
   allow_failure: true
 
 security:dependency-scan:

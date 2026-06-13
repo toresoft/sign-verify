@@ -67,12 +67,12 @@ public class ValidationWorker {
 
   @Transactional
   public void process(UUID id) {
+    // Atomic claim: only the worker whose conditional update affects a row proceeds. In a
+    // multi-instance deployment this guarantees a single owner per job, avoiding duplicate
+    // validation and duplicate callbacks. The status flip and attempt increment happen in the DB.
+    if (repo.claimForProcessing(id, Instant.now()) == 0) return;
     ValidationJob job = repo.findById(id).orElse(null);
-    if (job == null || job.getStatus() != JobStatus.PENDING) return;
-    job.setStatus(JobStatus.RUNNING);
-    job.setStartedAt(Instant.now());
-    job.setPickupAttempts(job.getPickupAttempts() + 1);
-    repo.save(job);
+    if (job == null) return;
 
     try {
       byte[] file = storage.read(job.getDocumentPath());
@@ -108,6 +108,9 @@ public class ValidationWorker {
       repo.save(job);
     } catch (AppException ae) {
       if ("dss.unavailable".equals(ae.getCode()) && job.getPickupAttempts() < maxPickupAttempts) {
+        // Reset the in-progress marker set by the claim so the requeued job is not mistaken for a
+        // running one by startedAt-based "in progress" queries / SLA metrics.
+        job.setStartedAt(null);
         job.setStatus(JobStatus.PENDING);
         repo.save(job);
         return;

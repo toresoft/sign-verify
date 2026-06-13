@@ -68,6 +68,8 @@ class AsyncJobServiceTest {
   void submit_createsJobWithExpectedFields() {
     var req = baseRequest();
     var profileId = req.profileId();
+    when(storage.storeInput(anyString(), anyString(), any()))
+        .thenReturn("/var/lib/sign-verify/jobs/abc/input-doc.pdf");
 
     UUID returned = service.submit(req, actor);
 
@@ -80,7 +82,7 @@ class AsyncJobServiceTest {
     assertThat(saved.getProfileId()).isEqualTo(profileId);
     assertThat(saved.getProfileOverrides()).isEqualTo("{\"k\":\"v\"}");
     assertThat(saved.getReportsRequested()).isEqualTo("simple,etsi");
-    assertThat(saved.getDocumentPath()).isEqualTo("storage/" + returned);
+    assertThat(saved.getDocumentPath()).isEqualTo("/var/lib/sign-verify/jobs/abc/input-doc.pdf");
     assertThat(saved.getDocumentFilename()).isEqualTo("doc.pdf");
     assertThat(saved.getCallbackUrl()).isEqualTo("https://callback.example/hook");
     assertThat(saved.getCallbackAlgorithm()).isEqualTo("HmacSHA256");
@@ -102,7 +104,7 @@ class AsyncJobServiceTest {
   }
 
   @Test
-  void submit_nullCallbackSecret_doesNotEncrypt() {
+  void submit_callbackUrlWithoutSecret_isRejected() {
     var req =
         new AsyncJobService.SubmitRequest(
             new byte[] {1},
@@ -111,6 +113,62 @@ class AsyncJobServiceTest {
             null,
             Set.of(ReportType.SIMPLE),
             "https://callback.example/hook",
+            null,
+            "HmacSHA256");
+
+    assertThatThrownBy(() -> service.submit(req, actor))
+        .isInstanceOf(AppException.class)
+        .satisfies(e -> assertThat(((AppException) e).getDetail()).contains("callbackSecret"));
+    verify(cipher, never()).encrypt(anyString());
+    verify(repo, never()).save(any());
+  }
+
+  @Test
+  void submit_malformedCallbackUrl_isRejected() {
+    var req =
+        new AsyncJobService.SubmitRequest(
+            new byte[] {1},
+            "doc.pdf",
+            UUID.randomUUID(),
+            null,
+            Set.of(ReportType.SIMPLE),
+            "ftp://not-http/hook",
+            "secret-123",
+            "HmacSHA256");
+
+    assertThatThrownBy(() -> service.submit(req, actor))
+        .isInstanceOf(AppException.class)
+        .satisfies(e -> assertThat(((AppException) e).getDetail()).contains("callbackUrl"));
+    verify(repo, never()).save(any());
+  }
+
+  @Test
+  void submit_callbackUrlWithBlankSecret_isRejected() {
+    var req =
+        new AsyncJobService.SubmitRequest(
+            new byte[] {1},
+            "doc.pdf",
+            UUID.randomUUID(),
+            null,
+            Set.of(ReportType.SIMPLE),
+            "https://callback.example/hook",
+            "   ",
+            "HmacSHA256");
+
+    assertThatThrownBy(() -> service.submit(req, actor)).isInstanceOf(AppException.class);
+    verify(repo, never()).save(any());
+  }
+
+  @Test
+  void submit_noCallbackUrl_nullSecret_doesNotEncrypt() {
+    var req =
+        new AsyncJobService.SubmitRequest(
+            new byte[] {1},
+            "doc.pdf",
+            UUID.randomUUID(),
+            null,
+            Set.of(ReportType.SIMPLE),
+            null,
             null,
             "HmacSHA256");
 
@@ -214,13 +272,18 @@ class AsyncJobServiceTest {
   }
 
   @Test
-  void submit_storesInputFile() {
+  void submit_storesInputFile_andPersistsReturnedPath() {
     var req = baseRequest();
     when(storage.storeInput(anyString(), anyString(), any())).thenReturn("storage/path/doc");
 
     service.submit(req, actor);
 
     verify(storage, times(1)).storeInput(anyString(), eq("doc.pdf"), eq(new byte[] {1, 2, 3}));
+    // The persisted documentPath must be the actual path returned by storage, not a synthetic
+    // "storage/<jobId>" directory (regression guard: the worker reads exactly this path).
+    ArgumentCaptor<ValidationJob> captor = ArgumentCaptor.forClass(ValidationJob.class);
+    verify(repo).save(captor.capture());
+    assertThat(captor.getValue().getDocumentPath()).isEqualTo("storage/path/doc");
   }
 
   @Test
