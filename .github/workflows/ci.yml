@@ -80,7 +80,8 @@ jobs:
   # --------------------------------------------------------------------------- #
   # package  → build & push image to Docker Hub                                  #
   #   Requires repository secrets: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN           #
-  #   Runs only on version tags and manual workflow_dispatch runs.                #
+  #   On workflow_dispatch: only :sha and :latest are pushed (no semver tag).     #
+  #   On tag pushes: semver tag + :latest are pushed.                            #
   # --------------------------------------------------------------------------- #
   package:
     runs-on: ubuntu-latest
