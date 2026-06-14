@@ -66,21 +66,26 @@ test:verify:
     # regex, which captures digits immediately before '%', ignores decimals.
     - |
       awk -F, 'NR>1{m+=$4;c+=$5} END{if(c+m>0) printf "Total coverage: %d%%\n", (c/(c+m))*100}' target/site/jacoco/jacoco.csv
-    # Diagnostic dump: print classpath and cache state on every run so the CI log
-    # always shows what JAXB / DSS jars the runner actually has, regardless of
-    # whether mvn verify succeeded.
-    - echo '=== DIAG: failsafe summary ===' || true
-    - ls -la target/failsafe-reports/ 2>&1 || true
-    - echo '=== DIAG: VerificationControllerIT txt report ===' || true
-    - cat target/failsafe-reports/org.toresoft.signverify.api.VerificationControllerIT.txt 2>&1 || echo 'no txt report'
-    - echo '=== DIAG: VerificationControllerIT xml (first 200 lines) ===' || true
-    - head -200 target/failsafe-reports/TEST-org.toresoft.signverify.api.VerificationControllerIT.xml 2>&1 || echo 'no xml report'
-    - echo '=== DIAG: cached dss-policy-jaxb jar sha1 ===' || true
-    - sha1sum .m2/repository/eu/europa/ec/joinup/sd-dss/dss-policy-jaxb/6.4/dss-policy-jaxb-6.4.jar 2>&1 || echo 'jar not in cache'
-    - echo '=== DIAG: cached jaxb-runtime jars ===' || true
-    - find .m2/repository/org/glassfish/jaxb/jaxb-runtime -name '*.jar' -not -name '*sources*' 2>&1 || true
-    - echo '=== DIAG: cached jakarta.xml.bind-api jars ===' || true
-    - find .m2/repository/jakarta/xml/bind -name '*.jar' -not -name '*sources*' 2>&1 || true
+    # Diagnostic dump. Wrapped in a block scalar + '|| true' shell semantics so:
+    # (a) GitLab's job schema sees a single string (the block scalar) instead of
+    #     N separate items containing '||', which GitLab rejects.
+    # (b) The dump always runs even when mvn verify failed, so the failsafe
+    #     report and cache state land in the CI log either way.
+    - |
+      {
+        echo '=== DIAG: failsafe summary ===' || true
+        ls -la target/failsafe-reports/ 2>&1 || true
+        echo '=== DIAG: VerificationControllerIT txt report ===' || true
+        cat target/failsafe-reports/org.toresoft.signverify.api.VerificationControllerIT.txt 2>&1 || echo 'no txt report'
+        echo '=== DIAG: VerificationControllerIT xml (first 200 lines) ===' || true
+        head -200 target/failsafe-reports/TEST-org.toresoft.signverify.api.VerificationControllerIT.xml 2>&1 || echo 'no xml report'
+        echo '=== DIAG: cached dss-policy-jaxb jar sha1 ===' || true
+        sha1sum .m2/repository/eu/europa/ec/joinup/sd-dss/dss-policy-jaxb/6.4/dss-policy-jaxb-6.4.jar 2>&1 || echo 'jar not in cache'
+        echo '=== DIAG: cached jaxb-runtime jars ===' || true
+        find .m2/repository/org/glassfish/jaxb/jaxb-runtime -name '*.jar' -not -name '*sources*' 2>&1 || true
+        echo '=== DIAG: cached jakarta.xml.bind-api jars ===' || true
+        find .m2/repository/jakarta/xml/bind -name '*.jar' -not -name '*sources*' 2>&1 || true
+      } || true
   coverage: '/Total.*?([0-9]{1,3})%/'
   artifacts:
     when: always
