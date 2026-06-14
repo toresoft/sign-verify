@@ -10,6 +10,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.toresoft.signverify.application.AsyncJobService;
+import org.toresoft.signverify.application.AuditActions;
+import org.toresoft.signverify.application.AuditService;
 import org.toresoft.signverify.domain.exception.AppException;
 import org.toresoft.signverify.domain.model.*;
 import org.toresoft.signverify.domain.port.DocumentStoragePort;
@@ -25,13 +27,19 @@ public class AsyncVerificationController {
   private final ValidationJobRepository repo;
   private final DocumentStoragePort storage;
   private final ObjectMapper om;
+  private final AuditService audit;
 
   public AsyncVerificationController(
-      AsyncJobService s, ValidationJobRepository r, DocumentStoragePort st, ObjectMapper om) {
+      AsyncJobService s,
+      ValidationJobRepository r,
+      DocumentStoragePort st,
+      ObjectMapper om,
+      AuditService audit) {
     this.asyncService = s;
     this.repo = r;
     this.storage = st;
     this.om = om;
+    this.audit = audit;
   }
 
   @PostMapping(value = "/async", consumes = "multipart/form-data")
@@ -96,7 +104,18 @@ public class AsyncVerificationController {
         actor.type() == job.getRequestedByPrincipalType()
             && actor.id().equals(job.getRequestedByPrincipalId());
     boolean isPriv = actor.role() == Role.PRIVILEGED;
-    if (!isOwner && !isPriv) throw AppException.notFound("job not found");
+    if (!isOwner && !isPriv) {
+      // The caller is neither the owner nor a privileged operator. Record the access denial
+      // as a failed audit event before the 404 so security monitoring can detect probing.
+      audit.log(
+          actor,
+          AuditActions.AUTH_DENIED,
+          "job",
+          job.getId().toString(),
+          false,
+          Map.of("reason", "not-owner"));
+      throw AppException.notFound("job not found");
+    }
 
     job.setLastAccessedAt(Instant.now());
     repo.save(job);

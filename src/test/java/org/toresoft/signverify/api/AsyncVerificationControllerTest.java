@@ -69,8 +69,12 @@ class AsyncVerificationControllerTest {
   @Autowired private ObjectMapper om;
 
   @MockBean private AsyncJobService asyncService;
+
   @MockBean private ValidationJobRepository jobRepository;
+
   @MockBean private DocumentStoragePort storage;
+
+  @MockBean private org.toresoft.signverify.application.AuditService audit;
   @MockBean private org.toresoft.signverify.persistence.ApiKeyRepository apiKeyRepository;
   @MockBean private org.toresoft.signverify.domain.port.PasswordHasherPort passwordHasher;
 

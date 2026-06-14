@@ -2,6 +2,9 @@ package org.toresoft.signverify.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -11,6 +14,7 @@ import static org.mockito.Mockito.when;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +23,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.toresoft.signverify.domain.model.JobStatus;
+import org.toresoft.signverify.domain.model.PrincipalType;
 import org.toresoft.signverify.domain.model.ValidationJob;
 import org.toresoft.signverify.domain.port.DocumentStoragePort;
 import org.toresoft.signverify.persistence.ValidationJobRepository;
@@ -41,14 +46,16 @@ class JobCleanupSchedulerTest {
 
   @Mock private ValidationJobRepository repo;
   @Mock private DocumentStoragePort storage;
+  @Mock private AuditService audit;
 
   private JobCleanupScheduler scheduler;
 
   @BeforeEach
   void setUp() {
+    org.mockito.Mockito.reset(repo, storage, audit);
     scheduler =
         new JobCleanupScheduler(
-            repo, storage, INPUT_RETENTION, RESULT_RETENTION, TOMBSTONE_RETENTION);
+            repo, storage, audit, INPUT_RETENTION, RESULT_RETENTION, TOMBSTONE_RETENTION);
   }
 
   // ---------------------------------------------------------------------
@@ -306,7 +313,63 @@ class JobCleanupSchedulerTest {
   }
 
   // ---------------------------------------------------------------------
-  // String-arg matching
+  // Audit summary
   // ---------------------------------------------------------------------
 
+  @Test
+  @SuppressWarnings("unchecked")
+  void cleanup_auditsSummaryWithPhaseCounts() {
+    // One job per phase to make the counters deterministic.
+    ValidationJob expired =
+        newJob(JobStatus.PENDING, null, Instant.now().minusSeconds(60), null, null);
+    ValidationJob inputAged =
+        newJob(
+            JobStatus.COMPLETED,
+            Instant.now().minus(INPUT_RETENTION).minusSeconds(60),
+            null,
+            null,
+            null);
+    ValidationJob tombstoneAged =
+        newJob(
+            JobStatus.COMPLETED,
+            Instant.now().minus(RESULT_RETENTION).minusSeconds(60),
+            null,
+            null,
+            CALLBACK_URL);
+    tombstoneAged.setCallbackSecretCipher("enc:cipher");
+    tombstoneAged.setProfileOverrides("{}");
+    tombstoneAged.setErrorMessage("e");
+    tombstoneAged.setLastCallbackError("cb");
+    ValidationJob deletedAged =
+        newJob(
+            JobStatus.DELETED,
+            null,
+            null,
+            Instant.now().minus(TOMBSTONE_RETENTION).minusSeconds(60),
+            null);
+    when(repo.findAll()).thenReturn(List.of(expired, inputAged, tombstoneAged, deletedAged));
+
+    scheduler.cleanup();
+
+    ArgumentCaptor<Map<String, Object>> details = ArgumentCaptor.forClass(Map.class);
+    verify(audit, times(1))
+        .log(
+            eq(PrincipalType.SYSTEM),
+            anyString(),
+            eq(AuditActions.JOB_CLEANUP),
+            eq("job"),
+            isNull(),
+            eq(true),
+            details.capture());
+    Map<String, Object> d = details.getValue();
+    // Note: the "input retention" phase matches both `inputAged` and `tombstoneAged` (both are
+    // terminal with completedAt older than input retention); the tombstone phase runs over the
+    // same data set in the next loop. The point of this test is that the cleanup pass records
+    // a single summary event with the right per-phase counters — exact values are derived from
+    // the scheduler's phase logic and are covered by the dedicated per-phase tests above.
+    assertThat(d).containsEntry("expired", 1);
+    assertThat(d.get("inputDeleted")).isNotNull();
+    assertThat((int) d.get("inputDeleted")).isGreaterThanOrEqualTo(1);
+    assertThat(d).containsEntry("tombstoned", 1).containsEntry("rowsDeleted", 1);
+  }
 }

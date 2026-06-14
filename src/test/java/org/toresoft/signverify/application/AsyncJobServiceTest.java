@@ -38,6 +38,7 @@ class AsyncJobServiceTest {
   @Mock private ValidationJobRepository repo;
   @Mock private DocumentStoragePort storage;
   @Mock private SecretCipherPort cipher;
+  @Mock private AuditService audit;
 
   private AsyncJobService service;
   private final Principal actor =
@@ -45,7 +46,7 @@ class AsyncJobServiceTest {
 
   @BeforeEach
   void setUp() {
-    service = new AsyncJobService(repo, storage, cipher, 5, 10, Duration.ofHours(1));
+    service = new AsyncJobService(repo, storage, cipher, audit, 5, 10, Duration.ofHours(1));
     lenient().when(repo.countActiveGlobal()).thenReturn(0L);
     lenient()
         .when(repo.countActiveByPrincipal(any(PrincipalType.class), anyString()))
@@ -314,5 +315,27 @@ class AsyncJobServiceTest {
     ArgumentCaptor<ValidationJob> captor = ArgumentCaptor.forClass(ValidationJob.class);
     verify(repo).save(captor.capture());
     assertThat(captor.getValue().getId()).isEqualTo(id);
+  }
+
+  @Test
+  void submit_auditsSuccessfulSubmission() {
+    var req = baseRequest();
+
+    UUID id = service.submit(req, actor);
+
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<java.util.Map<String, Object>> details =
+        ArgumentCaptor.forClass(java.util.Map.class);
+    verify(audit, times(1))
+        .log(
+            eq(actor),
+            eq(AuditActions.JOB_SUBMIT),
+            eq("job"),
+            eq(id.toString()),
+            eq(true),
+            details.capture());
+    assertThat(details.getValue())
+        .containsEntry("filename", "doc.pdf")
+        .containsEntry("profileId", req.profileId().toString());
   }
 }

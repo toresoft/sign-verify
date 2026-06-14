@@ -20,11 +20,12 @@ import org.toresoft.signverify.domain.exception.AppException;
 class TslControllerTest {
 
   @Mock private TslService tslService;
+  @Mock private org.toresoft.signverify.application.AuditService audit;
 
   private static final int MAX_SIZE = 100;
 
   private Object listWith(int page, int size) {
-    TslController controller = new TslController(tslService);
+    TslController controller = new TslController(tslService, audit);
     return controller.list(
         null, null, null, null, null, null, null, null, null, null, null, null, false, page, size);
   }

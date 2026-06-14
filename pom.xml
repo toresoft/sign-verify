@@ -300,6 +300,13 @@
             <version>${swagger-validator.version}</version>
             <scope>test</scope>
         </dependency>
+        <!-- Awaitility: poll-and-wait for asynchronous state in ITs (e.g. audit rows written
+             by the auditExecutor worker thread). The version is managed by Spring Boot's parent. -->
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

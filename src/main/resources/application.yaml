@@ -88,6 +88,10 @@ app:
     tombstone-retention: 30d
     cleanup:
       cron: "0 30 3 * * *"
+  audit:
+    # Master switch for audit writes. When false AuditService is a no-op (no rows written,
+    # no executor required). Useful for load tests and to silence the table in dev if needed.
+    enabled: ${APP_AUDIT_ENABLED:true}
   callback:
     max-attempts: 3
     # Comma-separated form so @Value("${...}") List<...> bindings resolve (YAML

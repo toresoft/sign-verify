@@ -8,6 +8,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.toresoft.signverify.application.AuditActions;
+import org.toresoft.signverify.application.AuditService;
 import org.toresoft.signverify.application.TslService;
 import org.toresoft.signverify.domain.exception.AppException;
 import org.toresoft.signverify.domain.model.RefreshTrigger;
@@ -21,9 +23,11 @@ public class TslController {
   private static final int MAX_PAGE_SIZE = 100;
 
   private final TslService tslService;
+  private final AuditService audit;
 
-  public TslController(TslService tslService) {
+  public TslController(TslService tslService, AuditService audit) {
     this.tslService = tslService;
+    this.audit = audit;
   }
 
   @GetMapping("/status")
@@ -44,6 +48,17 @@ public class TslController {
                 .getAuthentication()
                 .getPrincipal();
     var r = tslService.refresh(RefreshTrigger.MANUAL, actor);
+
+    // Record the manual refresh so operators can correlate with the request and distinguish it
+    // from the scheduled / startup refresh entries recorded by TslRefreshScheduler.
+    audit.log(
+        actor,
+        AuditActions.TSL_REFRESH,
+        "tsl",
+        r.getId().toString(),
+        true,
+        Map.of("trigger", RefreshTrigger.MANUAL.name().toLowerCase()));
+
     return ResponseEntity.accepted()
         .body(Map.of("refreshId", r.getId(), "status", r.getStatus().name()));
   }

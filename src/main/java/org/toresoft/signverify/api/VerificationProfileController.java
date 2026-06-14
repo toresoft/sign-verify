@@ -6,12 +6,14 @@ import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.RestController;
 import org.toresoft.signverify.api.dto.*;
 import org.toresoft.signverify.api.spi.ProfilesApi;
 import org.toresoft.signverify.application.VerificationProfileService;
 import org.toresoft.signverify.domain.model.ProfilePreset;
 import org.toresoft.signverify.domain.model.VerificationProfile;
+import org.toresoft.signverify.security.Principal;
 
 @RestController
 public class VerificationProfileController implements ProfilesApi {
@@ -51,7 +53,8 @@ public class VerificationProfileController implements ProfilesApi {
             ProfilePreset.valueOf(req.getPreset().getValue()),
             req.getPolicyXml() != null && req.getPolicyXml().isPresent()
                 ? req.getPolicyXml().get()
-                : null);
+                : null,
+            currentPrincipal());
     return ResponseEntity.status(201).body(toView(p));
   }
 
@@ -66,20 +69,24 @@ public class VerificationProfileController implements ProfilesApi {
         req.getPolicyXml() != null && req.getPolicyXml().isPresent()
             ? req.getPolicyXml().get()
             : null;
-    return ResponseEntity.ok(toView(service.update(id, desc, xml)));
+    return ResponseEntity.ok(toView(service.update(id, desc, xml, currentPrincipal())));
   }
 
   @Override
   @PreAuthorize("hasRole('PRIVILEGED')")
   public ResponseEntity<Void> deleteProfile(UUID id) {
-    service.delete(id);
+    service.delete(id, currentPrincipal());
     return ResponseEntity.noContent().build();
   }
 
   @Override
   @PreAuthorize("hasRole('PRIVILEGED')")
   public ResponseEntity<ProfileView> setDefaultProfile(UUID id) {
-    return ResponseEntity.ok(toView(service.setDefault(id)));
+    return ResponseEntity.ok(toView(service.setDefault(id, currentPrincipal())));
+  }
+
+  private Principal currentPrincipal() {
+    return (Principal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
   }
 
   private ProfileView toView(VerificationProfile p) {

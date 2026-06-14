@@ -3,6 +3,7 @@ package org.toresoft.signverify.application;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,10 +26,12 @@ public class ApiKeyService {
 
   private final ApiKeyRepository repo;
   private final PasswordHasherPort hasher;
+  private final AuditService audit;
 
-  public ApiKeyService(ApiKeyRepository repo, PasswordHasherPort hasher) {
+  public ApiKeyService(ApiKeyRepository repo, PasswordHasherPort hasher, AuditService audit) {
     this.repo = repo;
     this.hasher = hasher;
+    this.audit = audit;
   }
 
   public Page<ApiKey> findAll(Pageable pageable) {
@@ -65,32 +68,71 @@ public class ApiKeyService {
     k.setCreatedByPrincipalType(actor.type());
     k.setCreatedByPrincipalId(actor.id());
     repo.save(k);
+
+    // Audit the successful creation. The plaintext key is intentionally NOT included in details.
+    audit.log(
+        actor,
+        AuditActions.APIKEY_CREATE,
+        "api-key",
+        k.getId().toString(),
+        true,
+        Map.of("name", name, "role", role.name()));
+
     return new CreateResult(k, plaintext);
   }
 
   @Transactional
   public void delete(UUID id, Principal actor) {
     ApiKey k = repo.findById(id).orElseThrow(() -> AppException.notFound("api key not found"));
-    enforceLastPrivilegedInvariant(k);
+    enforceLastPrivilegedInvariant(k, actor);
     repo.deleteById(id);
+
+    audit.log(
+        actor,
+        AuditActions.APIKEY_DELETE,
+        "api-key",
+        k.getId().toString(),
+        true,
+        Map.of("name", k.getName()));
   }
 
   @Transactional
   public ApiKey patch(UUID id, Boolean enabled, Principal actor) {
     ApiKey k = repo.findById(id).orElseThrow(() -> AppException.notFound("api key not found"));
     if (enabled != null && !enabled && k.isEnabled()) {
-      enforceLastPrivilegedInvariant(k);
+      enforceLastPrivilegedInvariant(k, actor);
     }
     if (enabled != null) k.setEnabled(enabled);
-    return repo.save(k);
+    ApiKey saved = repo.save(k);
+
+    // Audit the patch. The enabled flag is the only mutable field exposed today; if more are
+    // added later, extend details accordingly (and add an explicit @Column whitelist here).
+    audit.log(
+        actor,
+        AuditActions.APIKEY_UPDATE,
+        "api-key",
+        saved.getId().toString(),
+        true,
+        Map.of("enabled", saved.isEnabled()));
+
+    return saved;
   }
 
-  private void enforceLastPrivilegedInvariant(ApiKey k) {
+  private void enforceLastPrivilegedInvariant(ApiKey k, Principal actor) {
     if (k.getRole() == Role.PRIVILEGED && k.isEnabled()) {
       // Pessimistic lock serializes concurrent removals, avoiding a TOCTOU race that could leave
       // zero enabled privileged keys (lock-out).
       long count = repo.lockEnabledIdsByRole(Role.PRIVILEGED).size();
       if (count <= 1) {
+        // Record the block as a failed audit event so security operators can see the attempt.
+        // The exception that follows is the user-facing error.
+        audit.log(
+            actor,
+            AuditActions.APIKEY_LAST_PRIVILEGED_BLOCKED,
+            "api-key",
+            k.getId().toString(),
+            false,
+            null);
         throw AppException.conflict("cannot remove last enabled privileged api key");
       }
     }

@@ -47,3 +47,4 @@ build/
 .idea/gbrowsers.xml
 .idea/git_toolbox_prj.xml
 docs/superpowers
+.firecrawl/

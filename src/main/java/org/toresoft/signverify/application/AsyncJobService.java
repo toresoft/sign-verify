@@ -3,6 +3,8 @@ package org.toresoft.signverify.application;
 import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,6 +46,7 @@ public class AsyncJobService {
   private final ValidationJobRepository repo;
   private final DocumentStoragePort storage;
   private final SecretCipherPort cipher;
+  private final AuditService audit;
   private final int maxPerPrincipal;
   private final int maxGlobal;
   private final Duration jobTtl;
@@ -52,12 +55,14 @@ public class AsyncJobService {
       ValidationJobRepository repo,
       DocumentStoragePort storage,
       SecretCipherPort cipher,
+      AuditService audit,
       @Value("${app.async.max-pending-per-principal}") int maxPerPrincipal,
       @Value("${app.async.max-pending-global}") int maxGlobal,
       @Value("${app.async.job-ttl}") Duration jobTtl) {
     this.repo = repo;
     this.storage = storage;
     this.cipher = cipher;
+    this.audit = audit;
     this.maxPerPrincipal = maxPerPrincipal;
     this.maxGlobal = maxGlobal;
     this.jobTtl = jobTtl;
@@ -122,6 +127,15 @@ public class AsyncJobService {
     j.setRequestedByPrincipalType(actor.type());
     j.setRequestedByPrincipalId(actor.id());
     repo.save(j);
+
+    // Audit the successful submission. The plaintext file bytes, callback secret and HMAC
+    // algorithm are intentionally excluded; the filename and profileId are sufficient to trace
+    // the submission while staying within the audit log "no PII / no secrets" policy.
+    Map<String, Object> details = new HashMap<>();
+    details.put("filename", req.filename());
+    if (req.profileId() != null) details.put("profileId", req.profileId().toString());
+    audit.log(actor, AuditActions.JOB_SUBMIT, "job", jobId.toString(), true, details);
+
     return jobId;
   }
 
