@@ -56,10 +56,17 @@ public class DssValidatorAdapter implements SignatureValidatorPort {
       var policyDoc =
           new InMemoryDocument(
               req.policyXml().getBytes(StandardCharsets.UTF_8), "validation-policy.xml");
+      var xmlBytes = req.policyXml().getBytes(StandardCharsets.UTF_8);
       log.info(
           "DIAG-LOAD-POLICY: policyXmlBytes={} factory={}",
-          req.policyXml().getBytes(StandardCharsets.UTF_8).length,
+          xmlBytes.length,
           EtsiValidationPolicyFactory.class.getName());
+      log.info(
+          "DIAG-POLICY-CONTENT-HEAD: {}",
+          req.policyXml().substring(0, Math.min(200, req.policyXml().length())));
+      log.info(
+          "DIAG-POLICY-CONTENT-HEX: {}",
+          java.util.HexFormat.of().formatHex(xmlBytes, 0, Math.min(60, xmlBytes.length)));
       logClasspathDiagnostics();
       policy = new EtsiValidationPolicyFactory().loadValidationPolicy(policyDoc);
     } catch (Exception e) {

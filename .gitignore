@@ -48,3 +48,4 @@ build/
 .idea/git_toolbox_prj.xml
 docs/superpowers
 .firecrawl/
+docs/debug.txt
