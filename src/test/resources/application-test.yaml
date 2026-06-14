@@ -1,7 +1,10 @@
 spring:
   datasource:
-    generate-unique-name: true
-    url: jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    # Unique DB name per Spring context so each @IsolatedDbTest gets its own H2 instance.
+    # (generate-unique-name is ignored when an explicit url is set, so the uniqueness must live
+    # in the url itself via ${random.uuid} — otherwise every context shares one mem:test DB and
+    # startup seeding/async writes bleed across IT classes, an order-dependent flake.)
+    url: jdbc:h2:mem:sv-${random.uuid};DB_CLOSE_DELAY=-1;MODE=PostgreSQL
     driver-class-name: org.h2.Driver
     username: sa
     password: ""
