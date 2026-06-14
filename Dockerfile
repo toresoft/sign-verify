@@ -33,11 +33,14 @@ FROM eclipse-temurin:21-jdk-alpine AS jre-build
 #   java.naming/sasl → LDAP retrieval of CRL/AIA
 #   java.sql         → JDBC / JPA
 #   java.management  → JMX, Micrometer, actuator
+#   jdk.net          → jdk.net.Sockets, referenced by Apache HttpClient 5's
+#                      DefaultHttpClientConnectionOperator static initializer;
+#                      without it DSS cannot download LOTL/TSL over HTTPS
 #   jdk.unsupported  → sun.misc.Unsafe (Netty, Hibernate, etc.)
 #   jdk.zipfs        → ZIP NIO filesystem for ASiC containers
 #   jdk.localedata   → Italian locale (trimmed to en,it below)
 RUN "$JAVA_HOME/bin/jlink" \
-      --add-modules java.base,java.compiler,java.desktop,java.instrument,java.management,java.naming,java.net.http,java.prefs,java.scripting,java.security.jgss,java.security.sasl,java.sql,java.sql.rowset,java.transaction.xa,java.xml,java.xml.crypto,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.jfr,jdk.management,jdk.unsupported,jdk.zipfs,jdk.localedata \
+      --add-modules java.base,java.compiler,java.desktop,java.instrument,java.management,java.naming,java.net.http,java.prefs,java.scripting,java.security.jgss,java.security.sasl,java.sql,java.sql.rowset,java.transaction.xa,java.xml,java.xml.crypto,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.jfr,jdk.management,jdk.net,jdk.unsupported,jdk.zipfs,jdk.localedata \
       --include-locales=en,it \
       --strip-debug --no-man-pages --no-header-files --compress=zip-6 \
       --output /javaruntime
