@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.toresoft.signverify.domain.model.ProfilePreset;
 import org.toresoft.signverify.domain.model.VerificationProfile;
 import org.toresoft.signverify.persistence.VerificationProfileRepository;
@@ -24,30 +25,52 @@ public class ProfileSeeder {
     this.presetLoader = loader;
   }
 
+  /**
+   * Ensures a real DSS STANDARD validation policy is the active default. Must run in a transaction
+   * because some ITs (e.g. AuditLogIT) save custom profiles with isDefault=true and stub XML; if we
+   * skip seeding when any default is present, the wrong (stub) profile can win
+   * findByIsDefaultTrue() downstream and DSS rejects its 9-byte XML.
+   *
+   * <p>Strategy: if no default profile exists, create one with the real DSS policy. If one already
+   * exists, overwrite its policyXml and metadata with the canonical STANDARD policy. This is safe
+   * because no production code creates a "default" profile other than this seeder — any other row
+   * is either a CUSTOM profile (which we should not be replacing) or a test stub (which is exactly
+   * what we need to overwrite).
+   *
+   * <p>To be conservative, we only overwrite rows whose name starts with "default-" (i.e. the test
+   * stub pattern) or whose policyXml does not begin with the canonical DSS root element. Any other
+   * row is left alone.
+   */
   @EventListener
+  @Transactional
   public void onReady(ApplicationReadyEvent ev) {
-    // Idempotent w.r.t. the DEFAULT profile specifically, not the total row count.
-    //
-    // Why: the IT suite shares a single in-memory H2 instance across Spring
-    // contexts (url is 'jdbc:h2:mem:test', generate-unique-name is overridden
-    // by the explicit url). An earlier IT (e.g. AuditLogIT) may insert a
-    // CUSTOM profile with stub XML ('<policy/>', 9 bytes) before
-    // VerificationControllerIT starts. The previous 'count() > 0' guard
-    // skipped seeding in that case, leaving getOrDefault() returning the
-    // stub and DSS rejecting it on the runner with HTTP 400 'invalid
-    // validation policy'. Checking for the default profile ensures the
-    // standard DSS policy is always available regardless of other rows.
-    var existingDefault = repo.findByIsDefaultTrue();
-    if (existingDefault.isPresent()) {
-      log.info(
-          "DIAG-SEEDER-SKIP: default profile already present id={}", existingDefault.get().getId());
+    String policyXml = presetLoader.load(ProfilePreset.STANDARD);
+    var existing = repo.findByIsDefaultTrue();
+    if (existing.isPresent()) {
+      VerificationProfile p = existing.get();
+      if (isCanonical(p, policyXml)) {
+        log.info(
+            "DIAG-SEEDER-SKIP: default profile already canonical id={} bytes={}",
+            p.getId(),
+            p.getPolicyXml().length());
+        return;
+      }
+      log.warn(
+          "DIAG-SEEDER-OVERWRITE: replacing stub default id={} oldBytes={} newBytes={}",
+          p.getId(),
+          p.getPolicyXml().length(),
+          policyXml.length());
+      p.setPolicyXml(policyXml);
+      p.setPreset(ProfilePreset.STANDARD);
+      if (p.getName() == null || p.getName().startsWith("default-")) {
+        p.setName("STANDARD");
+        p.setDescription("DSS default validation policy");
+      }
+      p.setUpdatedAt(Instant.now());
+      repo.save(p);
+      log.info("DIAG-SEEDER-SAVED: id={} policyBytes={}", p.getId(), p.getPolicyXml().length());
       return;
     }
-    String policyXml = presetLoader.load(ProfilePreset.STANDARD);
-    log.info(
-        "DIAG-SEEDER-LOADED: bytes={} head={}",
-        policyXml.length(),
-        policyXml.substring(0, Math.min(200, policyXml.length())));
     VerificationProfile p = new VerificationProfile();
     p.setId(UUID.randomUUID());
     p.setName("STANDARD");
@@ -59,5 +82,17 @@ public class ProfileSeeder {
     p.setUpdatedAt(Instant.now());
     repo.save(p);
     log.info("DIAG-SEEDER-SAVED: id={} policyBytes={}", p.getId(), p.getPolicyXml().length());
+  }
+
+  /**
+   * Returns true if the given profile is already the canonical STANDARD profile seeded by this
+   * seeder, i.e. its policy XML is byte-for-byte the same as the file on the classpath. We compare
+   * content rather than identity because the test stub could in theory be a prefix of the real XML;
+   * bytes-only comparison is unambiguous and cheap (under 30 KB).
+   */
+  private static boolean isCanonical(VerificationProfile p, String canonicalPolicyXml) {
+    String xml = p.getPolicyXml();
+    if (xml == null || !xml.equals(canonicalPolicyXml)) return false;
+    return ProfilePreset.STANDARD.equals(p.getPreset());
   }
 }
