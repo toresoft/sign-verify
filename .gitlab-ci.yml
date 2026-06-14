@@ -19,16 +19,16 @@ variables:
 
 # --------------------------------------------------------------------------- #
 # cache: basata su pom.xml (si invalida solo quando cambiano le dipendenze)    #
-#   prefix bumped to maven-v2 to abandon a poisoned cache entry: a transient   #
-#   download corrupted dss-policy-jaxb-6.4.jar, breaking the DSS               #
-#   ValidationPolicyFactory ServiceLoader at runtime (HTTP 400 "invalid        #
-#   validation policy") only on the runner. A clean .m2 resolves fine.         #
+#   prefix bumped to maven-v3: the real fix replaces ValidationPolicyLoader     #
+#   (which uses ServiceLoader and is fragile across classloaders/environments)  #
+#   with direct EtsiValidationPolicyFactory instantiation in DssValidatorAdapter. #
+#   The v2 bump (poisoned-cache hypothesis) did not fix the CI failure.         #
 # --------------------------------------------------------------------------- #
 cache:
   key:
     files:
       - pom.xml
-    prefix: maven-v2
+    prefix: maven-v3
   paths:
     - .m2/repository
 

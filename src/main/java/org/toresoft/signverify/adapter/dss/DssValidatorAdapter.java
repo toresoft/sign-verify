@@ -4,13 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.europa.esig.dss.enumerations.Indication;
 import eu.europa.esig.dss.model.InMemoryDocument;
 import eu.europa.esig.dss.model.policy.ValidationPolicy;
+import eu.europa.esig.dss.policy.EtsiValidationPolicyFactory;
 import eu.europa.esig.dss.simplereport.SimpleReport;
 import eu.europa.esig.dss.spi.validation.CertificateVerifier;
 import eu.europa.esig.dss.validation.SignedDocumentValidator;
-import eu.europa.esig.dss.validation.policy.ValidationPolicyLoader;
 import eu.europa.esig.dss.validation.reports.Reports;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
-import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.EnumMap;
 import java.util.Map;
@@ -46,10 +45,10 @@ public class DssValidatorAdapter implements SignatureValidatorPort {
 
     ValidationPolicy policy;
     try {
-      policy =
-          ValidationPolicyLoader.fromValidationPolicy(
-                  new ByteArrayInputStream(req.policyXml().getBytes(StandardCharsets.UTF_8)))
-              .create();
+      var policyDoc =
+          new InMemoryDocument(
+              req.policyXml().getBytes(StandardCharsets.UTF_8), "validation-policy.xml");
+      policy = new EtsiValidationPolicyFactory().loadValidationPolicy(policyDoc);
     } catch (Exception e) {
       throw AppException.badRequest("invalid validation policy: " + e.getMessage());
     }
