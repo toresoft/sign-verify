@@ -10,9 +10,15 @@ import eu.europa.esig.dss.spi.validation.CertificateVerifier;
 import eu.europa.esig.dss.validation.SignedDocumentValidator;
 import eu.europa.esig.dss.validation.reports.Reports;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.EnumMap;
+import java.util.Enumeration;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.toresoft.signverify.domain.exception.AppException;
 import org.toresoft.signverify.domain.port.ReportType;
@@ -22,6 +28,8 @@ import org.toresoft.signverify.domain.port.ValidationResult;
 
 @Component
 public class DssValidatorAdapter implements SignatureValidatorPort {
+
+  private static final Logger log = LoggerFactory.getLogger(DssValidatorAdapter.class);
 
   private final CertificateVerifier certificateVerifier;
   private final ObjectMapper om;
@@ -48,8 +56,14 @@ public class DssValidatorAdapter implements SignatureValidatorPort {
       var policyDoc =
           new InMemoryDocument(
               req.policyXml().getBytes(StandardCharsets.UTF_8), "validation-policy.xml");
+      log.info(
+          "DIAG-LOAD-POLICY: policyXmlBytes={} factory={}",
+          req.policyXml().getBytes(StandardCharsets.UTF_8).length,
+          EtsiValidationPolicyFactory.class.getName());
+      logClasspathDiagnostics();
       policy = new EtsiValidationPolicyFactory().loadValidationPolicy(policyDoc);
     } catch (Exception e) {
+      log.error("DIAG-LOAD-POLICY-FAIL: {}", stackTrace(e));
       throw AppException.badRequest("invalid validation policy: " + e.getMessage());
     }
 
@@ -87,6 +101,57 @@ public class DssValidatorAdapter implements SignatureValidatorPort {
             : null;
     return new ValidationResult(
         format, indication, subIndication, simple.getSignaturesCount(), out);
+  }
+
+  /** Logs classpath diagnostics to identify CI-only classloader issues. Remove after debug. */
+  private void logClasspathDiagnostics() {
+    try {
+      ClassLoader cl = Thread.currentThread().getContextClassLoader();
+      if (cl == null) cl = DssValidatorAdapter.class.getClassLoader();
+      log.info("DIAG-CLASSLOADER: {}", cl.getClass().getName());
+      // EtsiValidationPolicyFactory origin
+      URL factoryUrl =
+          cl.getResource("eu/europa/esig/dss/policy/EtsiValidationPolicyFactory.class");
+      log.info("DIAG-FACTORY-CLASS-URL: {}", factoryUrl);
+      // DSS ServiceLoader file
+      URL dssSpi =
+          cl.getResource(
+              "META-INF/services/eu.europa.esig.dss.model.policy.ValidationPolicyFactory");
+      log.info("DIAG-DSS-SPI-URL: {}", dssSpi);
+      // JAXB API on classpath
+      URL jaxbApi = cl.getResource("jakarta/xml/bind/JAXBContext.class");
+      log.info("DIAG-JAXB-API-URL: {}", jaxbApi);
+      // JAXB runtime on classpath (glassfish jaxb 3.x and 4.x META-INF entries)
+      Enumeration<URL> jaxbCtxSpi =
+          cl.getResources("META-INF/services/jakarta.xml.bind.JAXBContext");
+      Enumeration<URL> jaxbFactorySpi =
+          cl.getResources("META-INF/services/jakarta.xml.bind.JAXBContextFactory");
+      log.info(
+          "DIAG-JAXB-SPI-COUNT: JAXBContext={} JAXBContextFactory={}",
+          count(jaxbCtxSpi),
+          count(jaxbFactorySpi));
+      // dss-policy-jaxb jar
+      log.info(
+          "DIAG-DSS-POLICY-JAXB-CLASSLOADER: {}",
+          EtsiValidationPolicyFactory.class.getProtectionDomain().getCodeSource());
+    } catch (Exception diag) {
+      log.warn("DIAG-ERROR: {}", diag.getMessage());
+    }
+  }
+
+  private static int count(Enumeration<URL> e) {
+    int n = 0;
+    while (e != null && e.hasMoreElements()) {
+      e.nextElement();
+      n++;
+    }
+    return n;
+  }
+
+  private static String stackTrace(Throwable t) {
+    StringWriter sw = new StringWriter();
+    t.printStackTrace(new PrintWriter(sw));
+    return sw.toString();
   }
 
   /**
