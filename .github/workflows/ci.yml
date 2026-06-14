@@ -128,8 +128,18 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      # Persist Trivy's vulnerability DB across runs: it is otherwise re-pulled from ghcr.io
+      # every run (hundreds of MB, subject to anonymous pull rate limits).
+      - uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.trivy-cache
+          key: trivy-db-${{ github.run_id }}
+          restore-keys: |
+            trivy-db-
       - name: Scan image with Trivy
         uses: aquasecurity/trivy-action@v0.28.0
+        env:
+          TRIVY_CACHE_DIR: ${{ github.workspace }}/.trivy-cache
         with:
           image-ref: ${{ env.IMAGE_NAME }}@${{ needs.package.outputs.digest }}
           format: table
