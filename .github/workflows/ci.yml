@@ -148,7 +148,22 @@ jobs:
           distribution: temurin
           java-version: "21"
           cache: maven
-      - run: mvn -B -ntp -DskipTests org.owasp:dependency-check-maven:check
+      # Persist the OWASP NVD datastore across runs: the first build downloads the full feed
+      # (slow), later runs only fetch deltas. run_id keyed + prefix restore keeps it fresh.
+      - uses: actions/cache@v4
+        with:
+          path: .dependency-check-data
+          key: dependency-check-nvd-${{ github.run_id }}
+          restore-keys: |
+            dependency-check-nvd-
+      # An NVD API key (repo secret) avoids the slow/throttled anonymous NVD updates.
+      # Get one free: https://nvd.nist.gov/developers/request-an-api-key
+      - run: >
+          mvn -B -ntp -DskipTests
+          -DdataDirectory=.dependency-check-data
+          -DnvdApiKey=${{ secrets.NVD_API_KEY }}
+          -DnvdApiDelay=6000
+          org.owasp:dependency-check-maven:check
       - if: always()
         uses: actions/upload-artifact@v4
         with:
