@@ -38,7 +38,10 @@ management:
     health:
       probes:
         enabled: true
-      show-details: always
+      # Details (cert counts, refresh dates, job queue, db product, disk space) are shown only to
+      # authenticated PRIVILEGED callers; anonymous requests and k8s probes see status only (CWE-200).
+      show-details: when-authorized
+      roles: PRIVILEGED
   health:
     livenessstate:
       enabled: true
