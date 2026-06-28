@@ -181,3 +181,7 @@
 
 
 ## [2026-06-28] plan | "verifica di file tsd" -> outputs/plan-verifica-file-tsd-2026-06-28.md (11 articles consulted, 4 decisions, 5 phases)
+
+## [2026-06-28] research | "ricerca file tsd per test" -> 6 sources ingested, 2 articles compiled (1 source-note, 1 analysis), 1 article updated (verifica-file-tsd test-vectors)
+
+## [2026-06-28] research | "ricerca file p7m e pdf firmati per test funzionali" -> 5 sources ingested, 2 articles compiled (signed-files-test-corpus-research, cades-pades-test-corpus)

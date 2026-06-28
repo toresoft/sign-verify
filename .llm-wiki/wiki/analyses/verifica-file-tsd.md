@@ -110,14 +110,21 @@ Vedere [[concepts/rfc5544-tsd]] e [[concepts/dss-format-detection]] per i dettag
 
 ## Test vectors disponibili
 
-**Non esistono corpus `.tsd` pubblici.** DSS GitHub (`esig/dss`):
-- `dss-cades/src/test/resources/plugtest/cades/` — ha CAdES-BES, CAdES-T, CAdES-XL, CAdES-A come `.p7m`
-- `plugtest/esig2014/ESIG-CAdES/` — `.csig` da ETSI Plugtests 2014
-- **Zero file `.tsd`** nell'intero corpus DSS
+> ✏️ **Aggiornato (2026-06-28).** La precedente affermazione «non esistono corpus `.tsd` pubblici»
+> è parzialmente smentita: vedi [[analyses/tsd-test-corpus]] per un fixture pubblico reale + ricette di
+> generazione. Sintesi sotto.
 
-ETSI Plugtests: materiali gated (registration required). AGID: zero campioni pubblici.
+**Nel corpus DSS: zero `.tsd`** — DSS GitHub (`esig/dss`):
+- `dss-cades/src/test/resources/plugtest/cades/` — CAdES-BES/T/XL/A come `.p7m`
+- `plugtest/esig2014/ESIG-CAdES/` — `.csig` ETSI Plugtests 2014
+- ETSI Plugtests gated; AGID zero campioni pubblici.
 
-→ **Fonti per test corpus reali:** richiedere campioni direttamente ad ArubaSign/GoSign, o usare i tool per produrre file di test con dati sintetici.
+**Fonti `.tsd` per test (confermate 2026-06-28 — [[analyses/tsd-test-corpus]]):**
+1. **Generazione BC** (consigliata): `CMSTimeStampedDataGenerator.generate(token, p7mBytes)` con token
+   RFC 3161 self-issued → fixture riproducibili offline.
+2. **Fixture pubblico reale**: CPAN `Crypt::TimestampedData` → `test_output.tsd` (token FreeTSA, licenza Perl).
+3. **Tool PA** (GoSign Free / ArubaSign / Dike): `.tsd` reale, serve credito marca temporale a pagamento.
+4. **Token gratis**: FreeTSA `https://freetsa.org/tsr` (+ TSA EU qualificate per chain→Trusted List).
 
 ## DTO mapping per il report
 
