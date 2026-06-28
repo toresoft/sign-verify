@@ -38,7 +38,7 @@ management:
     health:
       probes:
         enabled: true
-      show-details: never
+      show-details: always
   health:
     livenessstate:
       enabled: true
@@ -47,6 +47,9 @@ management:
   info:
     build:
       enabled: true
+    git:
+      enabled: true
+      mode: full
 
 app:
   upload:

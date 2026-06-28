@@ -516,11 +516,19 @@ components:
     HealthStatus:
       type: object
       required: [status]
+      additionalProperties: true
       properties:
         status: { type: string, enum: [UP, DOWN, OUT_OF_SERVICE, UNKNOWN] }
         groups:
           type: array
           items: { type: string }
+        components:
+          type: object
+          additionalProperties: true
+          description: >
+            Per-component health (shown because management.endpoint.health.show-details=always).
+            Includes tslReadiness (certificateCount, lastRefresh*), jobQueue (activeJobs), dss, db,
+            and the liveness/readiness state groups.
 
     Problem:
       type: object

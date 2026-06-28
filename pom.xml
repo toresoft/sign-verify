@@ -337,6 +337,35 @@
             </plugin>
 
             <plugin>
+                <!-- Generates git.properties (branch, tag, commit) consumed by the Actuator
+                     /info git contributor. Tolerates a missing .git directory in CI/source tarballs. -->
+                <groupId>io.github.git-commit-id</groupId>
+                <artifactId>git-commit-id-maven-plugin</artifactId>
+                <version>9.0.1</version>
+                <executions>
+                    <execution>
+                        <id>get-the-git-infos</id>
+                        <goals>
+                            <goal>revision</goal>
+                        </goals>
+                        <phase>initialize</phase>
+                    </execution>
+                </executions>
+                <configuration>
+                    <failOnNoGitDirectory>false</failOnNoGitDirectory>
+                    <generateGitPropertiesFile>true</generateGitPropertiesFile>
+                    <includeOnlyProperties>
+                        <property>^git.branch$</property>
+                        <property>^git.tags$</property>
+                        <property>^git.closest.tag.name$</property>
+                        <property>^git.commit.id.abbrev$</property>
+                        <property>^git.commit.time$</property>
+                        <property>^git.dirty$</property>
+                    </includeOnlyProperties>
+                </configuration>
+            </plugin>
+
+            <plugin>
                 <!-- Exposes each dependency's resolved jar path as a ${groupId:artifactId:jar}
                      property so Surefire can reference the Mockito agent jar below. -->
                 <groupId>org.apache.maven.plugins</groupId>
