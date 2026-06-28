@@ -102,7 +102,37 @@ class DssValidatorAdapterTest {
     assertThat(result.signatures()).isNotEmpty();
     var sig = result.signatures().get(0);
     assertThat(sig.archiveTimestamps()).isNotNull();
-    // PAdES BASELINE_LT does not contain LTA evidence records, so list is empty
+    // Without an active TSL the DSS SimpleReport does not populate
+    // evidence records even for LTA fixtures, so the list is empty here.
+    // A positive assertion (`isNotEmpty`) would require a TSL-enabled profile.
     assertThat(sig.archiveTimestamps()).isEmpty();
+  }
+
+  @Test
+  void lta_signature_has_populated_certificate_chain() throws Exception {
+    // PAdES-LTA fixture carries a 3-cert chain (signer + intermediate + root).
+    // Without an active TSL, DSS still populates the SimpleReport certificateChain,
+    // so our CertificateSummary list must be non-empty and carry the signing cert.
+    byte[] pdf =
+        new ClassPathResource("assets/pades/PAdES-LTA.pdf").getInputStream().readAllBytes();
+    String policy =
+        new String(
+            new ClassPathResource("policy/BASIC.xml").getInputStream().readAllBytes(),
+            StandardCharsets.UTF_8);
+
+    var result =
+        adapter.validate(
+            new ValidationRequest(pdf, "PAdES-LTA.pdf", policy, Set.of(ReportType.SIMPLE)));
+
+    assertThat(result.signatures()).isNotEmpty();
+    var sig = result.signatures().get(0);
+    assertThat(sig.certificates())
+        .as("PAdES-LTA fixture must yield certificate chain metadata")
+        .isNotEmpty();
+    assertThat(sig.certificates().get(0).id()).isNotBlank();
+    assertThat(sig.certificates().get(0).qualifiedName()).isNotBlank();
+    // The chain contains at least signer + CA — 2 certs expected (the root is
+    // not always returned by SimpleReport.getCertificateChain).
+    assertThat(sig.certificates().size()).isGreaterThanOrEqualTo(2);
   }
 }
