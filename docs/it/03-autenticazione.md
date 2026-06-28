@@ -35,8 +35,13 @@ flowchart TD
 
 ### Endpoint pubblici (senza autenticazione)
 
-- `/actuator/health/**`, `/actuator/info`, `/actuator/prometheus`
+- `/actuator/health/**`, `/actuator/prometheus`
 - `/v3/api-docs/**`, `/swagger-ui/**`
+
+`/actuator/info` (dettagli build + git) ora **richiede autenticazione**.
+`/actuator/health` è pubblico ma agli anonimi mostra solo lo `status` aggregato;
+i dettagli per-componente (conteggi TSL, coda job, DB, disco) sono visibili solo
+a un chiamante autenticato **PRIVILEGED** (`show-details: when-authorized`).
 
 Tutto il resto richiede autenticazione (`anyRequest().authenticated()`).
 Un fallimento produce **401** con corpo `application/problem+json`.

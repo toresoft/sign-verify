@@ -37,6 +37,12 @@ DSS's primary outcome is expressed by:
   `SIG_CRYPTO_FAILURE`, `NO_CERTIFICATE_CHAIN_FOUND`, `OUT_OF_BOUNDS_NO_POE`…).
 - **`signatureFormat`** — detected format/level (e.g. `PAdES-BASELINE-B`).
 - **`signatureCount`** — number of signatures found.
+- **`signatures[]`** — per-signature detail: `id`, `indication`, `subIndication`,
+  `signatureFormat`, **`signatureLevel`** (DSS eIDAS qualification: `QESIG`/`QESEAL`,
+  `ADESIG_QC`/…, `NA`, `INDETERMINATE_*` variants; orthogonal to `indication`),
+  `signedBy`, `bestSignatureTime`, and that signature's `timestamps[]`.
+- **`timestamps[]`** — document timestamps: `id`, `indication`, `subIndication`,
+  `productionTime`, `qualification` (`QTSA`/`TSA`/`NA`).
 
 ### Report types
 
@@ -249,6 +255,19 @@ curl -sS -X POST http://localhost:8080/api/v1/verifications \
   "indication": "TOTAL_PASSED",
   "subIndication": null,
   "signatureCount": 1,
+  "signatures": [
+    {
+      "id": "S-1",
+      "indication": "TOTAL_PASSED",
+      "subIndication": null,
+      "signatureFormat": "PAdES_BASELINE_B",
+      "signatureLevel": "QESIG",
+      "signedBy": "CN=Mario Rossi, …",
+      "bestSignatureTime": "2026-06-08T10:14:00Z",
+      "timestamps": []
+    }
+  ],
+  "timestamps": [],
   "reports": {
     "simple":   { /* … */ },
     "detailed": { /* … */ }

@@ -35,8 +35,13 @@ flowchart TD
 
 ### Public endpoints (no authentication)
 
-- `/actuator/health/**`, `/actuator/info`, `/actuator/prometheus`
+- `/actuator/health/**`, `/actuator/prometheus`
 - `/v3/api-docs/**`, `/swagger-ui/**`
+
+`/actuator/info` (build + git details) now **requires authentication**.
+`/actuator/health` is public but shows only the aggregate `status` to anonymous
+callers; per-component details (TSL counts, job queue, DB, disk) appear only for
+an authenticated **PRIVILEGED** caller (`show-details: when-authorized`).
 
 Everything else requires authentication (`anyRequest().authenticated()`).
 A failure produces **401** with an `application/problem+json` body.

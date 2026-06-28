@@ -413,7 +413,8 @@ OpenAPI spec available at: `http://localhost:8080/v3/api-docs`
 |----------|---------------|---------|
 | `/actuator/health/liveness` | none | Process is alive (Kubernetes `livenessProbe`) |
 | `/actuator/health/readiness` | none | Service ready including TSL loaded (`readinessProbe`) |
-| `/actuator/info` | none | Build version and Git info |
+| `/actuator/health` | none (status) / PRIVILEGED (details) | Aggregate status; per-component details (TSL, job queue, DB, disk) only for an authenticated PRIVILEGED caller |
+| `/actuator/info` | **PRIVILEGED** | Build version and Git info (no longer public) |
 | `/actuator/prometheus` | none | Prometheus metrics |
 
 Other endpoints (`metrics`, `env`, `beans`…) are **not public** and require

@@ -37,6 +37,12 @@ L'esito principale di DSS è espresso da:
   (es. `SIG_CRYPTO_FAILURE`, `NO_CERTIFICATE_CHAIN_FOUND`, `OUT_OF_BOUNDS_NO_POE`…).
 - **`signatureFormat`** — formato/livello rilevato (es. `PAdES-BASELINE-B`).
 - **`signatureCount`** — numero di firme trovate.
+- **`signatures[]`** — dettaglio per firma: `id`, `indication`, `subIndication`,
+  `signatureFormat`, **`signatureLevel`** (qualifica eIDAS DSS: `QESIG`/`QESEAL`,
+  `ADESIG_QC`/…, `NA`, varianti `INDETERMINATE_*`; ortogonale a `indication`),
+  `signedBy`, `bestSignatureTime`, e `timestamps[]` della firma.
+- **`timestamps[]`** — marche del documento: `id`, `indication`, `subIndication`,
+  `productionTime`, `qualification` (`QTSA`/`TSA`/`NA`).
 
 ### Tipi di report
 
@@ -249,6 +255,19 @@ Risposta `200`:
   "indication": "TOTAL_PASSED",
   "subIndication": null,
   "signatureCount": 1,
+  "signatures": [
+    {
+      "id": "S-1",
+      "indication": "TOTAL_PASSED",
+      "subIndication": null,
+      "signatureFormat": "PAdES_BASELINE_B",
+      "signatureLevel": "QESIG",
+      "signedBy": "CN=Mario Rossi, …",
+      "bestSignatureTime": "2026-06-08T10:14:00Z",
+      "timestamps": []
+    }
+  ],
+  "timestamps": [],
   "reports": {
     "simple":   { /* … */ },
     "detailed": { /* … */ }
