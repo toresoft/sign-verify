@@ -56,4 +56,4 @@ downloaded 2026-06-28 from `dss-pades` / `dss-cades` `src/test/resources/validat
 ### SiVa (`siva/`)
 Core-format fixtures (PAdES/CAdES/XAdES/ASiC, 180 files) from the Estonian SiVa test suite —
 **EUPL-1.1** (copyleft, differs from the LGPL-2.1 files here). See `siva/README.md`.
-Catalog & rationale: `.llm-wiki/wiki/analyses/cades-pades-test-corpus.md`.
+Catalog & rationale: `.wiki/wiki/analyses/cades-pades-test-corpus.md`.

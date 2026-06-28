@@ -19,12 +19,12 @@ Coordinate artefatto: `org.toresoft:sign-verify-2:1.0.0-SNAPSHOT`.
 ## Dove trovare le informazioni sul progetto
 
 La conoscenza dettagliata del progetto (architettura, domini, concetti DSS/eIDAS, entità,
-decisioni di design, ricerche) vive in un **wiki locale** sotto `.llm-wiki/`.
+decisioni di design, ricerche) vive in un **wiki locale** sotto `.wiki/`.
 
 **Prima di rispondere a domande su architettura, domini o scelte tecniche, consultare il wiki:**
 
 - Interrogare in linguaggio naturale: `/wiki:query <domanda>` (usare `--deep` per analisi approfondite).
-- Indice navigabile: `.llm-wiki/meta/index.md` — 63 pagine tra `entities/`, `concepts/`,
+- Indice navigabile: `.wiki/meta/index.md` — 63 pagine tra `entities/`, `concepts/`,
   `syntheses/`, `analyses/`, `sources/`.
 - Esempi di voci utili: `concepts/hexagonal-architecture`, `concepts/design-first-openapi`,
   `concepts/api-key-authentication`, `concepts/trusted-lists`, `entities/sign-verify-2`.

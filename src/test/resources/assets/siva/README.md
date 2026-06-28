@@ -28,4 +28,4 @@ Core eIDAS formats only — `pdf` (PAdES), `asice` / `asics` (ASiC-E / ASiC-S), 
 Filenames are self-describing for negative cases (e.g. `*wrongDigestValue*`, `*invalid*`,
 `*expired*`). See upstream repo for the per-file expected-result matrix.
 
-Catalog & rationale: `.llm-wiki/wiki/analyses/cades-pades-test-corpus.md`.
+Catalog & rationale: `.wiki/wiki/analyses/cades-pades-test-corpus.md`.
