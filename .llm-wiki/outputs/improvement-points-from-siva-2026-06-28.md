@@ -6,61 +6,83 @@ sources:
   - analyses/siva-vs-sign-verify-2
   - entities/siva
   - sources/siva-research
+  - sources/SRC-2026-06-28-001
 generated: 2026-06-28
+updated: 2026-06-28
+notes: "Re-synthesized after audit (2026-06-28) — aligned with code state post commits dd9878f/6912fc5/4b4c262. Body previously contradicted on points 1/2/6/8."
 ---
 
 # Punti di miglioramento per sign-verify-2 (da open-eid/SiVa)
 
-Backlog operativo derivato dal confronto [[../wiki/analyses/siva-vs-sign-verify-2]]. Ogni voce: cosa fa SiVa, gap attuale, intervento, riferimenti.
+Backlog operativo derivato dal confronto [[../wiki/analyses/siva-vs-sign-verify-2]], verificato contro il codice attuale (audit 2026-06-28). Legenda: ✅ = già fatto, 🟡 = parzialmente fatto, ❌ = da fare.
 
-## P1 — alto valore
+## Già fatto (verificato contro codice)
 
-### 1. Report arricchito `signatures[]` / `timestamps[]`
-- **SiVa**: per-firma `signedBy`, `claimedSigningTime`, `bestSignatureTime`, `signatureLevel`; array `timeStampTokens[]` (livello QTSA/TSA), `archiveTimeStamps[]` (LTA), `certificates[]` tipizzati (SIGNING/REVOCATION/SIGNATURE_TIMESTAMP/ARCHIVE_TIMESTAMP), `validatedDocument` (hash), `warnings[]`.
-- **Gap**: `ValidationResult` è piatto (`signatureFormat/indication/subIndication/signatureCount` + mappa `reports`).
-- **Intervento**: estendere `openapi.yaml` (design-first) con `signatures[]`/`timestamps[]`; aggiornare assembler dal `SimpleReport`/`DiagnosticData`. È la **Phase 4** del piano TSD → riusare [[../wiki/analyses/tsd-dto-mapping]]. Mantenere i campi piatti per retro-compatibilità; `OpenApiContractIT` come guardia.
+### ✅ Livello di qualifica eIDAS (`signatureLevel`)
+- **Commit:** `dd9878f feat(api): expose signatures[]/timestamps[] with eIDAS qualification`
+- **Come:** `SignatureSummary.signatureLevel` ← `SimpleReport.getSignatureQualification(id).name()`. Enum DSS (QESIG/QESEAL/ADESIG_QC/…/NA) serializzato in ogni `signatures[].signatureLevel`.
+- **Test:** `DssValidatorAdapterTest#enriches_response_with_signatures_and_qualification` (verde).
 
-### 2. Livello di qualifica eIDAS (`signatureLevel`)
-- **SiVa**: enum `QESIG, QESEAL, ADESIG_QC, ADESEAL_QC, ADES_QC, ADESIG, ADESEAL, ADES, NOT_ADES_QC_QSCD, NA`.
-- **Gap**: non esposto.
-- **Intervento**: mappare `SimpleReport.getSignatureQualification(sigId)` di DSS in un campo `signatureLevel` per firma. Sforzo basso (dato già calcolato da DSS). Da fare insieme al punto 1.
+### ✅ Health indicator dedicati
+- **Commit:** `4b4c262 feat(health): enrich actuator with git, TSL, job-queue and DB details` (+ preesistenti)
+- **Come:** `TslReadinessIndicator` (lastRefreshStatus/At, cert count, readiness gating OUT_OF_SERVICE), `DssHealthIndicator` (CertificateVerifier wired), `JobQueueHealthIndicator`, `/actuator/info` con `BuildProperties`+`GitProperties`.
+- **Sicurezza:** `show-details: when-authorized` (solo PRIVILEGED). Test: 4/4 verdi.
 
-### 3. Report di validazione firmato (non-ripudio)
-- **SiVa**: Detailed report incapsulato in **ASiC-E firmato** (PKCS#11/PKCS#12) → il verdetto è esso stesso firmato dal validatore.
-- **Gap**: nessun report firmato.
-- **Intervento**: nuovo `ReportSignerPort` + adapter DSS (`ASiCWithXAdESService`/`PAdESService` o `SignatureService`), chiave da keystore (riusare `SecretCipherPort`/config esistente). Opzionale via parametro `reportType=signed`. Valore alto per PA (prova del controllo).
+### ✅ Report arricchito (parziale — residuo sotto)
+- **Commit:** `dd9878f` + `6912fc5 fix(dss): attach per-signature timestamps`
+- **Esposto:** `signedBy`, `bestSignatureTime`, `signatureFormat`, `signatureLevel`, `signatures[].timestamps[]` con livello (QTSA/TSA), `timestamps[]` top-level con qualification.
+- **Resta da fare:** `claimedSigningTime`, array separato `archiveTimeStamps[]`, `certificates[]` tipizzati per firma (SIGNING/REVOCATION/SIGNATURE_TIMESTAMP/ARCHIVE_TIMESTAMP).
 
-## P2 — medio valore
+### ✅ Audit (parziale)
+- **Cablaggio esistente:** `TslRefreshScheduler` (6× `audit.log`), `AsyncVerificationController` (access-denial), `TslController` (manual refresh). Totale 13 file referenziano `audit`.
+- **Mancante:** sync `VerificationController` e `ValidationWorker` — i path operativi principali non emettono audit.
 
-### 4. Hashcode validation
-- **SiVa**: `POST /validateHashcode` — valida per `filename`+`hashAlgo`+`hash`, senza il file originale (privacy/banda).
-- **Gap**: serve sempre il documento completo.
-- **Intervento**: usare `eu.europa.esig.dss.model.DigestDocument` come detached content (stessa tecnica del resolver imprint già scritto in `TsdAwareValidatorAdapter`). Endpoint dedicato o flag su `/verifications`.
+## Da fare (nessun codice o parziale)
 
-### 5. Corpus di conformità + load test
-- **SiVa**: repo separato `open-eid/Siva-test` (RestAssured) con documenti reali — PAdES/CAdES/XAdES/ASiC, profili B/T/LT/LTA, serie/parallele, validi+invalidi, ≤9 MB; perf con **Gatling** (`SiVa-perftests`).
-- **Gap**: corpus limitato.
-- **Intervento**: costruire corpus firmato reale/sintetico (aggancio [[../wiki/analyses/cades-pades-test-corpus]], [[../wiki/analyses/tsd-test-corpus]]); IT Failsafe end-to-end + load test (Gatling/k6).
+### ❌ Report di validazione firmato (non-ripudio) — P1
+- **SiVa:** Detailed report in **ASiC-E firmato** (PKCS#11/PKCS#12) → verdetto non ripudiabile.
+- **Gap:** nessun report firmato.
+- **Intervento:** nuovo `ReportSignerPort` + adapter DSS (`ASiCWithXAdESService` o `SignatureService`), chiave da keystore. Opzionale via parametro `reportType=signed`. Alto valore per PA.
+- **Sforzo:** medio
 
-### 6. Audit + statistiche d'uso
-- **SiVa**: statistiche per-validazione (tipo formato, esito) via syslog-JSON / Google Analytics.
-- **Gap**: `AuditService` **non cablato** nei path operativi (gap noto).
-- **Intervento**: cablare `AuditService`; aggiungere metriche d'uso (Micrometer: counter per formato/esito).
+### ❌ Hashcode validation — P2
+- **SiVa:** `POST /validateHashcode` — valida per `filename`+`hashAlgo`+`hash`, senza il file originale (privacy/banda).
+- **Gap:** serve sempre il documento completo.
+- **Intervento:** usare `DigestDocument` DSS come detached content. Endpoint dedicato o flag su `/verifications`. La tecnica è la stessa del resolver imprint in `TsdAwareValidatorAdapter`.
+- **Sforzo:** medio
 
-### 7. Validazione timestamp-token dedicata
-- **SiVa**: *TST Validation Service* per ASiC-S e token RFC 3161 nudi.
-- **Gap**: sign-verify-2 gestisce TSD RFC 5544 (appena aggiunto) ma non un path dedicato `.tsr`/ASiC-S.
-- **Intervento**: endpoint/strato dedicato come suggerito in [[../wiki/analyses/verifica-file-tsd]] (`DetachedTimestampValidator`).
+### ❌ Corpus di conformità + load test — P2
+- **SiVa:** repo `open-eid/Siva-test` (RestAssured) + `SiVa-perftests` (Gatling). Documenti reali PAdES/CAdES/XAdES/ASiC B/T/LT/LTA, validi+invalidi, ≤9 MB.
+- **Gap:** corpus limitato a pochi sample in `src/test/resources/assets/`.
+- **Intervento:** costruire corpus firmato (aggancio [[../wiki/analyses/cades-pades-test-corpus]], [[../wiki/analyses/tsd-test-corpus]]); IT Failsafe e2e + load test Gatling/k6.
+- **Sforzo:** medio, alto valore di fiducia
 
-## P3 — basso sforzo
+### 🟡 Report arricchito — residuo — P1
+- **Già esposto:** `signedBy`, `bestSignatureTime`, `signatureLevel`, `signatureFormat`, `indication`/`subIndication`, `signatures[].timestamps[]` (level QTSA/TSA), `timestamps[]` top-level.
+- **Mancante vs SiVa:**
+  - `claimedSigningTime` (orario dichiarato dal firmatario)
+  - `archiveTimeStamps[]` come array separato (per LTA)
+  - `certificates[]` tipizzati per firma (SIGNING/REVOCATION/SIGNATURE_TIMESTAMP/ARCHIVE_TIMESTAMP)
+- **Intervento:** estendere `SimpleReportMapper` e `SignatureSummary`; aggiornare `openapi.yaml` (design-first) con i nuovi campi; `OpenApiContractIT` come guardia.
+- **Sforzo:** medio (struttura DTO già in posto)
 
-### 8. Health indicator dedicati
-- **SiVa**: `/monitoring/{health,heartbeat,version,prometheus}` con stato dipendenze.
-- **Intervento**: `HealthIndicator` per **freschezza TSL** e disponibilità DSS; esporre build/version (Actuator `info`). Collega [[../wiki/concepts/tsl-hot-swap-refresh]].
+### 🟡 Cablare audit nei path sincroni — P2
+- **Già cablato:** `TslRefreshScheduler`, `AsyncVerificationController` (access-denial), `TslController`.
+- **Mancante:** sync `VerificationController` (POST `/verifications`), `ValidationWorker` (async processing path).
+- **Intervento:** emettere `audit.log` su verifica sincrona e processamento worker. Aggiornare `entities/sign-verify-2.md` "Known gaps".
+- **Sforzo:** basso
 
-### 9. Semantica policy QES-only vs AdES
-- **SiVa**: POLv4 (default, QES-only) vs POLv3 (AdES-permissiva).
-- **Intervento**: documentare/allineare i preset BASIC/STANDARD/STRICT alla distinzione eIDAS; esplicitare nella descrizione OpenAPI.
+### ❌ Semantica policy QES vs AdES — P3
+- **SiVa:** POLv4 default QES-only vs POLv3 permissiva (tutti i livelli legali).
+- **Gap:** preset BASIC/STANDARD/STRICT non documentano la distinzione eIDAS QES vs AdES.
+- **Intervento:** documentare/allineare i preset; esplicitare nella descrizione OpenAPI del campo `indication`/policy.
+- **Sforzo:** basso
+
+### ❌ Validazione timestamp-token dedicata — P2
+- **SiVa:** *TST Validation Service* per ASiC-S e token RFC 3161 nudi.
+- **Gap:** `TsdAwareValidatorAdapter` gestisce TSD RFC 5544 ma non un path dedicato `.tsr`/ASiC-S standard.
+- **Intervento:** endpoint/strato per token detached con `DetachedTimestampValidator` (come suggerito in [[../wiki/analyses/verifica-file-tsd]]).
+- **Sforzo:** medio
 
 ## Da NON copiare da SiVa
 - Fork DSS `org.digidoc4j.dss` (lag upstream) — restare su **upstream DSS 6.4**.
@@ -69,5 +91,6 @@ Backlog operativo derivato dal confronto [[../wiki/analyses/siva-vs-sign-verify-
 - Trust estone hardcoded (DDOC) — non neutrale eIDAS.
 
 ## Riferimenti
-- [[../wiki/entities/siva]] · [[../wiki/analyses/siva-vs-sign-verify-2]] · [[../wiki/sources/siva-research]]
-- Docs SiVa: https://open-eid.github.io/SiVa/siva3/interfaces/ · https://open-eid.github.io/SiVa/siva3/appendix/validation_policy/
+- [[../wiki/analyses/siva-vs-sign-verify-2]] (analisi wiki corretta 2026-06-28)
+- [[../wiki/entities/siva]] · [[../wiki/entities/sign-verify-2]] · [[../wiki/sources/siva-research]]
+- Raw docs SiVa: [[../wiki/sources/SRC-2026-06-28-001]] (60 file @ `348a6b2`, EUPL-1.1)

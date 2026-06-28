@@ -23,7 +23,7 @@ Confronto tra [[entities/siva|open-eid/SiVa]] (servizio di validazione firme del
 | API | REST sync, **no async/callback/batch** | REST **+ job async + webhook HMAC** ✅ |
 | Auth | delegata a X-Road | API-key + OAuth2 JWT ✅ |
 | Report | Simple/Detailed/Diagnostic, **arricchito** + **signed ASiC-E** | simple/detailed/diagnostic/**etsi** ([[concepts/reports]]) — il gap reale è `signatureLevel` + `timeStampTokens[]` strutturati + report firmato, **non** "piatto" ⚠️ |
-| Livello qualifica (QES/AdES) | **`signatureLevel` enum esposto** | non esposto ❌ |
+| Livello qualifica (QES/AdES) | **`signatureLevel` enum esposto** | **esposto** ✅ (`SignatureSummary.signatureLevel` ← DSS `getSignatureQualification`, vedi commit `dd9878f`) |
 | Marche temporali nel report | `timeStampTokens[]`, `archiveTimeStamps[]`, livello QTSA/TSA | non strutturato nel DTO ❌ |
 | Report firmato (non-ripudio) | **sì, ASiC-E firmato (PKCS#11/12)** | no ❌ |
 | Hashcode mode (validazione per hash) | **sì** | no ❌ |
@@ -43,11 +43,11 @@ Confronto tra [[entities/siva|open-eid/SiVa]] (servizio di validazione firme del
 
 Ordinati per valore/sforzo. Dettaglio operativo in [[../outputs/improvement-points-from-siva-2026-06-28]].
 
-1. **Report arricchito `signatures[]`/`timestamps[]`** — SiVa espone per-firma `signedBy`, `claimedSigningTime`, `bestSignatureTime`, `signatureLevel`, e array separati `timeStampTokens[]`/`archiveTimeStamps[]` con livello QTSA/TSA e `certificates[]` tipizzati. Conferma e dà forma alla **Phase 4** del piano [[../outputs/plan-verifica-file-tsd-2026-06-28|TSD]]. Vedi [[analyses/tsd-dto-mapping]]. *(alto valore)*
-2. **Livello di qualifica eIDAS** — esporre `signatureLevel` (QESIG/QESEAL/ADESIG_QC/…). DSS lo fornisce (`SignatureQualification`/`SimpleReport.getSignatureQualification`); oggi sign-verify-2 non lo mappa. *(alto valore, basso sforzo)*
+1. **Report arricchito — residuo** — `signatures[]` espone già `signedBy`, `bestSignatureTime`, `signatureFormat`, `signatureLevel`, `indication`/`subIndication` e `signatures[].timestamps[]` con livello QTSA/TSA (commit `dd9878f`/`6912fc5`). Manca ancora vs SiVa: `claimedSigningTime`, l'array separato `archiveTimeStamps[]`, e `certificates[]` tipizzati per firma. Dà forma alla **Phase 4** del piano [[../outputs/plan-verifica-file-tsd-2026-06-28|TSD]]. Vedi [[analyses/tsd-dto-mapping]]. *(medio valore)*
+2. ~~**Livello di qualifica eIDAS** — esporre `signatureLevel`~~ ✅ **Fatto** (commit `dd9878f`): `SignatureSummary.signatureLevel` ← DSS `SimpleReport.getSignatureQualification(id).name()`, testato in `DssValidatorAdapterTest#enriches_response_with_signatures_and_qualification`.
 3. **Report di validazione firmato** — SiVa restituisce il Detailed report in un container **ASiC-E firmato** (PKCS#11/12) → non-ripudio del verdetto. Differenziatore forte per una PA. Nuovo port `ReportSignerPort` + adapter DSS. *(alto valore, medio sforzo)*
 4. **Hashcode validation** — validare per `hashAlgo`+`hash` senza il file originale (privacy/banda). DSS supporta `DigestDocument`; la logica è simile al resolver imprint già scritto per il [[concepts/rfc5544-tsd|TSD]]. Nuovo endpoint o variante di `/verifications`. *(medio valore)*
-5. **Health indicator dedicati** — oltre Actuator, aggiungere health di **freschezza TSL** e disponibilità DSS, più build/version info (SiVa ha `/monitoring/{health,heartbeat,version}`). Collega [[concepts/tsl-hot-swap-refresh]]. *(basso sforzo)*
+5. ~~**Health indicator dedicati** — freschezza TSL + disponibilità DSS + build/version info~~ ✅ **Fatto** (commit `4b4c262` + preesistenti): `TslReadinessIndicator` (lastRefreshStatus/At, cert count, gating readiness OUT_OF_SERVICE), `DssHealthIndicator` (CertificateVerifier wired), `JobQueueHealthIndicator`, e `/actuator/info` con `BuildProperties`+`GitProperties` (`build-info`/`git-properties` plugin). `show-details: when-authorized` (PRIVILEGED). Test: `DssHealthIndicatorTest`, `TslReadinessIndicatorTest`, `JobQueueHealthIndicatorTest` (4/4 verdi).
 6. **Corpus di conformità reale + perf** — replicare l'approccio `Siva-test`: corpus di documenti firmati reali (PAdES/CAdES/XAdES/ASiC, profili B/T/LT/LTA, multi-firma, validi+invalidi) e load test (Gatling/k6). Si aggancia a [[analyses/cades-pades-test-corpus]] e [[analyses/tsd-test-corpus]]. *(medio sforzo, alto valore di fiducia)*
 7. **Cablare audit + statistiche d'uso** — chiudere il gap noto (`AuditService` non wired) ed emettere statistiche per-validazione (tipo formato, esito) come SiVa. *(medio)*
 8. **Semantica policy QES-only vs AdES** — documentare/allineare i preset alla distinzione eIDAS (come POLv4 default QES-only vs POLv3 permissiva), rendendola esplicita nella descrizione OpenAPI del campo `indication`/policy. *(basso sforzo)*

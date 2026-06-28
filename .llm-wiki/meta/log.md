@@ -205,3 +205,6 @@
 ## [2026-06-28] edit | analyses/siva-vs-sign-verify-2: corretta obsolescenza tabella (report/DSS/TSL/formati) contro raw SRC-2026-06-28-001
 
 ## [2026-06-28] query | "differenze tra il progetto corrente e SiVa" → answered from 7 articles (standard, post-correction)
+## [2026-06-28] audit | scope=artifact(analyses/siva-vs-sign-verify-2), outputs=2, drifted=1, escalations=3 (supported×1, weakened×1, contradicted×1)
+## [2026-06-28] edit | outputs/improvement-points-from-siva: re-synthesized (4 inaccuracies removed, aligned with code state post dd9878f/4b4c262)
+## [2026-06-28] edit | entities/sign-verify-2: updated "Known gaps" from "not yet wired" to partial audit state

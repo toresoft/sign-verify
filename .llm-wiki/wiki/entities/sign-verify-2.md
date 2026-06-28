@@ -35,7 +35,7 @@ Domain ports: `SignatureValidatorPort`, `ExtractionPort`, `TslRefresherPort`, `C
 - Operational docs: [[sources/SRC-2026-06-27-003]] … 007
 
 ## Known gaps
-`AuditService` is **not yet wired** into operational paths — see [[sources/SRC-2026-06-27-007]] §6.3 and the `wire-audit-log` plan.
+`AuditService` is **partially wired**: `TslRefreshScheduler` (6 paths), `AsyncVerificationController` (access-denial path), and `TslController` (manual refresh) call `audit.log`. Still missing from the sync `VerificationController` and `ValidationWorker` paths. See [[sources/SRC-2026-06-27-007]] §6.3 and the `wire-audit-log` plan.
 
 ## Related
 - [[entities/dss]] · [[entities/eidas-regulation]] · [[concepts/validation-profiles]]

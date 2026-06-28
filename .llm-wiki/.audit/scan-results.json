@@ -1,0 +1,69 @@
+{
+  "audit": {
+    "scope": "artifact",
+    "target": "wiki/analyses/siva-vs-sign-verify-2",
+    "flags": {},
+    "timestamp": "2026-06-28T21:28:00Z",
+    "session": "ses_current"
+  },
+  "summary": {
+    "artifact_trust": "PARTIALLY_ACCURATE",
+    "outputs_scanned": 2,
+    "outputs_drifted": 1,
+    "outputs_clean": 0,
+    "outputs_weak_evidence": 1,
+    "outputs_broken_refs": 0,
+    "wiki_findings": {
+      "stale_articles": 1,
+      "low_quality": 0,
+      "broken_sources": 0
+    },
+    "backlog_audit": {
+      "done": 2,
+      "partial": 2,
+      "not_done": 5
+    },
+    "escalations": {
+      "supported": 1,
+      "weakened": 1,
+      "contradicted": 1,
+      "unresolved": 0
+    },
+    "dependency_chain": {
+      "total_wikilinks": 20,
+      "broken_wikilinks": 0,
+      "raw_refs": 3,
+      "output_refs": 2,
+      "broken_output_refs": 0
+    }
+  },
+  "findings": [
+    {
+      "type": "output_drift",
+      "artifact": "outputs/improvement-points-from-siva-2026-06-28.md",
+      "verdict": "contradicted",
+      "points": [
+        "line 20: ValidationResult claims flat — false, signatures/timestamps exposed",
+        "line 25: signatureLevel 'non esposto' — false, done in dd9878f",
+        "line 47: AuditService 'non cablato' — false, wired in TslRefreshScheduler etc",
+        "line 58: Health indicators 'da fare' — false, done in 4b4c262"
+      ]
+    },
+    {
+      "type": "wiki_staleness",
+      "artifact": "wiki/entities/sign-verify-2.md",
+      "claim": "AuditService is not yet wired into operational paths",
+      "verdict": "weakened",
+      "evidence": "13 Java files reference audit; TslRefreshScheduler (6 calls), AsyncVerificationController, TslController"
+    },
+    {
+      "type": "backlog_completion",
+      "points": [
+        {"#": 2, "status": "done", "commit": "dd9878f"},
+        {"#": 5, "status": "done", "commit": "4b4c262"},
+        {"#": 1, "status": "partial", "done": "signedBy/bestSignatureTime/signatureLevel/timestamps", "missing": "claimedSigningTime/archiveTimeStamps[]/certificates[]"},
+        {"#": 7, "status": "partial", "done": "TslRefreshScheduler/AsyncVerificationController/TslController", "missing": "VerificationController sync path, ValidationWorker"}
+      ]
+    }
+  ]
+}
