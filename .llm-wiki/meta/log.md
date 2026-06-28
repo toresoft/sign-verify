@@ -210,3 +210,5 @@
 ## [2026-06-28] edit | entities/sign-verify-2: updated "Known gaps" from "not yet wired" to partial audit state
 
 ## [2026-06-28] query | "differenze tra il progetto corrente e SiVa" → answered from 7 articles (standard, wiki corrected+audited)
+
+## [2026-06-28] wiki-update | TSD implementation status: TsdAwareValidatorAdapter documented, analysis corrected

@@ -1,7 +1,7 @@
 ---
 type: analysis
 created: 2026-06-27
-updated: 2026-06-27
+updated: 2026-06-28
 query: "implementazione verifica firma per file .tsd"
 sources:
   - sources/SRC-2026-06-27-001
@@ -12,6 +12,13 @@ sources:
 # Verifica firma per file `.tsd`
 
 _Risposta di ricerca (deep) alla domanda: «implementazione verifica firma per file `.tsd`»._
+
+> ✅ **Implementato (2026-06-28).** Il supporto RFC 5544 TSD è attivo tramite `TsdAwareValidatorAdapter`
+> (decorator di `DssValidatorAdapter`). L'adapter intercetta `IllegalInputException` da DSS, unwrappa
+> il wrapper TSD via Bouncy Castle (`CMSTimeStampedData`), e valida inner content + timestamp RFC 3161.
+> Test: `TsdAwareValidatorAdapterTest` (4 test) + `TsdSmokeTest` (API-level smoke) + `Rfc5544TsdRoutingTest`
+> (2 test routing). La sezione "Implicazione" e "Approccio implementativo" qui sotto restano come
+> documentazione storica del percorso decisionale.
 
 > ⚠️ **Correzione (2026-06-27).** La prima stesura trattava `.tsd` come *timestamp detached puro* → `DetachedTimestampValidator`. Il caso operativo reale nella PA italiana è **file firmati marcati temporalmente** (CAdES tipo `.p7m` con timestamp embedded, spesso annidati): validare un `.tsd` significa **navigare tutti i contenitori/signature/timestamp annidati**, come per il `.p7m`. L'API di routing corretta è quindi **`SignedDocumentValidator.fromDocument()`** (CAdES), il quale gestisce signature + timestamp embedded + controfirme. `DetachedTimestampValidator` resta solo per il raro caso *timestamp nudo* (`.tsr`/CMS senza contenuto firmato). La sezione "Correzione" riassume il cambio.
 
@@ -71,7 +78,7 @@ eu.europa.esig.dss.spi.exception.IllegalInputException:
 
 **Implicazione per sign-verify-2:**
 
-I file `.tsd` da ArubaSign/GoSign (RFC 5544) vengono RIFIUTATI dall'endpoint `/verifications` attuale. Serve supporto esplicito.
+I file `.tsd` da ArubaSign/GoSign (RFC 5544) **venivano** rifiutati dall'endpoint `/verifications` attuale (prima dell'implementazione del `TsdAwareValidatorAdapter`). **Ora il supporto è attivo** — vedi nota in testa all'articolo.
 
 ### Approccio implementativo per TSD support
 
