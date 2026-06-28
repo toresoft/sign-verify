@@ -44,6 +44,9 @@ management:
       enabled: true
     readinessstate:
       enabled: true
+  info:
+    build:
+      enabled: true
 
 app:
   upload:
