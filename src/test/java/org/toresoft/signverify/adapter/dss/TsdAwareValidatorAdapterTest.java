@@ -69,4 +69,16 @@ class TsdAwareValidatorAdapterTest {
                         bogus, "x.bin", basicPolicy(), Set.of(ReportType.SIMPLE))))
         .isInstanceOf(AppException.class);
   }
+
+  @Test
+  void tsd_response_lists_wrapper_timestamp() throws Exception {
+    var result =
+        validator.validate(
+            new ValidationRequest(
+                sampleTsd(), "sample-rfc5544.tsd", basicPolicy(), Set.of(ReportType.SIMPLE)));
+
+    assertThat(result.timestamps()).isNotEmpty();
+    assertThat(result.timestamps().get(0).indication()).isNotBlank();
+    assertThat(result.signatures()).isEmpty(); // unsigned inner content
+  }
 }
