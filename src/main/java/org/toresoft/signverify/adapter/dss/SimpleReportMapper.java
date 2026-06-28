@@ -1,6 +1,7 @@
 package org.toresoft.signverify.adapter.dss;
 
 import eu.europa.esig.dss.simplereport.SimpleReport;
+import eu.europa.esig.dss.simplereport.jaxb.XmlTimestamp;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -28,9 +29,30 @@ final class SimpleReportMapper {
               qualification(report, id),
               report.getSignedBy(id),
               odt(report.getBestSignatureTime(id)),
-              timestamps(report)));
+              signatureTimestamps(report, id)));
     }
     return out;
+  }
+
+  /** Timestamps covering a specific signature (signature/archive timestamps of that signature). */
+  private static List<TimestampSummary> signatureTimestamps(SimpleReport report, String id) {
+    List<TimestampSummary> out = new ArrayList<>();
+    for (XmlTimestamp t : report.getSignatureTimestamps(id)) {
+      out.add(
+          new TimestampSummary(
+              t.getId(),
+              str(t.getIndication()),
+              str(t.getSubIndication()),
+              odt(t.getProductionTime()),
+              tsLevel(t)));
+    }
+    return out;
+  }
+
+  private static String tsLevel(XmlTimestamp t) {
+    var lvl = t.getTimestampLevel();
+    var q = lvl == null ? null : lvl.getValue();
+    return q == null ? "NA" : q.name();
   }
 
   static List<TimestampSummary> timestamps(SimpleReport report) {
