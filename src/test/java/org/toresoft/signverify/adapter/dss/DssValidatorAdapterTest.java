@@ -1,12 +1,15 @@
 package org.toresoft.signverify.adapter.dss;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.test.context.ActiveProfiles;
 import org.toresoft.signverify.domain.exception.AppException;
 import org.toresoft.signverify.domain.port.ReportType;
@@ -30,5 +33,26 @@ class DssValidatorAdapterTest {
                     new ValidationRequest(bogus, "x.pdf", policy, Set.of(ReportType.SIMPLE))))
         .isInstanceOf(AppException.class)
         .hasMessageContaining("Unprocessable");
+  }
+
+  @Test
+  void enriches_response_with_signatures_and_qualification() throws Exception {
+    byte[] pdf =
+        new ClassPathResource("signatures/sample-pades-valid.pdf").getInputStream().readAllBytes();
+    String policy =
+        new String(
+            new ClassPathResource("policy/BASIC.xml").getInputStream().readAllBytes(),
+            StandardCharsets.UTF_8);
+
+    var result =
+        adapter.validate(
+            new ValidationRequest(
+                pdf, "sample-pades-valid.pdf", policy, Set.of(ReportType.SIMPLE)));
+
+    assertThat(result.signatures()).isNotEmpty();
+    var sig = result.signatures().get(0);
+    assertThat(sig.signatureFormat()).startsWith("PAdES");
+    assertThat(sig.signatureLevel()).isNotBlank();
+    assertThat(sig.indication()).isNotBlank();
   }
 }

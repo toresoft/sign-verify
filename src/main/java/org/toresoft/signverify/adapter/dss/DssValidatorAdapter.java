@@ -12,7 +12,6 @@ import eu.europa.esig.dss.validation.reports.Reports;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import java.nio.charset.StandardCharsets;
 import java.util.EnumMap;
-import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Component;
 import org.toresoft.signverify.domain.exception.AppException;
@@ -87,7 +86,13 @@ public class DssValidatorAdapter implements SignatureValidatorPort {
             ? simple.getSubIndication(reportingId).toString()
             : null;
     return new ValidationResult(
-        format, indication, subIndication, simple.getSignaturesCount(), out, List.of(), List.of());
+        format,
+        indication,
+        subIndication,
+        simple.getSignaturesCount(),
+        out,
+        SimpleReportMapper.signatures(simple),
+        SimpleReportMapper.timestamps(simple));
   }
 
   /**
