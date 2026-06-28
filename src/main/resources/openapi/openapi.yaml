@@ -640,9 +640,44 @@ components:
             separately per signature in `signatures[].signatureLevel`.
         subIndication: { type: string, nullable: true }
         signatureCount: { type: integer }
+        signatures:
+          type: array
+          items: { $ref: '#/components/schemas/SignatureSummary' }
+        timestamps:
+          type: array
+          items: { $ref: '#/components/schemas/TimestampSummary' }
         reports:
           type: object
           additionalProperties: { type: object }
+
+    SignatureSummary:
+      type: object
+      properties:
+        id: { type: string }
+        indication: { type: string }
+        subIndication: { type: string, nullable: true }
+        signatureFormat: { type: string, nullable: true }
+        signatureLevel:
+          type: string
+          description: >
+            eIDAS qualification level (DSS SignatureQualification): QESIG/QESEAL (qualified),
+            ADESIG_QC/ADESEAL_QC (AdES/QC), ADESIG/ADESEAL/UNKNOWN (AdES), NOT_ADES*, NA, or an
+            INDETERMINATE_* variant. Orthogonal to `indication` (cryptographic validity).
+        signedBy: { type: string, nullable: true }
+        bestSignatureTime: { type: string, format: date-time, nullable: true }
+        timestamps:
+          type: array
+          items: { $ref: '#/components/schemas/TimestampSummary' }
+    TimestampSummary:
+      type: object
+      properties:
+        id: { type: string }
+        indication: { type: string, nullable: true }
+        subIndication: { type: string, nullable: true }
+        productionTime: { type: string, format: date-time, nullable: true }
+        qualification:
+          type: string
+          description: "DSS TimestampQualification: QTSA (qualified TSA), TSA, or NA."
 
     JobAcceptedResponse:
       type: object

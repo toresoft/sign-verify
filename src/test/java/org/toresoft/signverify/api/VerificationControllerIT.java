@@ -67,6 +67,9 @@ class VerificationControllerIT {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.indication").exists())
         .andExpect(jsonPath("$.signatureFormat").exists())
+        .andExpect(jsonPath("$.signatures").isArray())
+        .andExpect(jsonPath("$.signatures[0].signatureLevel").exists())
+        .andExpect(jsonPath("$.timestamps").isArray())
         .andExpect(jsonPath("$.reports.simple").exists());
   }
 }
