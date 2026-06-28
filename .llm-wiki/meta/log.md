@@ -186,3 +186,22 @@
 - orphans: 6, missing_pages: 39, contradictions: 0, auto_fix: false
 
 ## [2026-06-28] ll | "TSD impl, Jackson CVE, JDK-25 toolchain" → raw/notes/2026-06-28-ll-tsd-jackson-toolchain.md (5 lessons, 0 articles updated)
+
+## [2026-06-28] ingest-collection | open-eid-siva via git: 60 new, 0 skipped, 60 total candidates
+- packet: raw/sources/SRC-2026-06-28-001/
+- upstream: https://github.com/open-eid/SiVa @ 348a6b261df9a16167eea4ef46593c442d2d6bc8
+- scope: docs/ + root README/LICENSE/OSS_USED (excludes validation-services-parent test-files, .github, binaries)
+- license: EUPL-1.1; adapter: git (shallow clone, no HTML crawl)
+- 0 duplicates (no prior SRC packet for SiVa; sources/siva-research is a compiled wiki page, not a raw packet)
+
+## [2026-06-28] compile | open-eid-siva (focus): 4 new concept pages, 3 citation updates
+- raw backing: sources/SRC-2026-06-28-001 (60 SiVa docs @ 348a6b2)
+- new pages: concepts/siva-rest-interface, concepts/siva-validation-policy, concepts/siva-report-schema, concepts/siva-deployment-ops
+- citation updates: entities/siva (+SRC +4 cross-links), sources/siva-research (+raw backing note), analyses/siva-vs-sign-verify-2 (+SRC in sources)
+- 0 duplicates of existing pages; all 20 outbound wikilinks resolve; confidence: high (first-party upstream specs)
+
+## [2026-06-28] query | "differenze tra il progetto corrente e SiVa" → answered from 7 articles (standard)
+
+## [2026-06-28] edit | analyses/siva-vs-sign-verify-2: corretta obsolescenza tabella (report/DSS/TSL/formati) contro raw SRC-2026-06-28-001
+
+## [2026-06-28] query | "differenze tra il progetto corrente e SiVa" → answered from 7 articles (standard, post-correction)

@@ -11,6 +11,8 @@ confidence: high
 
 Consolidated provenance for the SiVa comparison. Multi-agent web research over first-party RIA/open-eid documentation (SiVa is almost entirely first-party documented; no significant independent critiques found).
 
+> **Primary raw backing:** the full SiVa documentation corpus (60 files, commit `348a6b2`, EUPL-1.1) is captured immutably in raw packet [[sources/SRC-2026-06-28-001]]. The deep-dive concept pages — [[concepts/siva-rest-interface]], [[concepts/siva-validation-policy]], [[concepts/siva-report-schema]], [[concepts/siva-deployment-ops]] — are synthesized from that packet and supersede the URL-level summary below where they go deeper.
+
 ## Primary references
 - GitHub repo — https://github.com/open-eid/SiVa (Java 17, Spring Boot, Maven wrapper, EUPL-1.1, 3.10.0 May 2026).
 - Component model — https://open-eid.github.io/SiVa/siva3/structure_and_activities/ (gateway → proxy → Generic/Timemark/TST/Hashcode validators; report-signing, statistics, TSL loader).

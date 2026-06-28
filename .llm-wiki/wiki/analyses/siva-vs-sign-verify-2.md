@@ -4,6 +4,7 @@ created: 2026-06-28
 updated: 2026-06-28
 query: "confronto open-eid/SiVa vs sign-verify-2 e punti di miglioramento"
 sources:
+  - sources/SRC-2026-06-28-001
   - sources/siva-research
   - sources/SRC-2026-06-27-002
   - sources/SRC-2026-06-27-008
@@ -17,22 +18,24 @@ Confronto tra [[entities/siva|open-eid/SiVa]] (servizio di validazione firme del
 
 | Dimensione | SiVa | sign-verify-2 |
 |---|---|---|
-| Libreria DSS | **fork** `org.digidoc4j.dss` (lag dietro upstream) | **upstream DSS 6.4** ✅ |
+| Libreria DSS | **fork** `org.digidoc4j.dss` (lag upstream; **3.11 Dic 2026 pianifica upgrade a DSS 6.x** → gap in riduzione) | **upstream DSS 6.4** ✅ |
 | Architettura | monolite modulare (gateway→proxy→validatori per formato) | esagonale, porte/adapter, ArchUnit ✅ |
 | API | REST sync, **no async/callback/batch** | REST **+ job async + webhook HMAC** ✅ |
 | Auth | delegata a X-Road | API-key + OAuth2 JWT ✅ |
-| Report | Simple/Detailed/Diagnostic, **arricchito** | piatto (`indication/subIndication/format/count`) ❌ |
+| Report | Simple/Detailed/Diagnostic, **arricchito** + **signed ASiC-E** | simple/detailed/diagnostic/**etsi** ([[concepts/reports]]) — il gap reale è `signatureLevel` + `timeStampTokens[]` strutturati + report firmato, **non** "piatto" ⚠️ |
 | Livello qualifica (QES/AdES) | **`signatureLevel` enum esposto** | non esposto ❌ |
-| Marche temporali nel report | `timeStampTokens[]`, `archiveTimeStamps[]`, livello QTSA/TSA | non strutturato ❌ |
+| Marche temporali nel report | `timeStampTokens[]`, `archiveTimeStamps[]`, livello QTSA/TSA | non strutturato nel DTO ❌ |
 | Report firmato (non-ripudio) | **sì, ASiC-E firmato (PKCS#11/12)** | no ❌ |
 | Hashcode mode (validazione per hash) | **sì** | no ❌ |
 | Policy | POLv3 (AdES-permissiva) / POLv4 (QES-only, default) | preset BASIC/STANDARD/STRICT |
 | Policy custom integratore | no | no (entrambi limitati) |
-| Trusted Lists | EU LOTL (ETSI) + liste statiche SK per DDOC | EU LOTL, [[concepts/tsl-hot-swap-refresh|hot-swap]] ShedLock ✅ |
+| Trusted Lists | EU LOTL con **pivot support** (default da 3.6.0), refresh cron `0 0 3 * * ?`, cache online/offline, T-level revocation filter per-paese; liste statiche SK **solo per DDOC** | EU LOTL, [[concepts/tsl-hot-swap-refresh|hot-swap]] ShedLock ✅ (edge: swap senza restart) |
 | Monitoring | `/monitoring/{health,heartbeat,version,prometheus}` | Actuator + Prometheus (≈parità) |
 | Statistiche | per-validazione (syslog-JSON / GA) | `AuditService` **non ancora cablato** ❌ |
 | Test corpus | ampio (DDOC/BDOC/ASiC/PAdES B/T/LT/LTA, ≤9 MB) + Gatling | limitato (in crescita) ❌ |
-| Formati extra | DDOC/BDOC (legacy estone) — irrilevanti per PA IT | — |
+| Formati extra | DDOC/BDOC (legacy estone) — irrilevanti per PA IT; **JAdES in arrivo nel 3.11 (Dic 2026)** | **JAdES già supportato** ✅ (gap temporaneo) |
+
+> **Verificato il 2026-06-28** contro i raw docs [[sources/SRC-2026-06-28-001]] (commit `348a6b2`, 60 file SiVa). Correzioni applicate alla tabella: (1) riga *Report* — sign-verify-2 espone `simple`/`detailed`/`diagnostic`/`etsi` per [[concepts/reports]], non "piatto"; il gap reale è `signatureLevel` + timestamp strutturati + report firmato; (2) riga *DSS* — SiVa 3.11 (Dic 2026) pianifica upgrade a DSS 6.x (`roadmap.md`); (3) riga *Trusted Lists* — SiVa ha pivot LOTL + cron refresh + cache + T-level revocation filter, non solo liste statiche; (4) riga *Formati* — SiVa aggiunge JAdES nel 3.11. Dettagli: [[concepts/siva-validation-policy]], [[concepts/siva-rest-interface]], [[concepts/siva-report-schema]], [[concepts/siva-deployment-ops]].
 
 **Dove sign-verify-2 è già avanti:** upstream DSS (niente fork-lag), async+webhook, auth applicativa (API-key/OAuth), architettura esagonale testata da ArchUnit, TSL hot-swap, `problem+json` (RFC 9457), circuit breaker/backpressure. Questi sono inversioni deliberate dei limiti principali di SiVa e **vanno mantenute come punti di forza**.
 

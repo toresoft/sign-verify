@@ -4,6 +4,7 @@ category: project
 created: 2026-06-28
 updated: 2026-06-28
 sources:
+  - sources/SRC-2026-06-28-001
   - sources/siva-research
 ---
 
@@ -42,5 +43,6 @@ RIA production via X-Road; public demos `siva-demo.eesti.ee/V3/`, `siva-arendus.
 
 ## Related
 - [[analyses/siva-vs-sign-verify-2]] — head-to-head comparison and improvement backlog.
+- Deep-dive concepts (from raw docs [[sources/SRC-2026-06-28-001]]): [[concepts/siva-rest-interface]] · [[concepts/siva-validation-policy]] · [[concepts/siva-report-schema]] · [[concepts/siva-deployment-ops]].
 - [[entities/sign-verify-2]] · [[entities/dss]] · [[concepts/trusted-lists]] · [[concepts/validation-profiles]]
 - [[concepts/etsi-en-319-102-1-validation]] · [[concepts/reports]] · [[concepts/rfc5544-tsd]]
