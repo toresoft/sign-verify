@@ -1,9 +1,31 @@
 {
+  "analyses/cades-pades-test-corpus": [
+    "analyses/siva-vs-sign-verify-2",
+    "sources/signed-files-test-corpus-research"
+  ],
+  "analyses/siva-vs-sign-verify-2": [
+    "concepts/signature-qualification",
+    "entities/siva"
+  ],
   "analyses/tsd-dto-mapping": [
-    "analyses/verifica-file-tsd"
+    "analyses/cades-pades-test-corpus",
+    "analyses/siva-vs-sign-verify-2",
+    "analyses/tsd-test-corpus",
+    "analyses/verifica-file-tsd",
+    "concepts/signature-qualification"
+  ],
+  "analyses/tsd-test-corpus": [
+    "analyses/cades-pades-test-corpus",
+    "analyses/siva-vs-sign-verify-2",
+    "analyses/verifica-file-tsd",
+    "sources/signed-files-test-corpus-research",
+    "sources/tsd-test-corpus-research"
   ],
   "analyses/verifica-file-tsd": [
+    "analyses/cades-pades-test-corpus",
+    "analyses/siva-vs-sign-verify-2",
     "analyses/tsd-dto-mapping",
+    "analyses/tsd-test-corpus",
     "concepts/cades-counter-signatures",
     "concepts/dss-format-detection",
     "concepts/dss-timestamp-api",
@@ -11,10 +33,12 @@
     "concepts/timestamping",
     "entities/detachedtimestampvalidator",
     "sources/tsd-is-cades-walk-not-detached-timestamp",
+    "sources/tsd-test-corpus-research",
     "syntheses/validation-at-a-specific-date-control-time",
     "syntheses/validation-time-and-the-timestamp-best-signature-time"
   ],
   "concepts/ades-signature-formats": [
+    "analyses/cades-pades-test-corpus",
     "concepts/baseline-profiles",
     "concepts/file-extraction",
     "concepts/rfc5544-tsd",
@@ -22,7 +46,8 @@
     "entities/dss",
     "entities/dssextractionadapter",
     "sources/SRC-2026-06-27-001",
-    "sources/SRC-2026-06-27-006"
+    "sources/SRC-2026-06-27-006",
+    "sources/signed-files-test-corpus-research"
   ],
   "concepts/api-key-authentication": [
     "entities/api_key",
@@ -39,6 +64,7 @@
     "sources/SRC-2026-06-27-002"
   ],
   "concepts/baseline-profiles": [
+    "analyses/cades-pades-test-corpus",
     "analyses/verifica-file-tsd",
     "concepts/ades-signature-formats",
     "concepts/dss-policy-xml",
@@ -52,6 +78,7 @@
     "entities/eidas-regulation",
     "entities/verification_profile",
     "sources/SRC-2026-06-27-001",
+    "sources/signed-files-test-corpus-research",
     "syntheses/validation-at-a-specific-date-control-time",
     "syntheses/validation-time-and-the-timestamp-best-signature-time"
   ],
@@ -94,9 +121,13 @@
     "concepts/etsi-en-319-102-1-validation"
   ],
   "concepts/etsi-en-319-102-1-validation": [
+    "analyses/cades-pades-test-corpus",
+    "analyses/siva-vs-sign-verify-2",
     "analyses/tsd-dto-mapping",
     "analyses/verifica-file-tsd",
-    "concepts/dss-timestamp-api"
+    "concepts/dss-timestamp-api",
+    "concepts/signature-qualification",
+    "entities/siva"
   ],
   "concepts/file-extraction": [
     "concepts/ades-signature-formats",
@@ -138,14 +169,19 @@
     "sources/SRC-2026-06-27-008"
   ],
   "concepts/reports": [
+    "analyses/cades-pades-test-corpus",
+    "analyses/siva-vs-sign-verify-2",
     "analyses/verifica-file-tsd",
     "concepts/dss-timestamp-api",
     "concepts/etsi-en-319-102-1-validation",
+    "concepts/signature-qualification",
     "entities/detachedtimestampvalidator",
     "entities/dssvalidatoradapter",
     "entities/signeddocumentvalidator",
+    "entities/siva",
     "sources/SRC-2026-06-27-001",
     "sources/SRC-2026-06-27-003",
+    "sources/signed-files-test-corpus-research",
     "syntheses/validation-at-a-specific-date-control-time",
     "syntheses/validation-time-and-the-timestamp-best-signature-time"
   ],
@@ -156,10 +192,14 @@
     "sources/SRC-2026-06-27-001"
   ],
   "concepts/rfc5544-tsd": [
+    "analyses/siva-vs-sign-verify-2",
+    "analyses/tsd-test-corpus",
     "analyses/verifica-file-tsd",
     "concepts/dss-format-detection",
     "concepts/timestamping",
-    "sources/rfc5544-tsd-standard"
+    "entities/siva",
+    "sources/rfc5544-tsd-standard",
+    "sources/tsd-test-corpus-research"
   ],
   "concepts/shedlock": [
     "concepts/async-verification-jobs",
@@ -173,7 +213,9 @@
     "sources/SRC-2026-06-27-002",
     "sources/SRC-2026-06-27-004"
   ],
+  "concepts/signature-qualification": [],
   "concepts/signature-validation": [
+    "analyses/cades-pades-test-corpus",
     "analyses/verifica-file-tsd",
     "concepts/ades-signature-formats",
     "concepts/async-verification-jobs",
@@ -190,6 +232,7 @@
     "entities/verification_profile",
     "sources/SRC-2026-06-27-001",
     "sources/SRC-2026-06-27-003",
+    "sources/signed-files-test-corpus-research",
     "syntheses/validation-at-a-specific-date-control-time",
     "syntheses/validation-time-and-the-timestamp-best-signature-time"
   ],
@@ -199,10 +242,12 @@
     "sources/SRC-2026-06-27-007"
   ],
   "concepts/timestamping": [
+    "analyses/tsd-test-corpus",
     "analyses/verifica-file-tsd",
     "concepts/rfc5544-tsd",
     "entities/detachedtimestampvalidator",
     "sources/SRC-2026-06-27-001",
+    "sources/tsd-test-corpus-research",
     "syntheses/validation-at-a-specific-date-control-time",
     "syntheses/validation-time-and-the-timestamp-best-signature-time"
   ],
@@ -222,6 +267,9 @@
     "sources/SRC-2026-06-27-004"
   ],
   "concepts/trusted-lists": [
+    "analyses/cades-pades-test-corpus",
+    "analyses/siva-vs-sign-verify-2",
+    "analyses/tsd-test-corpus",
     "analyses/verifica-file-tsd",
     "concepts/circuit-breaker",
     "concepts/etsi-en-319-102-1-validation",
@@ -238,12 +286,16 @@
     "entities/dsstsladapter",
     "entities/eidas-regulation",
     "entities/sign-verify-2",
+    "entities/siva",
     "entities/trusted_certificate",
     "sources/SRC-2026-06-27-001",
     "sources/SRC-2026-06-27-002",
-    "sources/SRC-2026-06-27-004"
+    "sources/SRC-2026-06-27-004",
+    "sources/signed-files-test-corpus-research",
+    "sources/tsd-test-corpus-research"
   ],
   "concepts/tsl-hot-swap-refresh": [
+    "analyses/siva-vs-sign-verify-2",
     "concepts/oj-keystore",
     "concepts/shedlock",
     "concepts/tl-validation-job",
@@ -257,6 +309,8 @@
     "sources/SRC-2026-06-27-004"
   ],
   "concepts/validation-profiles": [
+    "analyses/cades-pades-test-corpus",
+    "analyses/siva-vs-sign-verify-2",
     "analyses/verifica-file-tsd",
     "concepts/async-verification-jobs",
     "concepts/baseline-profiles",
@@ -266,6 +320,7 @@
     "concepts/signature-validation",
     "entities/dssvalidatoradapter",
     "entities/sign-verify-2",
+    "entities/siva",
     "entities/verification_profile",
     "sources/SRC-2026-06-27-002",
     "sources/SRC-2026-06-27-003",
@@ -290,12 +345,14 @@
     "sources/SRC-2026-06-27-001"
   ],
   "entities/detachedtimestampvalidator": [
+    "analyses/tsd-test-corpus",
     "analyses/verifica-file-tsd",
     "concepts/dss-format-detection",
     "concepts/rfc5544-tsd",
     "concepts/timestamping"
   ],
   "entities/dss": [
+    "analyses/siva-vs-sign-verify-2",
     "analyses/verifica-file-tsd",
     "concepts/ades-signature-formats",
     "concepts/baseline-profiles",
@@ -306,6 +363,7 @@
     "concepts/oj-keystore",
     "concepts/reports",
     "concepts/revocation-data",
+    "concepts/signature-qualification",
     "concepts/signature-validation",
     "concepts/timestamping",
     "concepts/tl-validation-job",
@@ -321,6 +379,7 @@
     "entities/eidas-regulation",
     "entities/sign-verify-2",
     "entities/signeddocumentvalidator",
+    "entities/siva",
     "entities/verification_profile",
     "sources/SRC-2026-06-27-001",
     "sources/SRC-2026-06-27-002",
@@ -335,7 +394,13 @@
     "sources/SRC-2026-06-27-002"
   ],
   "entities/dssvalidatoradapter": [
-    "sources/SRC-2026-06-27-002"
+    "analyses/verifica-file-tsd",
+    "concepts/revocation-data",
+    "entities/detachedtimestampvalidator",
+    "entities/signeddocumentvalidator",
+    "sources/SRC-2026-06-27-002",
+    "syntheses/validation-at-a-specific-date-control-time",
+    "syntheses/validation-time-and-the-timestamp-best-signature-time"
   ],
   "entities/eidas-regulation": [
     "concepts/ades-signature-formats",
@@ -349,6 +414,7 @@
     "syntheses/validation-at-a-specific-date-control-time"
   ],
   "entities/sign-verify-2": [
+    "analyses/siva-vs-sign-verify-2",
     "concepts/ades-signature-formats",
     "concepts/api-key-authentication",
     "concepts/async-verification-jobs",
@@ -363,6 +429,7 @@
     "concepts/problemjson",
     "concepts/reports",
     "concepts/shedlock",
+    "concepts/signature-qualification",
     "concepts/signature-validation",
     "concepts/structured-logging",
     "concepts/tl-validation-job",
@@ -377,6 +444,7 @@
     "entities/dssvalidatoradapter",
     "entities/eidas-regulation",
     "entities/signeddocumentvalidator",
+    "entities/siva",
     "entities/trusted_certificate",
     "entities/tsl_refresh",
     "entities/validation_job",
@@ -390,6 +458,7 @@
     "syntheses/validation-time-and-the-timestamp-best-signature-time"
   ],
   "entities/signeddocumentvalidator": [
+    "analyses/tsd-test-corpus",
     "analyses/verifica-file-tsd",
     "concepts/cades-counter-signatures",
     "concepts/dss-format-detection",
@@ -401,6 +470,10 @@
     "entities/dssvalidatoradapter",
     "sources/SRC-2026-06-27-001",
     "syntheses/validation-time-and-the-timestamp-best-signature-time"
+  ],
+  "entities/siva": [
+    "analyses/siva-vs-sign-verify-2",
+    "concepts/signature-qualification"
   ],
   "entities/trusted_certificate": [
     "entities/tsl_refresh",
@@ -496,9 +569,17 @@
   "sources/lint-auto-fix-creates-duplicate-stubs": [],
   "sources/obs-2026-06-27-dss-docs-pdf-capture-required-manual-pdftotext": [],
   "sources/rfc5544-tsd-standard": [
+    "analyses/tsd-test-corpus",
     "analyses/verifica-file-tsd"
   ],
+  "sources/signed-files-test-corpus-research": [
+    "analyses/cades-pades-test-corpus"
+  ],
+  "sources/siva-research": [],
   "sources/tsd-is-cades-walk-not-detached-timestamp": [],
+  "sources/tsd-test-corpus-research": [
+    "analyses/tsd-test-corpus"
+  ],
   "syntheses/validation-at-a-specific-date-control-time": [
     "syntheses/validation-time-and-the-timestamp-best-signature-time"
   ],

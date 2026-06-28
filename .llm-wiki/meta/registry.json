@@ -1,7 +1,29 @@
 {
   "version": "1.0",
-  "last_updated": "2026-06-27T21:14:55.331Z",
+  "last_updated": "2026-06-28T15:27:13.891Z",
   "pages": {
+    "analyses/cades-pades-test-corpus": {
+      "type": "analysis",
+      "title": "cades-pades-test-corpus",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "query": "\"quali file .p7m e PDF firmati usare per i test funzionali di sign-verify-2\"",
+      "sources": [
+        "sources/signed-files-test-corpus-research"
+      ]
+    },
+    "analyses/siva-vs-sign-verify-2": {
+      "type": "analysis",
+      "title": "siva-vs-sign-verify-2",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "query": "\"confronto open-eid/SiVa vs sign-verify-2 e punti di miglioramento\"",
+      "sources": [
+        "sources/siva-research",
+        "sources/SRC-2026-06-27-002",
+        "sources/SRC-2026-06-27-008"
+      ]
+    },
     "analyses/tsd-dto-mapping": {
       "type": "analysis",
       "title": "tsd-dto-mapping",
@@ -11,6 +33,17 @@
       "sources": [
         "sources/dss-timestamp-api-research",
         "sources/etsi-en-319-102-1-timestamp"
+      ]
+    },
+    "analyses/tsd-test-corpus": {
+      "type": "analysis",
+      "title": "tsd-test-corpus",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "query": "\"dove trovare o come generare file .tsd per i test di sign-verify-2\"",
+      "sources": [
+        "sources/tsd-test-corpus-research",
+        "sources/rfc5544-tsd-standard"
       ]
     },
     "analyses/verifica-file-tsd": {
@@ -238,6 +271,17 @@
         "sources/SRC-2026-06-27-002"
       ]
     },
+    "concepts/signature-qualification": {
+      "type": "concept",
+      "title": "signature-qualification",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "sources": [
+        "sources/siva-research",
+        "sources/dss-timestamp-api-research"
+      ],
+      "confidence": "high"
+    },
     "concepts/signature-validation": {
       "type": "concept",
       "title": "signature-validation",
@@ -441,6 +485,16 @@
         "sources/SRC-2026-06-27-001"
       ]
     },
+    "entities/siva": {
+      "type": "entity",
+      "title": "siva",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "category": "project",
+      "sources": [
+        "sources/siva-research"
+      ]
+    },
     "entities/trusted_certificate": {
       "type": "entity",
       "title": "trusted_certificate",
@@ -488,8 +542,8 @@
     "sources/SRC-2026-06-27-001": {
       "type": "source",
       "title": "SRC-2026-06-27-001",
-      "created": "2026-06-27",
-      "updated": "2026-06-27",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
       "format": "web",
       "source_id": "SRC-2026-06-27-001",
       "raw_path": "raw/sources/SRC-2026-06-27-001/extracted.md",
@@ -499,8 +553,8 @@
     "sources/SRC-2026-06-27-002": {
       "type": "source",
       "title": "SRC-2026-06-27-002",
-      "created": "2026-06-27",
-      "updated": "2026-06-27",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
       "format": "markdown",
       "source_id": "SRC-2026-06-27-002",
       "raw_path": "raw/sources/SRC-2026-06-27-002/extracted.md",
@@ -510,8 +564,8 @@
     "sources/SRC-2026-06-27-003": {
       "type": "source",
       "title": "SRC-2026-06-27-003",
-      "created": "2026-06-27",
-      "updated": "2026-06-27",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
       "format": "markdown",
       "source_id": "SRC-2026-06-27-003",
       "raw_path": "raw/sources/SRC-2026-06-27-003/extracted.md",
@@ -521,8 +575,8 @@
     "sources/SRC-2026-06-27-004": {
       "type": "source",
       "title": "SRC-2026-06-27-004",
-      "created": "2026-06-27",
-      "updated": "2026-06-27",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
       "format": "markdown",
       "source_id": "SRC-2026-06-27-004",
       "raw_path": "raw/sources/SRC-2026-06-27-004/extracted.md",
@@ -532,8 +586,8 @@
     "sources/SRC-2026-06-27-005": {
       "type": "source",
       "title": "SRC-2026-06-27-005",
-      "created": "2026-06-27",
-      "updated": "2026-06-27",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
       "format": "markdown",
       "source_id": "SRC-2026-06-27-005",
       "raw_path": "raw/sources/SRC-2026-06-27-005/extracted.md",
@@ -543,8 +597,8 @@
     "sources/SRC-2026-06-27-006": {
       "type": "source",
       "title": "SRC-2026-06-27-006",
-      "created": "2026-06-27",
-      "updated": "2026-06-27",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
       "format": "markdown",
       "source_id": "SRC-2026-06-27-006",
       "raw_path": "raw/sources/SRC-2026-06-27-006/extracted.md",
@@ -554,8 +608,8 @@
     "sources/SRC-2026-06-27-007": {
       "type": "source",
       "title": "SRC-2026-06-27-007",
-      "created": "2026-06-27",
-      "updated": "2026-06-27",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
       "format": "markdown",
       "source_id": "SRC-2026-06-27-007",
       "raw_path": "raw/sources/SRC-2026-06-27-007/extracted.md",
@@ -565,8 +619,8 @@
     "sources/SRC-2026-06-27-008": {
       "type": "source",
       "title": "SRC-2026-06-27-008",
-      "created": "2026-06-27",
-      "updated": "2026-06-27",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
       "format": "yaml",
       "source_id": "SRC-2026-06-27-008",
       "raw_path": "raw/sources/SRC-2026-06-27-008/extracted.md",
@@ -673,6 +727,38 @@
       ],
       "credibility": "high"
     },
+    "sources/signed-files-test-corpus-research": {
+      "type": "source",
+      "title": "\"Corpus pubblici di file firmati (CAdES .p7m / PAdES PDF) per test — ricerca multi-agente\"",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "slug": "signed-files-test-corpus-research",
+      "status": "ingested",
+      "category": "testing",
+      "urls": [
+        "https://github.com/esig/dss/tree/master/dss-pades/src/test/resources/validation",
+        "https://github.com/esig/dss/tree/master/dss-cades/src/test/resources/validation",
+        "https://github.com/open-eid/SiVa-Test",
+        "https://github.com/open-eid/digidoc4j",
+        "https://docs.openssl.org/3.1/man1/openssl-cms/"
+      ],
+      "credibility": "high"
+    },
+    "sources/siva-research": {
+      "type": "source",
+      "title": "\"open-eid/SiVa — architecture, formats, policy, report schema, ops (research 2026-06-28)\"",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "url": "https://open-eid.github.io/SiVa/",
+      "tags": [
+        "siva",
+        "eidas",
+        "dss",
+        "validation",
+        "comparison"
+      ],
+      "confidence": "high"
+    },
     "sources/tsd-is-cades-walk-not-detached-timestamp": {
       "type": "source",
       "title": "\".tsd (PA) = CAdES firma marcatemporalmente, non timestamp detached\"",
@@ -681,6 +767,24 @@
       "slug": "tsd-is-cades-walk-not-detached-timestamp",
       "status": "insight",
       "category": "correction"
+    },
+    "sources/tsd-test-corpus-research": {
+      "type": "source",
+      "title": "\"Corpus e generazione file .tsd (RFC 5544) per test — ricerca multi-agente\"",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "slug": "tsd-test-corpus-research",
+      "status": "ingested",
+      "category": "testing",
+      "urls": [
+        "https://metacpan.org/release/BRUGNARA/Crypt-TimestampedData-0.01-TRIAL",
+        "https://github.com/bcgit/bc-java/blob/master/pkix/src/test/java/org/bouncycastle/tsp/test/CMSTimeStampedDataGeneratorTest.java",
+        "https://www.freetsa.org/index_en.php",
+        "https://gist.github.com/Manouchehri/fd754e402d98430243455713efada710",
+        "https://www.jimby.name/techbits/recent/openssl_tsa/",
+        "https://docs.openssl.org/3.1/man1/openssl-ts/"
+      ],
+      "credibility": "high"
     },
     "syntheses/validation-at-a-specific-date-control-time": {
       "type": "synthesis",

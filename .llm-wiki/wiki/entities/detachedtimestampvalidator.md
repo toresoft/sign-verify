@@ -21,7 +21,7 @@ The [[entities/dss]] validator for **standalone / detached RFC 3161 timestamp to
 - `getDocumentAnalyzer()` → the timestamped document(s) *without* the signature.
 
 ## Detection
-`DetachedTimestampAnalyzer` / `DetachedTimestampProcessor` decide whether a CMS/DER blob is a **timestamp-only** document. This is the branch condition [[entities/dss-validator-adapter|DssValidatorAdapter]] needs: timestamp-only → this validator; otherwise → `SignedDocumentValidator.fromDocument(...)`.
+`DetachedTimestampAnalyzer` / `DetachedTimestampProcessor` decide whether a CMS/DER blob is a **timestamp-only** document. This is the branch condition [[entities/dssvalidatoradapter|DssValidatorAdapter]] needs: timestamp-only → this validator; otherwise → `SignedDocumentValidator.fromDocument(...)`.
 
 ## Why not `SignedDocumentValidator.fromDocument()` alone
 `fromDocument()` auto-detects XAdES/CAdES/PAdES/JAdES/ASiC **entity signatures**; a pure timestamp token (`.tsd`/`.tsr` data container) is not an AdES signature and must be routed explicitly (see [[analyses/verifica-file-tsd|the .tsd analysis]]). Note: a `.tsd` could *also* be a CAdES envelope carrying a real signature + an archive timestamp — the analyzer distinguishes by content, not extension (DSS detects by content).

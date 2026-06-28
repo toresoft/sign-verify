@@ -4,7 +4,10 @@
 
 ## Analysiss
 
+- [[analyses/cades-pades-test-corpus]] — cades-pades-test-corpus *(created: 2026-06-28)*
+- [[analyses/siva-vs-sign-verify-2]] — siva-vs-sign-verify-2 *(created: 2026-06-28)*
 - [[analyses/tsd-dto-mapping]] — tsd-dto-mapping *(created: 2026-06-27)*
+- [[analyses/tsd-test-corpus]] — tsd-test-corpus *(created: 2026-06-28)*
 - [[analyses/verifica-file-tsd]] — verifica-file-tsd *(created: 2026-06-27)*
 
 ## Concepts
@@ -29,6 +32,7 @@
 - [[concepts/revocation-data]] — revocation-data *(created: 2026-06-27)*
 - [[concepts/rfc5544-tsd]] — rfc5544-tsd *(created: 2026-06-27)*
 - [[concepts/shedlock]] — shedlock *(created: 2026-06-27)*
+- [[concepts/signature-qualification]] — signature-qualification *(created: 2026-06-28)*
 - [[concepts/signature-validation]] — signature-validation *(created: 2026-06-27)*
 - [[concepts/structured-logging]] — structured-logging *(created: 2026-06-27)*
 - [[concepts/timestamping]] — timestamping *(created: 2026-06-27)*
@@ -51,6 +55,7 @@
 - [[entities/eidas-regulation]] — eidas-regulation *(created: 2026-06-27)*
 - [[entities/sign-verify-2]] — sign-verify-2 *(created: 2026-06-27)*
 - [[entities/signeddocumentvalidator]] — signeddocumentvalidator *(created: 2026-06-27)*
+- [[entities/siva]] — siva *(created: 2026-06-28)*
 - [[entities/trusted_certificate]] — trusted_certificate *(created: 2026-06-27)*
 - [[entities/tsl_refresh]] — tsl_refresh *(created: 2026-06-27)*
 - [[entities/validation_job]] — validation_job *(created: 2026-06-27)*
@@ -65,15 +70,18 @@
 - [[sources/lint-auto-fix-creates-duplicate-stubs]] — "wiki_lint auto_fix creates duplicate stubs from link text" *(created: 2026-06-27)*
 - [[sources/obs-2026-06-27-dss-docs-pdf-capture-required-manual-pdftotext]] — "Observation: DSS docs PDF capture required manual pdftotext" *(created: 2026-06-27)*
 - [[sources/rfc5544-tsd-standard]] — "RFC 5544 + RFC 5955: definizione formale formato TSD e adozione italiana" *(created: 2026-06-27)*
-- [[sources/SRC-2026-06-27-001]] — SRC-2026-06-27-001 *(created: 2026-06-27)*
-- [[sources/SRC-2026-06-27-002]] — SRC-2026-06-27-002 *(created: 2026-06-27)*
-- [[sources/SRC-2026-06-27-003]] — SRC-2026-06-27-003 *(created: 2026-06-27)*
-- [[sources/SRC-2026-06-27-004]] — SRC-2026-06-27-004 *(created: 2026-06-27)*
-- [[sources/SRC-2026-06-27-005]] — SRC-2026-06-27-005 *(created: 2026-06-27)*
-- [[sources/SRC-2026-06-27-006]] — SRC-2026-06-27-006 *(created: 2026-06-27)*
-- [[sources/SRC-2026-06-27-007]] — SRC-2026-06-27-007 *(created: 2026-06-27)*
-- [[sources/SRC-2026-06-27-008]] — SRC-2026-06-27-008 *(created: 2026-06-27)*
+- [[sources/signed-files-test-corpus-research]] — "Corpus pubblici di file firmati (CAdES .p7m / PAdES PDF) per test — ricerca multi-agente" *(created: 2026-06-28)*
+- [[sources/siva-research]] — "open-eid/SiVa — architecture, formats, policy, report schema, ops (research 2026-06-28)" *(created: 2026-06-28)*
+- [[sources/SRC-2026-06-27-001]] — SRC-2026-06-27-001 *(created: 2026-06-28)*
+- [[sources/SRC-2026-06-27-002]] — SRC-2026-06-27-002 *(created: 2026-06-28)*
+- [[sources/SRC-2026-06-27-003]] — SRC-2026-06-27-003 *(created: 2026-06-28)*
+- [[sources/SRC-2026-06-27-004]] — SRC-2026-06-27-004 *(created: 2026-06-28)*
+- [[sources/SRC-2026-06-27-005]] — SRC-2026-06-27-005 *(created: 2026-06-28)*
+- [[sources/SRC-2026-06-27-006]] — SRC-2026-06-27-006 *(created: 2026-06-28)*
+- [[sources/SRC-2026-06-27-007]] — SRC-2026-06-27-007 *(created: 2026-06-28)*
+- [[sources/SRC-2026-06-27-008]] — SRC-2026-06-27-008 *(created: 2026-06-28)*
 - [[sources/tsd-is-cades-walk-not-detached-timestamp]] — ".tsd (PA) = CAdES firma marcatemporalmente, non timestamp detached" *(created: 2026-06-27)*
+- [[sources/tsd-test-corpus-research]] — "Corpus e generazione file .tsd (RFC 5544) per test — ricerca multi-agente" *(created: 2026-06-28)*
 
 ## Synthesiss
 
@@ -81,4 +89,4 @@
 - [[syntheses/validation-time-and-the-timestamp-best-signature-time]] — validation-time-and-the-timestamp-best-signature-time *(created: 2026-06-27)*
 
 ---
-*Last updated: 2026-06-27T21:14:55.331Z* | *Total pages: 63*
+*Last updated: 2026-06-28T15:27:13.891Z* | *Total pages: 71*

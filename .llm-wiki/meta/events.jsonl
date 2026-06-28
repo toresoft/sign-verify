@@ -59,3 +59,5 @@
 {"timestamp":"2026-06-27T19:37:49.694Z","kind":"rebuild_meta"}
 {"timestamp":"2026-06-27T21:07:31.205Z","kind":"ensure_page","page_type":"synthesis","title":"Validation at a specific date (control time)","path":"syntheses/validation-at-a-specific-date-control-time"}
 {"timestamp":"2026-06-27T21:14:55.329Z","kind":"ensure_page","page_type":"synthesis","title":"Validation time and the timestamp (best-signature-time)","path":"syntheses/validation-time-and-the-timestamp-best-signature-time"}
+{"timestamp":"2026-06-28T15:16:23.570Z","kind":"lint","orphans":6,"missing_pages":48,"contradictions":0,"auto_fix":false}
+{"timestamp":"2026-06-28T15:27:13.890Z","kind":"lint","orphans":6,"missing_pages":39,"contradictions":0,"auto_fix":false}

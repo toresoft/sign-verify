@@ -19,7 +19,7 @@ The mechanisms for checking whether a signing certificate has been revoked, cent
 DSS supports caching, offline fetching, and a revocation-data loading strategy + verifier (docs §6). Revocation evidence is embedded at LT/LTA levels (`RevocationValues`) to preserve long-term verifiability ([[concepts/baseline-profiles]]).
 
 ## In sign-verify-2
-The [[entities/certificate-verifier|CertificateVerifier]] configured by [[entities/dss-validator-adapter|DssValidatorAdapter]] carries these sources; fetch failures contribute to the DSS [[concepts/circuit-breaker|circuit breaker]] opening.
+The [[entities/certificate-verifier|CertificateVerifier]] configured by [[entities/dssvalidatoradapter|DssValidatorAdapter]] carries these sources; fetch failures contribute to the DSS [[concepts/circuit-breaker|circuit breaker]] opening.
 
 ## Related
 - [[entities/dss]] · [[entities/certificate-verifier]]

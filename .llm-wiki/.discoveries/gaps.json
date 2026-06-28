@@ -1,12 +1,15 @@
 {
   "gaps": [
     {
-      "topic": "entities/dss-validator-adapter",
+      "topic": "../outputs/improvement-points-from-siva-2026-06-28",
       "mentionedBy": [
-        "analyses/verifica-file-tsd",
-        "concepts/revocation-data",
-        "entities/detachedtimestampvalidator",
-        "entities/signeddocumentvalidator"
+        "analyses/siva-vs-sign-verify-2"
+      ]
+    },
+    {
+      "topic": "../outputs/plan-verifica-file-tsd-2026-06-28",
+      "mentionedBy": [
+        "analyses/siva-vs-sign-verify-2"
       ]
     },
     {
@@ -176,5 +179,5 @@
       ]
     }
   ],
-  "generated": "2026-06-27T19:33:05.610Z"
+  "generated": "2026-06-28T15:27:13.890Z"
 }

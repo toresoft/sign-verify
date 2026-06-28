@@ -15,7 +15,7 @@ _Synthesis answering: «attualmente la validazione avviene al tempo della marca 
 **Sì, ma automaticamente e a livelli — non è una scelta esplicita di sign-verify-2.** [[entities/sign-verify-2]] non imposta né un `ValidationLevel` né un tempo di validazione, quindi [[entities/dss]] esegue il **livello più alto (con LTA)**. Quel processo include, per le firme "with-time / LT", la validazione **contro il best-signature-time = tempo di produzione della marca temporale della firma** (docs §20.2.4). La validazione **base** parte comunque al **tempo corrente**; la validazione "nel passato" via POE si attiva solo se la base al current-time è `INDETERMINATE` e i timestamp possono risolverla.
 
 ## Comportamento corrente (dal codice)
-`DssValidatorAdapter.validate()` ([[entities/dss-validator-adapter]]) fa esattamente:
+`DssValidatorAdapter.validate()` ([[entities/dssvalidatoradapter]]) fa esattamente:
 ```java
 validator = SignedDocumentValidator.fromDocument(doc);
 validator.setCertificateVerifier(certificateVerifier);
@@ -48,6 +48,6 @@ Past-validation (PCV/VTS/POE-extraction/PSV) viene attivata quando la validazion
 
 ## Related
 - [[concepts/signature-validation]] · [[concepts/baseline-profiles]] · [[concepts/timestamping]]
-- [[entities/dss-validator-adapter]] · [[entities/dss]] · [[entities/signeddocumentvalidator]]
+- [[entities/dssvalidatoradapter]] · [[entities/dss]] · [[entities/signeddocumentvalidator]]
 - [[concepts/validation-profiles]] · [[concepts/dss-policy-xml]] · [[analyses/verifica-file-tsd]]
 - [[syntheses/validation-at-a-specific-date-control-time]]

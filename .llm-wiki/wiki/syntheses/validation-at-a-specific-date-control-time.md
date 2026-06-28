@@ -27,7 +27,7 @@ Pertanto "impostare una data" significa fissare il **control time / best-signatu
 
 ## Come si aggiungerebbe a sign-verify-2 (gaps attuali)
 1. **Contratto:** aggiungere a `metadata` un campo facoltativo `validationDate` (ISO-8601) nello schema di [[concepts/design-first-openapi|OpenAPI]] (design-first → `OpenApiContractIT` forza la rigenerazione). Estensione pulita del meccanismo di [[concepts/validation-profiles|profileOverrides]].
-2. **Adapter:** in [[entities/dss-validator-adapter|DssValidatorAdapter]], raccogliere `validationDate` e impostare il tempo di validazione sul `SignedDocumentValidator`/`CertificateVerifier` (DSS espone il setter interno; `validationDate` del §13.1.4 è il riferimento API).
+2. **Adapter:** in [[entities/dssvalidatoradapter|DssValidatorAdapter]], raccogliere `validationDate` e impostare il tempo di validazione sul `SignedDocumentValidator`/`CertificateVerifier` (DSS espone il setter interno; `validationDate` del §13.1.4 è il riferimento API).
 3. **Risultato:** `verifiedAt` dovrebbe riflettere la data impostata (non `now`); esporre nel [[concepts/reports|Reports]] che la validazione è stata eseguita "as-of". Decidere la **semantica di aggregazione** coerente con [[concepts/signature-validation]] (signature B-level vs marca TSA) — stesso caveat del caso `.tsd` ([[analyses/verifica-file-tsd]]).
 
 ## Gap di conoscenza
@@ -37,5 +37,5 @@ Il design spec ([[sources/SRC-2026-06-27-002]]) e i docs operativi **non menzion
 
 ## Related
 - [[concepts/signature-validation]] · [[concepts/baseline-profiles]] · [[concepts/timestamping]]
-- [[concepts/validation-profiles]] · [[entities/dss-validator-adapter]] · [[concepts/design-first-openapi]]
+- [[concepts/validation-profiles]] · [[entities/dssvalidatoradapter]] · [[concepts/design-first-openapi]]
 - [[entities/eidas-regulation]] · [[analyses/verifica-file-tsd]]

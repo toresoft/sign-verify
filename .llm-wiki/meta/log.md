@@ -179,9 +179,10 @@
 ## [2026-06-27T21:14:55.329Z] ensure_page
 - page_type: "synthesis", title: "Validation time and the timestamp (best-signature-time)", path: "syntheses/validation-time-and-the-timestamp-best-signature-time"
 
+## [2026-06-28T15:16:23.570Z] lint
+- orphans: 6, missing_pages: 48, contradictions: 0, auto_fix: false
 
-## [2026-06-28] plan | "verifica di file tsd" -> outputs/plan-verifica-file-tsd-2026-06-28.md (11 articles consulted, 4 decisions, 5 phases)
+## [2026-06-28T15:27:13.890Z] lint
+- orphans: 6, missing_pages: 39, contradictions: 0, auto_fix: false
 
-## [2026-06-28] research | "ricerca file tsd per test" -> 6 sources ingested, 2 articles compiled (1 source-note, 1 analysis), 1 article updated (verifica-file-tsd test-vectors)
-
-## [2026-06-28] research | "ricerca file p7m e pdf firmati per test funzionali" -> 5 sources ingested, 2 articles compiled (signed-files-test-corpus-research, cades-pades-test-corpus)
+## [2026-06-28] ll | "TSD impl, Jackson CVE, JDK-25 toolchain" → raw/notes/2026-06-28-ll-tsd-jackson-toolchain.md (5 lessons, 0 articles updated)
