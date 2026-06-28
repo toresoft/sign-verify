@@ -92,6 +92,8 @@ public class TsdAwareValidatorAdapter implements SignatureValidatorPort {
 
     ValidationPolicy policy = loadPolicy(req.policyXml());
     List<Element> elements = new ArrayList<>();
+    List<org.toresoft.signverify.domain.port.SignatureSummary> sigSummaries = new ArrayList<>();
+    List<org.toresoft.signverify.domain.port.TimestampSummary> tsSummaries = new ArrayList<>();
     Reports primaryReports = null;
 
     // 1) The inner content may itself be a CAdES signature (TSD over a signed .p7m).
@@ -111,6 +113,7 @@ public class TsdAwareValidatorAdapter implements SignatureValidatorPort {
           innerFormat = sr.getSignatureFormat(id).toString();
         }
       }
+      sigSummaries.addAll(SimpleReportMapper.signatures(sr));
       primaryReports = innerReports;
     }
 
@@ -133,6 +136,7 @@ public class TsdAwareValidatorAdapter implements SignatureValidatorPort {
                 str(sr.getSubIndication(id))));
       }
       if (primaryReports == null) primaryReports = tsReports;
+      tsSummaries.addAll(SimpleReportMapper.timestamps(sr));
     }
 
     if (elements.isEmpty() || primaryReports == null) {
@@ -152,8 +156,8 @@ public class TsdAwareValidatorAdapter implements SignatureValidatorPort {
         worst.subIndication(),
         innerSignatureCount,
         out,
-        List.of(),
-        List.of());
+        sigSummaries,
+        tsSummaries);
   }
 
   private Reports tryValidateInnerSignatures(byte[] content, ValidationPolicy policy) {
