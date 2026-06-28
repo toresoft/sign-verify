@@ -1,6 +1,7 @@
 package org.toresoft.signverify.adapter.dss;
 
 import eu.europa.esig.dss.simplereport.SimpleReport;
+import eu.europa.esig.dss.simplereport.jaxb.XmlEvidenceRecord;
 import eu.europa.esig.dss.simplereport.jaxb.XmlTimestamp;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -30,7 +31,7 @@ final class SimpleReportMapper {
               report.getSignedBy(id),
               odt(report.getBestSignatureTime(id)),
               odt(report.getSigningTime(id)),
-              List.of(),
+              archiveTimestamps(report, id),
               List.of(),
               signatureTimestamps(report, id)));
     }
@@ -48,6 +49,31 @@ final class SimpleReportMapper {
               str(t.getSubIndication()),
               odt(t.getProductionTime()),
               tsLevel(t)));
+    }
+    return out;
+  }
+
+  /** Archive timestamps extracted from evidence records attached to a signature (LTA). */
+  private static List<TimestampSummary> archiveTimestamps(SimpleReport report, String id) {
+    List<TimestampSummary> out = new ArrayList<>();
+    var records = report.getSignatureEvidenceRecords(id);
+    if (records == null) {
+      return out;
+    }
+    for (XmlEvidenceRecord er : records) {
+      var timestamps = report.getEvidenceRecordTimestamps(er.getId());
+      if (timestamps == null) {
+        continue;
+      }
+      for (XmlTimestamp t : timestamps) {
+        out.add(
+            new TimestampSummary(
+                t.getId(),
+                str(t.getIndication()),
+                str(t.getSubIndication()),
+                odt(t.getProductionTime()),
+                tsLevel(t)));
+      }
     }
     return out;
   }

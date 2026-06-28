@@ -58,4 +58,27 @@ class DssValidatorAdapterTest {
     assertThat(sig.indication()).isNotBlank();
     assertThat(sig.claimedSigningTime()).isNotNull();
   }
+
+  @Test
+  void extracts_archive_timestamps_from_evidence_records() throws Exception {
+    byte[] pdf =
+        new ClassPathResource("assets/pades/sample-pades-valid.pdf")
+            .getInputStream()
+            .readAllBytes();
+    String policy =
+        new String(
+            new ClassPathResource("policy/BASIC.xml").getInputStream().readAllBytes(),
+            StandardCharsets.UTF_8);
+
+    var result =
+        adapter.validate(
+            new ValidationRequest(
+                pdf, "sample-pades-valid.pdf", policy, Set.of(ReportType.SIMPLE)));
+
+    assertThat(result.signatures()).isNotEmpty();
+    var sig = result.signatures().get(0);
+    assertThat(sig.archiveTimestamps()).isNotNull();
+    // PAdES BASELINE_LT does not contain LTA evidence records, so list is empty
+    assertThat(sig.archiveTimestamps()).isEmpty();
+  }
 }
