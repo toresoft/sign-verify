@@ -147,7 +147,13 @@ public class TsdAwareValidatorAdapter implements SignatureValidatorPort {
     String format = innerFormat != null ? innerFormat : TSD_FORMAT;
     Map<ReportType, String> out = serialize(req.reports(), primaryReports);
     return new ValidationResult(
-        format, worst.indication(), worst.subIndication(), innerSignatureCount, out);
+        format,
+        worst.indication(),
+        worst.subIndication(),
+        innerSignatureCount,
+        out,
+        List.of(),
+        List.of());
   }
 
   private Reports tryValidateInnerSignatures(byte[] content, ValidationPolicy policy) {
