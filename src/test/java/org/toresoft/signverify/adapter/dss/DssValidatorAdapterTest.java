@@ -56,5 +56,6 @@ class DssValidatorAdapterTest {
     assertThat(sig.signatureFormat()).startsWith("PAdES");
     assertThat(sig.signatureLevel()).isNotBlank();
     assertThat(sig.indication()).isNotBlank();
+    assertThat(sig.claimedSigningTime()).isNotNull();
   }
 }

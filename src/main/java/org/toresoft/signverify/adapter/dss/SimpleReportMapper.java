@@ -29,6 +29,9 @@ final class SimpleReportMapper {
               qualification(report, id),
               report.getSignedBy(id),
               odt(report.getBestSignatureTime(id)),
+              odt(report.getSigningTime(id)),
+              List.of(),
+              List.of(),
               signatureTimestamps(report, id)));
     }
     return out;

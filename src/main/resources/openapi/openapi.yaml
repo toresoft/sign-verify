@@ -673,9 +673,21 @@ components:
             INDETERMINATE_* variant. Orthogonal to `indication` (cryptographic validity).
         signedBy: { type: string, nullable: true }
         bestSignatureTime: { type: string, format: date-time, nullable: true }
+        claimedSigningTime: { type: string, format: date-time, nullable: true }
+        archiveTimestamps:
+          type: array
+          items: { $ref: '#/components/schemas/TimestampSummary' }
+        certificates:
+          type: array
+          items: { $ref: '#/components/schemas/CertificateSummary' }
         timestamps:
           type: array
           items: { $ref: '#/components/schemas/TimestampSummary' }
+    CertificateSummary:
+      type: object
+      properties:
+        id: { type: string }
+        qualifiedName: { type: string }
     TimestampSummary:
       type: object
       properties:

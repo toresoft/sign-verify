@@ -11,4 +11,7 @@ public record SignatureSummary(
     String signatureLevel,
     String signedBy,
     OffsetDateTime bestSignatureTime,
+    OffsetDateTime claimedSigningTime,
+    List<TimestampSummary> archiveTimestamps,
+    List<CertificateSummary> certificates,
     List<TimestampSummary> timestamps) {}
