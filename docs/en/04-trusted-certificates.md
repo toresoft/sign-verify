@@ -104,6 +104,32 @@ Each item contains (`certToMap`): `id`, `ski`, `aki`, `subjectDn`, `subjectCn`,
 `tspServiceStatus`, `validFrom`, `validTo`, `lastSeenAt`, `removedAt`,
 `certificateDerB64` (DER certificate, base64), `tslUrl`.
 
+### Possible values for `tspServiceType`
+
+| Value | Meaning |
+|-------|---------|
+| `CA/QC` | Certification Authority issuing qualified certificates |
+| `QCertESeal` | Qualified certificate for electronic seal |
+| `QCertESig` | Qualified certificate for electronic signature |
+| `QTimestamp` | Qualified electronic time stamp |
+| `QWAC` | Qualified website authentication certificate |
+| `QPreservation` | Qualified preservation service for qualified electronic signatures/seals |
+| `QeIDASLogin` | eIDAS login service |
+| `QeIDASNotify` | eIDAS notification service |
+| `QeIDASSignature` | eIDAS signature service |
+| `QeIDASVerification` | eIDAS verification service |
+
+> Values are defined by ETSI TS 119 612-1.
+
+### Possible values for `tspServiceStatus`
+
+| Value | Meaning |
+|-------|---------|
+| `GRANTED` | Service is actively granted and in operation |
+| `WITHDRAWN` | Service has been withdrawn by the TSP or supervisory body |
+| `SUPERSEDED` | Service has been superseded by another service |
+| `NOT_GRANTED` | Service is not (or no longer) granted |
+
 ## 3.5 Certificate detail
 
 `GET /api/v1/tsl/certificates/{id}` — returns the same object as above for the
