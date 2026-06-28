@@ -8,6 +8,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import org.toresoft.signverify.domain.port.CertificateSummary;
 import org.toresoft.signverify.domain.port.SignatureSummary;
 import org.toresoft.signverify.domain.port.TimestampSummary;
 
@@ -32,7 +33,7 @@ final class SimpleReportMapper {
               odt(report.getBestSignatureTime(id)),
               odt(report.getSigningTime(id)),
               archiveTimestamps(report, id),
-              List.of(),
+              certificates(report, id),
               signatureTimestamps(report, id)));
     }
     return out;
@@ -114,5 +115,18 @@ final class SimpleReportMapper {
 
   private static OffsetDateTime odt(Date d) {
     return d == null ? null : d.toInstant().atOffset(ZoneOffset.UTC);
+  }
+
+  private static List<CertificateSummary> certificates(SimpleReport report, String signatureId) {
+    var chain = report.getCertificateChain(signatureId);
+    if (chain == null) {
+      return List.of();
+    }
+    List<CertificateSummary> out = new ArrayList<>();
+    for (var cert : chain.getCertificate()) {
+      out.add(
+          new CertificateSummary(cert.getId(), cert.getQualifiedName(), odt(cert.getSunsetDate())));
+    }
+    return out;
   }
 }

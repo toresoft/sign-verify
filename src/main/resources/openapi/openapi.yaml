@@ -688,6 +688,7 @@ components:
       properties:
         id: { type: string }
         qualifiedName: { type: string }
+        sunsetDate: { type: string, format: date-time, nullable: true }
     TimestampSummary:
       type: object
       properties:
