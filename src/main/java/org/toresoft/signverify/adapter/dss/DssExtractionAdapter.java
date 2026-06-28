@@ -4,7 +4,6 @@ import eu.europa.esig.dss.model.DSSDocument;
 import eu.europa.esig.dss.model.InMemoryDocument;
 import eu.europa.esig.dss.spi.validation.CertificateVerifier;
 import eu.europa.esig.dss.validation.SignedDocumentValidator;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Component;
@@ -21,7 +20,6 @@ public class DssExtractionAdapter implements ExtractionPort {
   }
 
   @Override
-  @CircuitBreaker(name = "dssValidator", fallbackMethod = "fallback")
   public ExtractionResult extract(byte[] bytes, String filename) {
     DSSDocument doc = new InMemoryDocument(bytes, filename);
     SignedDocumentValidator validator;
@@ -61,9 +59,5 @@ public class DssExtractionAdapter implements ExtractionPort {
     }
     String format = "UNKNOWN";
     return new ExtractionResult(format, out);
-  }
-
-  public ExtractionResult fallback(byte[] bytes, String filename, Throwable t) {
-    throw AppException.dssUnavailable("dss circuit breaker open: " + t.getMessage());
   }
 }

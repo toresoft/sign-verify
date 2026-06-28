@@ -20,12 +20,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.toresoft.signverify.domain.port.ExtractionPort;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 class TsdExtractionSmokeTest {
 
   @Autowired private TestRestTemplate rest;
+  @Autowired private ExtractionPort extractor;
 
   @Value("${local.server.port}")
   private int port;
@@ -36,6 +38,7 @@ class TsdExtractionSmokeTest {
   void setUp() throws IOException {
     apiKey = Files.readString(Path.of("/tmp/sign-verify-test/bootstrap-api-key.txt")).strip();
     System.out.println("[TsdExtractionSmokeTest] port=" + port);
+    System.out.println("[TsdExtractionSmokeTest] extractor=" + extractor.getClass().getName());
   }
 
   @Test
@@ -63,16 +66,10 @@ class TsdExtractionSmokeTest {
     System.out.println("[TsdExtractionSmokeTest] status=" + response.getStatusCode());
     System.out.println("[TsdExtractionSmokeTest] body=" + response.getBody());
 
-    // Characterisation: extraction from RFC 5544 TSD is NOT yet supported.
-    // DssExtractionAdapter uses DSS directly without the Bouncy Castle unwrap
-    // that TsdAwareValidatorAdapter provides for the /verifications endpoint.
-    // Expected: 400 or 500 because DSS can't parse TSD format.
     assertThat(response.getStatusCode())
-        .as("TSD extraction currently unsupported — DSS rejects RFC 5544; error expected")
-        .isNotEqualTo(HttpStatus.OK);
+        .as("TSD extraction via TsdAwareExtractionAdapter")
+        .isEqualTo(HttpStatus.OK);
 
-    assertThat(response.getBody())
-        .as("Error body should contain problem+json or error detail")
-        .isNotNull();
+    assertThat(response.getBody()).isNotNull().isNotEmpty();
   }
 }
