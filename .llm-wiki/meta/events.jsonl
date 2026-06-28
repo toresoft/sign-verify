@@ -61,3 +61,5 @@
 {"timestamp":"2026-06-27T21:14:55.329Z","kind":"ensure_page","page_type":"synthesis","title":"Validation time and the timestamp (best-signature-time)","path":"syntheses/validation-time-and-the-timestamp-best-signature-time"}
 {"timestamp":"2026-06-28T15:16:23.570Z","kind":"lint","orphans":6,"missing_pages":48,"contradictions":0,"auto_fix":false}
 {"timestamp":"2026-06-28T15:27:13.890Z","kind":"lint","orphans":6,"missing_pages":39,"contradictions":0,"auto_fix":false}
+{"timestamp":"2026-06-28T19:22:24Z","kind":"audit_started","scope":"artifact","target":"wiki/analyses/siva-vs-sign-verify-2"}
+{"timestamp":"2026-06-28T19:23:38Z","kind":"audit_completed","scope":"artifact","target":"wiki/analyses/siva-vs-sign-verify-2","verdict":"partially_accurate","outputs_scanned":2,"drifted":1,"escalations":3}
