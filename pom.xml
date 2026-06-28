@@ -25,6 +25,10 @@
         <tomcat.version>10.1.55</tomcat.version>
         <!-- Override Spring Boot's managed PostgreSQL driver (42.7.10) for CVE-2026-42198. -->
         <postgresql.version>42.7.11</postgresql.version>
+        <!-- Override Spring Boot's managed Jackson (2.21.2) for CVE-2026-23183, CVE-2026-54512,
+             CVE-2026-54513 and CVE-2026-54515. 2.21.5 is not on Maven Central; 2.22.0 is the first
+             released version clearing all four. -->
+        <jackson-bom.version>2.22.0</jackson-bom.version>
         <dss.version>6.4</dss.version>
         <resilience4j.version>2.2.0</resilience4j.version>
         <shedlock.version>5.16.0</shedlock.version>
