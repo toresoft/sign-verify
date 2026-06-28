@@ -188,7 +188,7 @@ Without `metadata`, the default profile and the `simple` + `etsi` reports are us
 ```bash
 curl -s -X POST http://localhost:8080/api/v1/verifications \
   -H "X-API-Key: $KEY" \
-  -F "file=@src/test/resources/signatures/sample-pades-valid.pdf" | jq
+  -F "file=@src/test/resources/assets/pades/sample-pades-valid.pdf" | jq
 ```
 
 Response (excerpt):
@@ -298,5 +298,3 @@ Italian (`docs/it/`), with Mermaid diagrams. Indexes:
 
 - API: OpenAPI contract in `src/main/resources/openapi/openapi.yaml` —
   Swagger UI at `/swagger-ui/index.html`
-- Design: `docs/superpowers/specs/2026-06-07-sign-verify-design.md`
-- Implementation plan: `docs/superpowers/plans/2026-06-07-sign-verify-implementation.md`

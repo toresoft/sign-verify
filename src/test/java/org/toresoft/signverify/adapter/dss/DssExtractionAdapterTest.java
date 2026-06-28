@@ -22,7 +22,7 @@ class DssExtractionAdapterTest {
   @Test
   void extract_returns_result_from_pades() throws IOException {
     byte[] pdf =
-        Files.readAllBytes(Path.of("src/test/resources/signatures/sample-pades-valid.pdf"));
+        Files.readAllBytes(Path.of("src/test/resources/assets/pades/sample-pades-valid.pdf"));
     var result = extractor.extract(pdf, "sample.pdf");
 
     assertThat(result.signatureFormat()).isNotNull();

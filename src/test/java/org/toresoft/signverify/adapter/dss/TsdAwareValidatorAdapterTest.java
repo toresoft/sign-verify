@@ -35,7 +35,7 @@ class TsdAwareValidatorAdapterTest {
   }
 
   private static byte[] sampleTsd() throws Exception {
-    return new ClassPathResource("signatures/sample-rfc5544.tsd").getInputStream().readAllBytes();
+    return new ClassPathResource("assets/tsd/sample-rfc5544.tsd").getInputStream().readAllBytes();
   }
 
   @Test

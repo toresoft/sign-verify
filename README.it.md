@@ -296,5 +296,3 @@ La documentazione d'uso approfondita si trova sotto `docs/`, in italiano
 
 - API: contratto OpenAPI in `src/main/resources/openapi/openapi.yaml` —
   Swagger UI su `/swagger-ui/index.html`
-- Design: `docs/superpowers/specs/2026-06-07-sign-verify-design.md`
-- Piano di implementazione: `docs/superpowers/plans/2026-06-07-sign-verify-implementation.md`

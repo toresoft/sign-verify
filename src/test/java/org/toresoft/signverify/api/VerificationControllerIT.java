@@ -53,7 +53,7 @@ class VerificationControllerIT {
   @Test
   void verify_pades_returns_indication() throws Exception {
     byte[] pdf =
-        Files.readAllBytes(Path.of("src/test/resources/signatures/sample-pades-valid.pdf"));
+        Files.readAllBytes(Path.of("src/test/resources/assets/pades/sample-pades-valid.pdf"));
     var filePart = new MockMultipartFile("file", "sample.pdf", "application/pdf", pdf);
     var meta =
         new MockMultipartFile(

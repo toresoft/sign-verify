@@ -38,7 +38,9 @@ class DssValidatorAdapterTest {
   @Test
   void enriches_response_with_signatures_and_qualification() throws Exception {
     byte[] pdf =
-        new ClassPathResource("signatures/sample-pades-valid.pdf").getInputStream().readAllBytes();
+        new ClassPathResource("assets/pades/sample-pades-valid.pdf")
+            .getInputStream()
+            .readAllBytes();
     String policy =
         new String(
             new ClassPathResource("policy/BASIC.xml").getInputStream().readAllBytes(),
