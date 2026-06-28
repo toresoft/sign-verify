@@ -17,10 +17,10 @@ import org.junit.jupiter.api.Test;
 /**
  * Probes how DSS 6.4 handles RFC 5544 TimeStampedData (TSD) format.
  *
- * <p>RFC 5544 TSD wraps a document + RFC 3161 timestamp token in a CMS ContentInfo with
- * contentType = id-aa-timeStampedData (OID 1.2.840.113549.1.9.16.1.31). This is structurally
- * different from CAdES (id-signedData). The test builds a minimal syntactically-partial TSD (no
- * real TSA token needed) to probe the DSS routing layer.
+ * <p>RFC 5544 TSD wraps a document + RFC 3161 timestamp token in a CMS ContentInfo with contentType
+ * = id-aa-timeStampedData (OID 1.2.840.113549.1.9.16.1.31). This is structurally different from
+ * CAdES (id-signedData). The test builds a minimal syntactically-partial TSD (no real TSA token
+ * needed) to probe the DSS routing layer.
  *
  * <p>Expected findings — one of:
  *
@@ -85,11 +85,12 @@ class Rfc5544TsdRoutingTest {
 
     // This is the key probe: does DSS recognise the RFC 5544 ContentInfo at all?
     // See Javadoc on this class for the 4 possible outcomes (A/B/C/D).
-    var validatorOrNull = new Object() {
-      SignedDocumentValidator value;
-      String validatorClass;
-      String thrownMessage;
-    };
+    var validatorOrNull =
+        new Object() {
+          SignedDocumentValidator value;
+          String validatorClass;
+          String thrownMessage;
+        };
 
     try {
       validatorOrNull.value = SignedDocumentValidator.fromDocument(doc);
