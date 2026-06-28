@@ -1,0 +1,10 @@
+{
+  "id": "SRC-2026-06-27-008",
+  "captured": "2026-06-27",
+  "packet_version": "1.0",
+  "title": "openapi.yaml",
+  "file_path": "/home/salvatore/Development/sign-verify-2/src/main/resources/openapi/openapi.yaml",
+  "format": "file",
+  "extractor": "passthrough",
+  "extraction_status": "success"
+}

@@ -1,0 +1,11 @@
+{
+  "id": "SRC-2026-06-27-005",
+  "captured": "2026-06-27",
+  "packet_version": "1.0",
+  "title": "03-authentication.md",
+  "file_path": "/home/salvatore/Development/sign-verify-2/docs/en/03-authentication.md",
+  "format": "markdown",
+  "extractor": "passthrough",
+  "extraction_status": "success",
+  "content_type": "text/markdown"
+}

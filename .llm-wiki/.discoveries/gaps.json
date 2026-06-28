@@ -1,0 +1,180 @@
+{
+  "gaps": [
+    {
+      "topic": "entities/dss-validator-adapter",
+      "mentionedBy": [
+        "analyses/verifica-file-tsd",
+        "concepts/revocation-data",
+        "entities/detachedtimestampvalidator",
+        "entities/signeddocumentvalidator"
+      ]
+    },
+    {
+      "topic": "entities/certificate-verifier",
+      "mentionedBy": [
+        "analyses/verifica-file-tsd",
+        "concepts/revocation-data",
+        "entities/dssvalidatoradapter",
+        "entities/signeddocumentvalidator"
+      ]
+    },
+    {
+      "topic": "concepts/oauth2-resource-server",
+      "mentionedBy": [
+        "concepts/api-key-authentication"
+      ]
+    },
+    {
+      "topic": "entities/dss-tsl-adapter",
+      "mentionedBy": [
+        "entities/trusted_certificate",
+        "entities/tsl_refresh"
+      ]
+    },
+    {
+      "topic": "ETSI EN 319 102-1",
+      "mentionedBy": [
+        "sources/SRC-2026-06-27-001"
+      ]
+    },
+    {
+      "topic": "European Commission Digital Building Blocks",
+      "mentionedBy": [
+        "sources/SRC-2026-06-27-001"
+      ]
+    },
+    {
+      "topic": "Certificate qualification",
+      "mentionedBy": [
+        "sources/SRC-2026-06-27-001"
+      ]
+    },
+    {
+      "topic": "Sync vs async verification",
+      "mentionedBy": [
+        "sources/SRC-2026-06-27-003"
+      ]
+    },
+    {
+      "topic": "LOTL pivot support",
+      "mentionedBy": [
+        "sources/SRC-2026-06-27-004"
+      ]
+    },
+    {
+      "topic": "ApiKeyAuthenticationFilter",
+      "mentionedBy": [
+        "sources/SRC-2026-06-27-005"
+      ]
+    },
+    {
+      "topic": "Principal",
+      "mentionedBy": [
+        "sources/SRC-2026-06-27-005"
+      ]
+    },
+    {
+      "topic": "Bootstrap API key",
+      "mentionedBy": [
+        "sources/SRC-2026-06-27-005"
+      ]
+    },
+    {
+      "topic": "OAuth2 resource server",
+      "mentionedBy": [
+        "sources/SRC-2026-06-27-005"
+      ]
+    },
+    {
+      "topic": "Stateless security",
+      "mentionedBy": [
+        "sources/SRC-2026-06-27-005"
+      ]
+    },
+    {
+      "topic": "ExtractionPort",
+      "mentionedBy": [
+        "sources/SRC-2026-06-27-006"
+      ]
+    },
+    {
+      "topic": "ASiC",
+      "mentionedBy": [
+        "sources/SRC-2026-06-27-006"
+      ]
+    },
+    {
+      "topic": "multipart/form-data",
+      "mentionedBy": [
+        "sources/SRC-2026-06-27-006"
+      ]
+    },
+    {
+      "topic": "AuditService",
+      "mentionedBy": [
+        "sources/SRC-2026-06-27-007"
+      ]
+    },
+    {
+      "topic": "AuditLog",
+      "mentionedBy": [
+        "sources/SRC-2026-06-27-007"
+      ]
+    },
+    {
+      "topic": "Actuator",
+      "mentionedBy": [
+        "sources/SRC-2026-06-27-007"
+      ]
+    },
+    {
+      "topic": "MDC",
+      "mentionedBy": [
+        "sources/SRC-2026-06-27-007"
+      ]
+    },
+    {
+      "topic": "Audit log",
+      "mentionedBy": [
+        "sources/SRC-2026-06-27-007"
+      ]
+    },
+    {
+      "topic": "Observability",
+      "mentionedBy": [
+        "sources/SRC-2026-06-27-007"
+      ]
+    },
+    {
+      "topic": "ApiKeyAuth",
+      "mentionedBy": [
+        "sources/SRC-2026-06-27-008"
+      ]
+    },
+    {
+      "topic": "OAuth2Bearer",
+      "mentionedBy": [
+        "sources/SRC-2026-06-27-008"
+      ]
+    },
+    {
+      "topic": "REST API",
+      "mentionedBy": [
+        "sources/SRC-2026-06-27-008"
+      ]
+    },
+    {
+      "topic": "OpenAPI Generator",
+      "mentionedBy": [
+        "sources/SRC-2026-06-27-008"
+      ]
+    },
+    {
+      "topic": "wikilinks",
+      "mentionedBy": [
+        "sources/lint-auto-fix-creates-duplicate-stubs"
+      ]
+    }
+  ],
+  "generated": "2026-06-27T19:33:05.610Z"
+}

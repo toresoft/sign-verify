@@ -1,0 +1,11 @@
+{
+  "id": "SRC-2026-06-27-004",
+  "captured": "2026-06-27",
+  "packet_version": "1.0",
+  "title": "04-trusted-certificates.md",
+  "file_path": "/home/salvatore/Development/sign-verify-2/docs/en/04-trusted-certificates.md",
+  "format": "markdown",
+  "extractor": "passthrough",
+  "extraction_status": "success",
+  "content_type": "text/markdown"
+}
