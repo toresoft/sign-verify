@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -33,7 +34,8 @@ class VerificationServiceTest {
         .thenAnswer(
             inv -> {
               Thread.sleep(3000);
-              return new ValidationResult("PAdES", "TOTAL_PASSED", null, 1, Map.of());
+              return new ValidationResult(
+                  "PAdES", "TOTAL_PASSED", null, 1, Map.of(), List.of(), List.of());
             });
 
     VerificationService service = new VerificationService(validator, profileService, applier, 1);

@@ -107,7 +107,9 @@ class ValidationWorkerTest {
         "TOTAL_PASSED",
         null,
         1,
-        Map.of(ReportType.SIMPLE, "{\"ok\":true}", ReportType.ETSI, "{\"etsi\":true}"));
+        Map.of(ReportType.SIMPLE, "{\"ok\":true}", ReportType.ETSI, "{\"etsi\":true}"),
+        List.of(),
+        List.of());
   }
 
   /**

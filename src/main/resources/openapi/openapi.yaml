@@ -586,7 +586,13 @@ components:
         id: { type: string, format: uuid }
         name: { type: string }
         description: { type: string, nullable: true }
-        preset: { type: string, enum: [BASIC, STANDARD, STRICT, CUSTOM] }
+        preset:
+          type: string
+          enum: [BASIC, STANDARD, STRICT, CUSTOM]
+          description: >
+            Validation policy preset. BASIC/STANDARD accept AdES and qualified signatures
+            (type-agnostic, cf. SiVa POLv3). STRICT enforces qualified-only semantics
+            (QES/QESeal, cf. SiVa POLv4). CUSTOM requires an explicit policyXml.
         policyXml: { type: string, nullable: true }
         isDefault: { type: boolean }
         createdAt: { type: string, format: date-time }
@@ -597,7 +603,13 @@ components:
       properties:
         name: { type: string, minLength: 1, maxLength: 120 }
         description: { type: string, nullable: true }
-        preset: { type: string, enum: [BASIC, STANDARD, STRICT, CUSTOM] }
+        preset:
+          type: string
+          enum: [BASIC, STANDARD, STRICT, CUSTOM]
+          description: >
+            Validation policy preset. BASIC/STANDARD accept AdES and qualified signatures
+            (type-agnostic, cf. SiVa POLv3). STRICT enforces qualified-only semantics
+            (QES/QESeal, cf. SiVa POLv4). CUSTOM requires an explicit policyXml.
         policyXml: { type: string, nullable: true, description: "Required when preset=CUSTOM" }
     ProfileUpdateRequest:
       type: object
@@ -620,7 +632,12 @@ components:
         profileUsed: { type: string }
         overridesApplied: { type: boolean }
         signatureFormat: { type: string }
-        indication: { type: string }
+        indication:
+          type: string
+          description: >
+            ETSI EN 319 102-1 outcome: TOTAL_PASSED / TOTAL_FAILED / INDETERMINATE — i.e. is the
+            signature cryptographically valid. The eIDAS *qualification* (QES vs AdES) is reported
+            separately per signature in `signatures[].signatureLevel`.
         subIndication: { type: string, nullable: true }
         signatureCount: { type: integer }
         reports:
