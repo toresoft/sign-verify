@@ -43,4 +43,5 @@ POST /api/v1/verifications (file .tsd)
 
 - [[entities/dssvalidatoradapter]] · [[entities/dss]] · [[concepts/rfc5544-tsd]]
 - [[analyses/verifica-file-tsd]] · [[outputs/plan-verifica-file-tsd-2026-06-28]]
+- [[entities/tsdawareextractionadapter]] (extraction counterpart)
 - [[concepts/baseline-profiles]] · [[concepts/timestamping]]

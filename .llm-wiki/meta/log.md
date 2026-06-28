@@ -212,3 +212,5 @@
 ## [2026-06-28] query | "differenze tra il progetto corrente e SiVa" → answered from 7 articles (standard, wiki corrected+audited)
 
 ## [2026-06-28] wiki-update | TSD implementation status: TsdAwareValidatorAdapter documented, analysis corrected
+
+## [2026-06-28] wiki-update | TsdAwareExtractionAdapter documented; file-extraction concept and docs (en/it) updated with TSD extraction

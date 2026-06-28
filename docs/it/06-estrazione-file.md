@@ -67,3 +67,27 @@ curl -sS -X POST http://localhost:8080/api/v1/extractions \
   `signature.parse-error` (vedi gestione errori in [7. Log e audit](07-log-audit.md)).
 - L'estrazione è un'operazione **stateless**: non crea job né persiste il
   contenuto.
+
+## 5.5 Estrazione da TSD
+
+Il servizio supporta l'estrazione da file **RFC 5544 TimeStampedData** (`.tsd`),
+comunemente prodotti da strumenti della PA italiana (ArubaSign, GoSign, Namirial).
+
+DSS 6.4 non riconosce nativamente il formato TSD, perciò l'adapter di estrazione
+sbuccia l'inviluppo TSD tramite **Bouncy Castle** (`CMSTimeStampedData`) e
+restituisce direttamente il contenuto interno. La risposta riporta
+`X-Signature-Format: RFC5544_TSD`.
+
+```bash
+curl -sS -X POST http://localhost:8080/api/v1/extractions \
+  -H "X-API-Key: $KEY" \
+  -F 'file=@documento.tsd' \
+  -D - -o documento.pdf
+# X-Signature-Format: RFC5544_TSD
+# X-Document-Count: 1
+```
+
+> **Nota:** se il contenuto interno è a sua volta un `.p7m` CAdES firmato, vengono
+> restituiti i byte grezzi del `.p7m`, non gli originali al suo interno. Per
+> un'estrazione completa da un documento firmato in TSD, estrarre in due passaggi:
+> prima il `.tsd`, poi il `.p7m` risultante.
