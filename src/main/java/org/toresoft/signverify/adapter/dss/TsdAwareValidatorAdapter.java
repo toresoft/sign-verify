@@ -1,22 +1,17 @@
 package org.toresoft.signverify.adapter.dss;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import eu.europa.esig.dss.enumerations.Indication;
 import eu.europa.esig.dss.model.InMemoryDocument;
 import eu.europa.esig.dss.model.policy.ValidationPolicy;
-import eu.europa.esig.dss.policy.EtsiValidationPolicyFactory;
 import eu.europa.esig.dss.simplereport.SimpleReport;
 import eu.europa.esig.dss.spi.validation.CertificateVerifier;
 import eu.europa.esig.dss.validation.SignedDocumentValidator;
 import eu.europa.esig.dss.validation.reports.Reports;
 import eu.europa.esig.dss.validation.timestamp.DetachedTimestampValidator;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.cms.ContentInfo;
@@ -90,7 +85,7 @@ public class TsdAwareValidatorAdapter implements SignatureValidatorPort {
           "TSD wrapper without inner content (dataUri-only TSD is not supported)");
     }
 
-    ValidationPolicy policy = loadPolicy(req.policyXml());
+    ValidationPolicy policy = DssValidatorAdapter.loadPolicy(req.policyXml());
     List<Element> elements = new ArrayList<>();
     List<org.toresoft.signverify.domain.port.SignatureSummary> sigSummaries = new ArrayList<>();
     List<org.toresoft.signverify.domain.port.TimestampSummary> tsSummaries = new ArrayList<>();
@@ -106,9 +101,9 @@ public class TsdAwareValidatorAdapter implements SignatureValidatorPort {
       for (String id : sr.getSignatureIdList()) {
         elements.add(
             new Element(
-                rank(sr.getIndication(id)),
-                str(sr.getIndication(id)),
-                str(sr.getSubIndication(id))));
+                DssValidatorAdapter.indicationRank(sr.getIndication(id)),
+                SimpleReportMapper.str(sr.getIndication(id)),
+                SimpleReportMapper.str(sr.getSubIndication(id))));
         if (innerFormat == null && sr.getSignatureFormat(id) != null) {
           innerFormat = sr.getSignatureFormat(id).toString();
         }
@@ -131,9 +126,9 @@ public class TsdAwareValidatorAdapter implements SignatureValidatorPort {
       for (String id : sr.getTimestampIdList()) {
         elements.add(
             new Element(
-                rank(sr.getIndication(id)),
-                str(sr.getIndication(id)),
-                str(sr.getSubIndication(id))));
+                DssValidatorAdapter.indicationRank(sr.getIndication(id)),
+                SimpleReportMapper.str(sr.getIndication(id)),
+                SimpleReportMapper.str(sr.getSubIndication(id))));
       }
       if (primaryReports == null) primaryReports = tsReports;
       tsSummaries.addAll(SimpleReportMapper.timestamps(sr));
@@ -149,10 +144,10 @@ public class TsdAwareValidatorAdapter implements SignatureValidatorPort {
     }
 
     String format = innerFormat != null ? innerFormat : TSD_FORMAT;
-    Map<ReportType, String> out = serialize(req.reports(), primaryReports);
+    Map<ReportType, String> out = DssValidatorAdapter.serialize(req.reports(), primaryReports, om);
     return new ValidationResult(
         format,
-        worst.indication(),
+        worst.indication() != null ? worst.indication() : "INDETERMINATE",
         worst.subIndication(),
         innerSignatureCount,
         out,
@@ -220,48 +215,6 @@ public class TsdAwareValidatorAdapter implements SignatureValidatorPort {
     } catch (Exception e) {
       return false;
     }
-  }
-
-  private ValidationPolicy loadPolicy(String policyXml) {
-    try {
-      var policyDoc =
-          new InMemoryDocument(policyXml.getBytes(StandardCharsets.UTF_8), "validation-policy.xml");
-      return new EtsiValidationPolicyFactory().loadValidationPolicy(policyDoc);
-    } catch (Exception e) {
-      throw AppException.badRequest("invalid validation policy: " + e.getMessage());
-    }
-  }
-
-  private Map<ReportType, String> serialize(Set<ReportType> wanted, Reports reports) {
-    Map<ReportType, String> out = new EnumMap<>(ReportType.class);
-    try {
-      if (wanted.contains(ReportType.SIMPLE))
-        out.put(ReportType.SIMPLE, om.writeValueAsString(reports.getSimpleReportJaxb()));
-      if (wanted.contains(ReportType.DETAILED))
-        out.put(ReportType.DETAILED, om.writeValueAsString(reports.getDetailedReportJaxb()));
-      if (wanted.contains(ReportType.DIAGNOSTIC))
-        out.put(ReportType.DIAGNOSTIC, om.writeValueAsString(reports.getDiagnosticDataJaxb()));
-      if (wanted.contains(ReportType.ETSI))
-        out.put(ReportType.ETSI, om.writeValueAsString(reports.getEtsiValidationReportJaxb()));
-    } catch (Exception e) {
-      throw new IllegalStateException("report serialization", e);
-    }
-    return out;
-  }
-
-  /** Worst-of aggregation: higher rank = less favourable outcome. */
-  private static int rank(Indication indication) {
-    if (indication == null) return 2;
-    return switch (indication) {
-      case TOTAL_FAILED, FAILED -> 3;
-      case INDETERMINATE -> 2;
-      case TOTAL_PASSED, PASSED -> 0;
-      default -> 1;
-    };
-  }
-
-  private static String str(Object o) {
-    return o == null ? null : o.toString();
   }
 
   private record Element(int rank, String indication, String subIndication) {}

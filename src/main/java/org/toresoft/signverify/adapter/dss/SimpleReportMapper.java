@@ -109,7 +109,7 @@ final class SimpleReportMapper {
     return q == null ? "NA" : q.name();
   }
 
-  private static String str(Object o) {
+  static String str(Object o) {
     return o == null ? null : o.toString();
   }
 

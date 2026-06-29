@@ -526,7 +526,8 @@ components:
           type: object
           additionalProperties: true
           description: >
-            Per-component health (shown because management.endpoint.health.show-details=always).
+            Per-component health (visible to authenticated PRIVILEGED callers only;
+            management.endpoint.health.show-details=when-authorized, roles: PRIVILEGED).
             Includes tslReadiness (certificateCount, lastRefresh*), jobQueue (activeJobs), dss, db,
             and the liveness/readiness state groups.
 

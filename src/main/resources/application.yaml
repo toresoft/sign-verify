@@ -132,6 +132,16 @@ resilience4j:
         # otherwise a burst of bad input causes a DoS for legitimate traffic.
         ignoreExceptions:
           - org.toresoft.signverify.domain.exception.AppException
+      dssExtraction:
+        failureRateThreshold: 50
+        slidingWindowSize: 20
+        waitDurationInOpenState: 60s
+        slowCallDurationThreshold: 30s
+        slowCallRateThreshold: 80
+        permittedNumberOfCallsInHalfOpenState: 3
+        registerHealthIndicator: true
+        ignoreExceptions:
+          - org.toresoft.signverify.domain.exception.AppException
 
 logging:
   level:

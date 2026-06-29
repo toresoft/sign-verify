@@ -31,23 +31,20 @@ public class TsdAwareExtractionAdapter implements ExtractionPort {
   }
 
   @Override
-  @CircuitBreaker(name = "dssExtraction")
+  @CircuitBreaker(name = "dssExtraction", fallbackMethod = "dssExtractionFallback")
   public ExtractionResult extract(byte[] bytes, String filename) {
-    // 1. Try TSD unwrap first — fast, no DSS involved, won't trip circuit breaker.
     byte[] inner = tryUnwrapTsd(bytes);
     if (inner != null) {
       return new ExtractionResult(
           TSD_FORMAT,
           List.of(new ExtractedFile(deriveInnerName(filename), "application/octet-stream", inner)));
     }
+    return delegate.extract(bytes, filename);
+  }
 
-    // 2. Not a TSD — delegate to DSS.
-    try {
-      return delegate.extract(bytes, filename);
-    } catch (AppException e) {
-      // circuit breaker records this failure for non-TSD paths
-      throw e;
-    }
+  public ExtractionResult dssExtractionFallback(byte[] bytes, String filename, Throwable t) {
+    if (t instanceof AppException) throw (AppException) t;
+    throw AppException.dssUnavailable("dss extraction circuit breaker open: " + t.getMessage());
   }
 
   /**

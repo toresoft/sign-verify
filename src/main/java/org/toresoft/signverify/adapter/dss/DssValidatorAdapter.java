@@ -13,6 +13,7 @@ import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import java.nio.charset.StandardCharsets;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.stereotype.Component;
 import org.toresoft.signverify.domain.exception.AppException;
 import org.toresoft.signverify.domain.port.ReportType;
@@ -43,32 +44,11 @@ public class DssValidatorAdapter implements SignatureValidatorPort {
     }
     validator.setCertificateVerifier(certificateVerifier);
 
-    ValidationPolicy policy;
-    try {
-      var policyDoc =
-          new InMemoryDocument(
-              req.policyXml().getBytes(StandardCharsets.UTF_8), "validation-policy.xml");
-      policy = new EtsiValidationPolicyFactory().loadValidationPolicy(policyDoc);
-    } catch (Exception e) {
-      throw AppException.badRequest("invalid validation policy: " + e.getMessage());
-    }
-
+    ValidationPolicy policy = loadPolicy(req.policyXml());
     Reports reports = validator.validateDocument(policy);
     SimpleReport simple = reports.getSimpleReport();
 
-    Map<ReportType, String> out = new EnumMap<>(ReportType.class);
-    try {
-      if (req.reports().contains(ReportType.SIMPLE))
-        out.put(ReportType.SIMPLE, om.writeValueAsString(reports.getSimpleReportJaxb()));
-      if (req.reports().contains(ReportType.DETAILED))
-        out.put(ReportType.DETAILED, om.writeValueAsString(reports.getDetailedReportJaxb()));
-      if (req.reports().contains(ReportType.DIAGNOSTIC))
-        out.put(ReportType.DIAGNOSTIC, om.writeValueAsString(reports.getDiagnosticDataJaxb()));
-      if (req.reports().contains(ReportType.ETSI))
-        out.put(ReportType.ETSI, om.writeValueAsString(reports.getEtsiValidationReportJaxb()));
-    } catch (Exception e) {
-      throw new IllegalStateException("report serialization", e);
-    }
+    Map<ReportType, String> out = serialize(req.reports(), reports, om);
 
     // For multi-signature documents the top-level outcome reflects the worst signature, so a single
     // invalid signature can never be masked by a passing one appearing first.
@@ -111,7 +91,7 @@ public class DssValidatorAdapter implements SignatureValidatorPort {
     return worstId;
   }
 
-  private int indicationRank(Indication indication) {
+  static int indicationRank(Indication indication) {
     if (indication == null) return 2;
     return switch (indication) {
       case TOTAL_FAILED, FAILED -> 3;
@@ -119,6 +99,34 @@ public class DssValidatorAdapter implements SignatureValidatorPort {
       case TOTAL_PASSED, PASSED -> 0;
       default -> 1;
     };
+  }
+
+  static ValidationPolicy loadPolicy(String policyXml) {
+    try {
+      var policyDoc =
+          new InMemoryDocument(policyXml.getBytes(StandardCharsets.UTF_8), "validation-policy.xml");
+      return new EtsiValidationPolicyFactory().loadValidationPolicy(policyDoc);
+    } catch (Exception e) {
+      throw AppException.badRequest("invalid validation policy: " + e.getMessage());
+    }
+  }
+
+  static Map<ReportType, String> serialize(
+      Set<ReportType> wanted, Reports reports, ObjectMapper om) {
+    Map<ReportType, String> out = new EnumMap<>(ReportType.class);
+    try {
+      if (wanted.contains(ReportType.SIMPLE))
+        out.put(ReportType.SIMPLE, om.writeValueAsString(reports.getSimpleReportJaxb()));
+      if (wanted.contains(ReportType.DETAILED))
+        out.put(ReportType.DETAILED, om.writeValueAsString(reports.getDetailedReportJaxb()));
+      if (wanted.contains(ReportType.DIAGNOSTIC))
+        out.put(ReportType.DIAGNOSTIC, om.writeValueAsString(reports.getDiagnosticDataJaxb()));
+      if (wanted.contains(ReportType.ETSI))
+        out.put(ReportType.ETSI, om.writeValueAsString(reports.getEtsiValidationReportJaxb()));
+    } catch (Exception e) {
+      throw new IllegalStateException("report serialization", e);
+    }
+    return out;
   }
 
   public ValidationResult fallback(ValidationRequest req, Throwable t) {
