@@ -41,7 +41,8 @@ public class ProfileSeeder {
   @Transactional
   public void onReady(ApplicationReadyEvent ev) {
     seedStandardDefault();
-    seedPreset("agid", "Firma digitale italiana (AgID) — solo firme qualificate", ProfilePreset.AGID);
+    seedPreset(
+        "agid", "Firma digitale italiana (AgID) — solo firme qualificate", ProfilePreset.AGID);
     seedPreset(
         "agid-ts",
         "Firma digitale italiana (AgID) — solo firme qualificate con marca temporale",
