@@ -6,6 +6,7 @@ updated: 2026-06-27
 sources:
   - sources/SRC-2026-06-27-002
   - sources/SRC-2026-06-27-008
+volatility: warm
 ---
 
 # sign-verify-2
@@ -40,3 +41,4 @@ Domain ports: `SignatureValidatorPort`, `ExtractionPort`, `TslRefresherPort`, `C
 ## Related
 - [[entities/dss]] · [[entities/eidas-regulation]] · [[concepts/validation-profiles]]
 - [[concepts/async-verification-jobs]] · [[concepts/trusted-lists]] · [[concepts/problemjson]]
+- [[sources/openapi-spec-sign-verify-2]] — endpoint/schema reference completa del contratto API

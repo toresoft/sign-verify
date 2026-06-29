@@ -6,6 +6,7 @@ query: "dove trovare o come generare file .tsd per i test di sign-verify-2"
 sources:
   - sources/tsd-test-corpus-research
   - sources/rfc5544-tsd-standard
+volatility: warm
 ---
 
 # Corpus `.tsd` per i test — playbook

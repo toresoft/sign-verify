@@ -7,6 +7,7 @@ sources:
   - sources/SRC-2026-06-27-001
   - sources/SRC-2026-06-27-002
   - sources/SRC-2026-06-27-003
+volatility: warm
 ---
 
 # Verifica firma per file `.tsd`
@@ -152,7 +153,7 @@ Algoritmo normativo: [[concepts/etsi-en-319-102-1-validation]] (§5.4-§5.6).
 ## Related
 - [[entities/dss]] · [[entities/signeddocumentvalidator]] · [[entities/detachedtimestampvalidator]]
 - [[concepts/timestamping]] · [[concepts/baseline-profiles]] · [[concepts/signature-validation]]
-- [[entities/dssvalidatoradapter]] · [[entities/certificate-verifier]] · [[concepts/reports]]
+- [[entities/dssvalidatoradapter]] · [[entities/certificateverifier]] · [[concepts/reports]]
 - [[concepts/rfc5544-tsd]] · [[concepts/dss-timestamp-api]] · [[concepts/dss-format-detection]]
 - [[concepts/etsi-en-319-102-1-validation]] · [[concepts/cades-counter-signatures]]
 - [[analyses/tsd-dto-mapping]]

@@ -12,6 +12,7 @@ urls:
   - https://github.com/esig/dss/blob/master/dss-cades/src/test/java/eu/europa/esig/dss/cades/signature/CAdESLevelLTACounterSignatureTest.java
   - https://github.com/esig/dss/blob/master/dss-cades/src/test/java/eu/europa/esig/dss/cades/signature/CAdESCounterSignSignaturesConsequentlyTest.java
 credibility: high
+volatility: warm
 ---
 
 # DSS Counter-Signature Research

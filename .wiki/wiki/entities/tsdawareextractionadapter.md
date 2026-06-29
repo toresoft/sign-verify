@@ -5,6 +5,7 @@ created: 2026-06-28
 updated: 2026-06-28
 sources:
   - concepts/file-extraction
+volatility: warm
 ---
 
 # TsdAwareExtractionAdapter

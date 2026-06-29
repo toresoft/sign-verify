@@ -8,6 +8,7 @@ sources:
   - sources/SRC-2026-06-27-002
   - sources/SRC-2026-06-27-004
   - articles/2026-06-28-trusted-lists-lotl-tsl-struttura
+volatility: warm
 ---
 
 # Trusted Lists (TL / LOTL)

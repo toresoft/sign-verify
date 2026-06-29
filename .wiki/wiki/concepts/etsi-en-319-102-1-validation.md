@@ -5,6 +5,7 @@ created: 2026-06-27
 updated: 2026-06-27
 sources:
   - sources/etsi-en-319-102-1-timestamp
+volatility: warm
 ---
 
 # ETSI EN 319 102-1 — Algoritmo di validazione AdES con timestamp

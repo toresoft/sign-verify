@@ -7,6 +7,7 @@ sources:
   - sources/SRC-2026-06-27-002
   - sources/SRC-2026-06-27-003
   - sources/SRC-2026-06-27-008
+volatility: warm
 ---
 
 # Validation at a specific date (control time)

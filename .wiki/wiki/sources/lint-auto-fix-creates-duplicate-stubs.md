@@ -6,6 +6,7 @@ status: insight
 created: 2026-06-27
 updated: 2026-06-27
 category: tool-quirk
+volatility: warm
 ---
 # wiki_lint auto_fix creates duplicate stubs from link text
 Running `wiki_lint(auto_fix: true)` on a vault where rich kebab-case concept pages already exist (e.g. `concepts/circuit-breaker.md`) but are linked with natural Title-case text (e.g. `[[concepts/circuit-breaker]]`) caused the linter to **auto-create empty stub files named after the link text** (`concepts/Circuit breaker.md`, `status: stub`, "Stub auto-created by lint"). Result: two files per concept — a rich kebab page and a Title-case stub — inflating page count and fragmenting the graph.

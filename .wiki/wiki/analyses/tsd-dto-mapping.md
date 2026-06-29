@@ -6,6 +6,7 @@ query: "come mappare DSS Reports in DTO REST per file .tsd"
 sources:
   - sources/dss-timestamp-api-research
   - sources/etsi-en-319-102-1-timestamp
+volatility: warm
 ---
 
 # TSD Verification — Mapping DSS Reports → DTO REST

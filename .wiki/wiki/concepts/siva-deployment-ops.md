@@ -9,6 +9,7 @@ sources:
 tags: [siva, deployment, ops, tsl, lotl, monitoring, roadmap, systemd, war]
 confidence: high
 summary: "SiVa 3.x build & deployment (fat JAR / systemd / WAR-per-Tomcat), TSL loader configuration, the April 2026 EU LOTL signer-certificate rotation, monitoring endpoints, report-signing config, statistics, and the 3.11 roadmap."
+volatility: warm
 ---
 
 # SiVa deployment & operations

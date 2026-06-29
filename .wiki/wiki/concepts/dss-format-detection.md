@@ -5,6 +5,7 @@ created: 2026-06-27
 updated: 2026-06-27
 sources:
   - sources/dss-format-detection-research
+volatility: warm
 ---
 
 # DSS Format Detection — Come fromDocument() instrada i formati

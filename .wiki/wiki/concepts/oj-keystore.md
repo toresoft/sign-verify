@@ -5,6 +5,7 @@ created: 2026-06-27
 updated: 2026-06-27
 sources:
   - sources/SRC-2026-06-27-004
+volatility: warm
 ---
 
 # OJ keystore (LOTL trust anchor)

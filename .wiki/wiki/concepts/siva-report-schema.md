@@ -9,6 +9,7 @@ sources:
 tags: [siva, report, simple, detailed, diagnostic, signature-level, qualification, eidas]
 confidence: high
 summary: "SiVa validation report tiers (Simple/Detailed/Diagnostic), validationConclusion field schema, signatureLevel qualification enum, timeStampTokens, Estonian-context message filtering, and the signed ASiC-E report."
+volatility: warm
 ---
 
 # SiVa validation report schema

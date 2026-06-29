@@ -6,11 +6,12 @@ updated: 2026-06-27
 sources:
   - sources/SRC-2026-06-27-001
   - sources/SRC-2026-06-27-002
+volatility: warm
 ---
 
 # Revocation data (CRL / OCSP)
 
-The mechanisms for checking whether a signing certificate has been revoked, central to [[concepts/signature-validation]]. [[entities/dss]] makes these pluggable via **sources** attached to the [[entities/certificate-verifier|CertificateVerifier]].
+The mechanisms for checking whether a signing certificate has been revoked, central to [[concepts/signature-validation]]. [[entities/dss]] makes these pluggable via **sources** attached to the [[entities/certificateverifier|CertificateVerifier]].
 
 ## Sources
 - **CRLSource** — Certificate Revocation Lists (e.g. `OnlineCRLSource`).
@@ -19,8 +20,8 @@ The mechanisms for checking whether a signing certificate has been revoked, cent
 DSS supports caching, offline fetching, and a revocation-data loading strategy + verifier (docs §6). Revocation evidence is embedded at LT/LTA levels (`RevocationValues`) to preserve long-term verifiability ([[concepts/baseline-profiles]]).
 
 ## In sign-verify-2
-The [[entities/certificate-verifier|CertificateVerifier]] configured by [[entities/dssvalidatoradapter|DssValidatorAdapter]] carries these sources; fetch failures contribute to the DSS [[concepts/circuit-breaker|circuit breaker]] opening.
+The [[entities/certificateverifier|CertificateVerifier]] configured by [[entities/dssvalidatoradapter|DssValidatorAdapter]] carries these sources; fetch failures contribute to the DSS [[concepts/circuit-breaker|circuit breaker]] opening.
 
 ## Related
-- [[entities/dss]] · [[entities/certificate-verifier]]
+- [[entities/dss]] · [[entities/certificateverifier]]
 - [[concepts/signature-validation]] · [[concepts/baseline-profiles]]

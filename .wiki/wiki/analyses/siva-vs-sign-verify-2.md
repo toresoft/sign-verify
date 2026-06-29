@@ -8,6 +8,7 @@ sources:
   - sources/siva-research
   - sources/SRC-2026-06-27-002
   - sources/SRC-2026-06-27-008
+volatility: warm
 ---
 
 # SiVa vs sign-verify-2 — confronto e punti di miglioramento

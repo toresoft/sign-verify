@@ -6,6 +6,7 @@ updated: 2026-06-28
 sources:
   - articles/2026-06-28-etsi-ades-formats-baseline
   - articles/2026-06-28-eidas-regolamento-910-2014-approfondimento
+volatility: warm
 ---
 
 # ETSI AdES signature formats and baseline profiles

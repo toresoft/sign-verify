@@ -7,6 +7,7 @@ sources:
   - sources/SRC-2026-06-27-001
   - sources/SRC-2026-06-27-002
   - articles/2026-06-28-eidas-regolamento-910-2014-approfondimento
+volatility: warm
 ---
 
 # eIDAS Regulation
@@ -52,3 +53,4 @@ Key changes to the signature framework:
 - [[entities/dss]] · [[concepts/trusted-lists]] · [[concepts/baseline-profiles]]
 - [[concepts/signature-validation]] (ETSI EN 319 102-1 process)
 - [[concepts/timestamping]] · [[concepts/etsi-ades-formats]] · [[concepts/x509-pki-profiles]]
+- [[concepts/italian-digital-signature-law]] — recepimento italiano (CAD, DPCM 2013, AgID, CNIPA 45/2009)

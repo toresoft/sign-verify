@@ -6,6 +6,7 @@ updated: 2026-06-28
 sources:
   - sources/SRC-2026-06-27-001
   - articles/2026-06-28-time-stamping-regolamentazione
+volatility: warm
 ---
 
 # Timestamping (marcatura temporale)

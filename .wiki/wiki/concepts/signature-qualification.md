@@ -6,6 +6,7 @@ sources:
   - sources/siva-research
   - sources/dss-timestamp-api-research
 confidence: high
+volatility: warm
 ---
 
 # Signature qualification (eIDAS level)
@@ -62,3 +63,4 @@ SiVa's enum is essentially a subset/rename of DSS's. The DSS set is the **supers
 ## Related
 - [[concepts/etsi-en-319-102-1-validation]] · [[concepts/reports]] · [[analyses/tsd-dto-mapping]]
 - [[analyses/siva-vs-sign-verify-2]] · [[entities/siva]] · [[entities/dss]]
+- [[concepts/firma-con-spid]] — firme SPID si presentano come `QESEAL` (sigillo del gestore)

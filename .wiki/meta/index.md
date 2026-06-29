@@ -12,6 +12,8 @@
 
 ## Concepts
 
+- [[concepts/italian-digital-signature-law]] — Quadro normativo italiano: CAD, DPCM 2013, CNIPA 45/2009, AgID *(created: 2026-06-29)*
+- [[concepts/firma-con-spid]] — Sottoscrizione SPID ex art. 20 CAD (Det. 157/2020): QSeal del gestore, verifica come QESEAL *(created: 2026-06-29)*
 - [[concepts/ades-signature-formats]] — ades-signature-formats *(created: 2026-06-27)*
 - [[concepts/api-key-authentication]] — api-key-authentication *(created: 2026-06-27)*
 - [[concepts/async-verification-jobs]] — async-verification-jobs *(created: 2026-06-27)*
@@ -22,6 +24,7 @@
 - [[concepts/dss-format-detection]] — dss-format-detection *(created: 2026-06-27)*
 - [[concepts/dss-policy-xml]] — dss-policy-xml *(created: 2026-06-27)*
 - [[concepts/dss-timestamp-api]] — dss-timestamp-api *(created: 2026-06-27)*
+- [[concepts/etsi-ades-formats]] — ETSI AdES signature formats and baseline profiles *(created: 2026-06-28)*
 - [[concepts/etsi-en-319-102-1-validation]] — etsi-en-319-102-1-validation *(created: 2026-06-27)*
 - [[concepts/file-extraction]] — file-extraction *(created: 2026-06-27)*
 - [[concepts/hexagonal-architecture]] — hexagonal-architecture *(created: 2026-06-27)*
@@ -34,6 +37,10 @@
 - [[concepts/shedlock]] — shedlock *(created: 2026-06-27)*
 - [[concepts/signature-qualification]] — signature-qualification *(created: 2026-06-28)*
 - [[concepts/signature-validation]] — signature-validation *(created: 2026-06-27)*
+- [[concepts/siva-deployment-ops]] — SiVa deployment & operations *(created: 2026-06-28)*
+- [[concepts/siva-report-schema]] — SiVa validation report schema *(created: 2026-06-28)*
+- [[concepts/siva-rest-interface]] — SiVa REST interface (3.x) *(created: 2026-06-28)*
+- [[concepts/siva-validation-policy]] — SiVa validation policy (POLv3 / POLv4) *(created: 2026-06-28)*
 - [[concepts/structured-logging]] — structured-logging *(created: 2026-06-27)*
 - [[concepts/timestamping]] — timestamping *(created: 2026-06-27)*
 - [[concepts/tl-validation-job]] — tl-validation-job *(created: 2026-06-27)*
@@ -41,6 +48,7 @@
 - [[concepts/trusted-lists-certificate-source]] — trusted-lists-certificate-source *(created: 2026-06-27)*
 - [[concepts/tsl-hot-swap-refresh]] — tsl-hot-swap-refresh *(created: 2026-06-27)*
 - [[concepts/validation-profiles]] — validation-profiles *(created: 2026-06-27)*
+- [[concepts/x509-pki-profiles]] — X.509 PKI certificate and CRL profiles (RFC 5280, 6960, 5758) *(created: 2026-06-28)*
 
 ## Entitys
 
@@ -57,12 +65,21 @@
 - [[entities/signeddocumentvalidator]] — signeddocumentvalidator *(created: 2026-06-27)*
 - [[entities/siva]] — siva *(created: 2026-06-28)*
 - [[entities/trusted_certificate]] — trusted_certificate *(created: 2026-06-27)*
+- [[entities/tsdawareextractionadapter]] — TsdAwareExtractionAdapter *(created: 2026-06-28)*
+- [[entities/tsdawarevalidatoradapter]] — TsdAwareValidatorAdapter *(created: 2026-06-28)*
 - [[entities/tsl_refresh]] — tsl_refresh *(created: 2026-06-27)*
 - [[entities/validation_job]] — validation_job *(created: 2026-06-27)*
 - [[entities/verification_profile]] — verification_profile *(created: 2026-06-27)*
 
 ## Sources
 
+- [[sources/agid-signature-rules-research]] — "AgID — regole firma qualificata/digitale e algoritmi crittografici (Det.157/2020, CNIPA 45/2009, cap. crittografia)" *(created: 2026-06-29)*
+- [[sources/SRC-2026-06-29-001]] — "AgID Linee Guida sottoscrizione art. 20 CAD (Det. 157/2020)" *(created: 2026-06-29)*
+- [[sources/SRC-2026-06-29-002]] — "CNIPA Deliberazione 45/2009 (mod. DT 69/2010)" *(created: 2026-06-29)*
+- [[sources/SRC-2026-06-29-003]] — "AgID Regole Tecniche cap. 6 — algoritmi crittografici" *(created: 2026-06-29)*
+- [[sources/SRC-2026-06-29-004]] — "AgID — Qualified Electronic Signature (pagina piattaforma)" *(created: 2026-06-29)*
+- [[sources/openapi-spec-sign-verify-2]] — "sign-verify-2 OpenAPI contract v1.0.0: endpoint, schema, signatureLevel (firma vs sigillo)" *(created: 2026-06-29)*
+- [[sources/ll-tsd-jackson-toolchain]] — "Lessons: TSD imprint resolution, DSS routing, Jackson CVE, JDK-25 toolchain" *(created: 2026-06-29)*
 - [[sources/dss-counter-signature-research]] — "DSS 6.4 source: CAdES counter-signature limitations e API" *(created: 2026-06-27)*
 - [[sources/dss-format-detection-research]] — "DSS 6.4 source code: CMSDocumentAnalyzer, DetachedTimestampAnalyzer, DSSUtils.isTimestampToken" *(created: 2026-06-27)*
 - [[sources/dss-timestamp-api-research]] — "DSS 6.4 Javadoc: TimestampWrapper, SignatureWrapper, SimpleReport API" *(created: 2026-06-27)*
@@ -89,4 +106,4 @@
 - [[syntheses/validation-time-and-the-timestamp-best-signature-time]] — validation-time-and-the-timestamp-best-signature-time *(created: 2026-06-27)*
 
 ---
-*Last updated: 2026-06-28T15:27:13.891Z* | *Total pages: 71*
+*Last updated: 2026-06-30T00:30:00.000Z* | *Total pages: 88* | *Last lint: 2026-06-30*

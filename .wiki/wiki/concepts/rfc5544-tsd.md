@@ -6,6 +6,7 @@ updated: 2026-06-27
 sources:
   - sources/rfc5544-tsd-standard
   - sources/etsi-en-319-102-1-timestamp
+volatility: warm
 ---
 
 # RFC 5544 — Formato TSD (TimeStampedData)
@@ -102,3 +103,4 @@ SignedDocumentValidator.fromDocument(tsdDoc) → throws:
 - [[entities/detachedtimestampvalidator]] — validator per timestamp puri
 - [[entities/signeddocumentvalidator]] — validator CAdES
 - [[concepts/ades-signature-formats]] — panoramica formati firma
+- [[sources/ll-tsd-jackson-toolchain]] — L1 imprint resolution, L2 DSS routing decorator

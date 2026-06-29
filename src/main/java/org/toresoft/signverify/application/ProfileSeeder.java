@@ -40,6 +40,15 @@ public class ProfileSeeder {
   @EventListener
   @Transactional
   public void onReady(ApplicationReadyEvent ev) {
+    seedStandardDefault();
+    seedPreset("agid", "Firma digitale italiana (AgID) — solo firme qualificate", ProfilePreset.AGID);
+    seedPreset(
+        "agid-ts",
+        "Firma digitale italiana (AgID) — solo firme qualificate con marca temporale",
+        ProfilePreset.AGID_TS);
+  }
+
+  private void seedStandardDefault() {
     String policyXml = presetLoader.load(ProfilePreset.STANDARD);
     var existing = repo.findByIsDefaultTrue();
     if (existing.isPresent()) {
@@ -64,6 +73,28 @@ public class ProfileSeeder {
     p.setPreset(ProfilePreset.STANDARD);
     p.setPolicyXml(policyXml);
     p.setIsDefault(true);
+    p.setCreatedAt(Instant.now());
+    p.setUpdatedAt(Instant.now());
+    repo.save(p);
+  }
+
+  /**
+   * Preloads a non-default, ready-to-use profile for the given preset, addressed by {@code name}.
+   * Idempotent: skips creation when a profile with that name already exists, so an operator can
+   * later customise or delete it without the seeder resurrecting it on the next boot. Never the
+   * system default; {@link #seedStandardDefault()} owns that.
+   */
+  private void seedPreset(String name, String description, ProfilePreset preset) {
+    if (repo.findByName(name).isPresent()) {
+      return;
+    }
+    VerificationProfile p = new VerificationProfile();
+    p.setId(UUID.randomUUID());
+    p.setName(name);
+    p.setDescription(description);
+    p.setPreset(preset);
+    p.setPolicyXml(presetLoader.load(preset));
+    p.setIsDefault(false);
     p.setCreatedAt(Instant.now());
     p.setUpdatedAt(Instant.now());
     repo.save(p);

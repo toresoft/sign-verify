@@ -5,6 +5,7 @@ title: "open-eid/SiVa — architecture, formats, policy, report schema, ops (res
 url: https://open-eid.github.io/SiVa/
 tags: [siva, eidas, dss, validation, comparison]
 confidence: high
+volatility: warm
 ---
 
 # Source: open-eid/SiVa research (2026-06-28)

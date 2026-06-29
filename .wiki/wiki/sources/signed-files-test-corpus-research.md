@@ -13,6 +13,7 @@ urls:
   - https://github.com/open-eid/digidoc4j
   - https://docs.openssl.org/3.1/man1/openssl-cms/
 credibility: high
+volatility: warm
 ---
 
 # Corpus file firmati (CAdES / PAdES) per test funzionali

@@ -10,6 +10,7 @@ urls:
   - https://www.rfc-editor.org/rfc/rfc5544.html
   - https://datatracker.ietf.org/doc/html/rfc5955
 credibility: high
+volatility: warm
 ---
 
 # RFC 5544 + RFC 5955 — Formato TSD

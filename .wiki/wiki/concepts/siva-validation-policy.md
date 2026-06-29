@@ -9,6 +9,7 @@ sources:
 tags: [siva, policy, polv3, polv4, baseline-profile, eidas, trusted-lists]
 confidence: high
 summary: "SiVa validation policy POLv3/POLv4 — baseline-profile matrix, common constraints (crypto, trust anchors, revocation freshness, trusted signing time), container rules, and the XML constraint-file configuration. Estonian-local; not territory-neutral."
+volatility: warm
 ---
 
 # SiVa validation policy (POLv3 / POLv4)

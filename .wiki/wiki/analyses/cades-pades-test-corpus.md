@@ -5,6 +5,7 @@ updated: 2026-06-28
 query: "quali file .p7m e PDF firmati usare per i test funzionali di sign-verify-2"
 sources:
   - sources/signed-files-test-corpus-research
+volatility: warm
 ---
 
 # Corpus CAdES/PAdES per test funzionali — catalogo & selezione

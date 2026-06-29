@@ -9,6 +9,7 @@ sources:
 tags: [siva, rest, api, interface, validation, eidas]
 confidence: high
 summary: "SiVa 3.x REST/JSON contract — /validate, /validateHashcode, /getDataFiles, monitoring endpoints; request/response schema, report tiers, error shape. SOAP removed in 3.10."
+volatility: warm
 ---
 
 # SiVa REST interface (3.x)

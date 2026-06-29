@@ -6,6 +6,7 @@ updated: 2026-06-27
 sources:
   - sources/SRC-2026-06-27-002
   - sources/SRC-2026-06-27-004
+volatility: warm
 ---
 
 # tsl_refresh (table)
@@ -23,4 +24,4 @@ Queried indirectly via `GET /api/v1/tsl/status` (last refresh, per-source outcom
 
 ## Related
 - [[concepts/tsl-hot-swap-refresh]] · [[entities/trusted_certificate]]
-- [[concepts/shedlock]] · [[entities/dss-tsl-adapter]]
+- [[concepts/shedlock]] · [[entities/dsstsladapter]]

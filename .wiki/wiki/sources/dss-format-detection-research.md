@@ -11,6 +11,7 @@ urls:
   - https://github.com/esig/dss/blob/master/dss-validation/src/main/java/eu/europa/esig/dss/validation/timestamp/DetachedTimestampAnalyzer.java
   - https://github.com/esig/dss/blob/master/dss-spi/src/main/java/eu/europa/esig/dss/spi/DSSUtils.java
 credibility: high
+volatility: warm
 ---
 
 # DSS Format Detection — Source Code

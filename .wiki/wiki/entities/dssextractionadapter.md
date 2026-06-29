@@ -6,6 +6,7 @@ updated: 2026-06-27
 sources:
   - sources/SRC-2026-06-27-002
   - sources/SRC-2026-06-27-006
+volatility: warm
 ---
 
 # DssExtractionAdapter

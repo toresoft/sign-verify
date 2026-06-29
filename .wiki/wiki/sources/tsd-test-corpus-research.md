@@ -14,6 +14,7 @@ urls:
   - https://www.jimby.name/techbits/recent/openssl_tsa/
   - https://docs.openssl.org/3.1/man1/openssl-ts/
 credibility: high
+volatility: warm
 ---
 
 # Corpus e generazione `.tsd` per test

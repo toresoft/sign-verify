@@ -6,6 +6,7 @@ updated: 2026-06-28
 sources:
   - sources/SRC-2026-06-28-001
   - sources/siva-research
+volatility: warm
 ---
 
 # SiVa (open-eid/SiVa)

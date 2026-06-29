@@ -12,6 +12,7 @@ urls:
   - https://ec.europa.eu/digital-building-blocks/DSS/webapp-demo/apidocs/eu/europa/esig/dss/diagnostic/DiagnosticData.html
   - https://ec.europa.eu/digital-building-blocks/DSS/webapp-demo/apidocs/eu/europa/esig/dss/simplereport/SimpleReport.html
 credibility: high
+volatility: warm
 ---
 
 # DSS 6.4 API — Timestamp Extraction

@@ -6,6 +6,7 @@ updated: 2026-06-28
 sources:
   - sources/SRC-2026-06-27-006
   - sources/SRC-2026-06-27-002
+volatility: warm
 ---
 
 # File extraction

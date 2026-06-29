@@ -7,6 +7,7 @@ sources:
   - sources/SRC-2026-06-27-002
   - sources/SRC-2026-06-27-007
   - sources/SRC-2026-06-27-008
+volatility: warm
 ---
 
 # problem+json (RFC 9457)

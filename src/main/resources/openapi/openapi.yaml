@@ -159,8 +159,10 @@ paths:
       operationId: createProfile
       summary: Create a validation profile
       description: >-
-        Creates a validation profile from a preset (BASIC, STANDARD, STRICT) or
-        a custom DSS policy. `policyXml` is required when `preset=CUSTOM`.
+        Creates a validation profile from a preset (BASIC, STANDARD, STRICT, AGID,
+        AGID_TS) or a custom DSS policy. AGID/AGID_TS encode the Italian digital
+        signature law baseline (qualified-only); AGID_TS additionally requires a
+        valid T-level timestamp. `policyXml` is required when `preset=CUSTOM`.
       requestBody:
         required: true
         content:
@@ -597,11 +599,14 @@ components:
         description: { type: string, nullable: true }
         preset:
           type: string
-          enum: [BASIC, STANDARD, STRICT, CUSTOM]
+          enum: [BASIC, STANDARD, STRICT, AGID, AGID_TS, CUSTOM]
           description: >
             Validation policy preset. BASIC/STANDARD accept AdES and qualified signatures
             (type-agnostic, cf. SiVa POLv3). STRICT enforces qualified-only semantics
-            (QES/QESeal, cf. SiVa POLv4). CUSTOM requires an explicit policyXml.
+            (QES/QESeal, cf. SiVa POLv4). AGID encodes the Italian digital signature law
+            baseline: qualified certificate (QcCompliance) + nonRepudiation key usage
+            required (CAD art. 24, DPCM 22/02/2013 art. 28). AGID_TS adds a mandatory
+            valid T-level timestamp. CUSTOM requires an explicit policyXml.
         policyXml: { type: string, nullable: true }
         isDefault: { type: boolean }
         createdAt: { type: string, format: date-time }
@@ -614,11 +619,14 @@ components:
         description: { type: string, nullable: true }
         preset:
           type: string
-          enum: [BASIC, STANDARD, STRICT, CUSTOM]
+          enum: [BASIC, STANDARD, STRICT, AGID, AGID_TS, CUSTOM]
           description: >
             Validation policy preset. BASIC/STANDARD accept AdES and qualified signatures
             (type-agnostic, cf. SiVa POLv3). STRICT enforces qualified-only semantics
-            (QES/QESeal, cf. SiVa POLv4). CUSTOM requires an explicit policyXml.
+            (QES/QESeal, cf. SiVa POLv4). AGID encodes the Italian digital signature law
+            baseline: qualified certificate (QcCompliance) + nonRepudiation key usage
+            required (CAD art. 24, DPCM 22/02/2013 art. 28). AGID_TS adds a mandatory
+            valid T-level timestamp. CUSTOM requires an explicit policyXml.
         policyXml: { type: string, nullable: true, description: "Required when preset=CUSTOM" }
     ProfileUpdateRequest:
       type: object

@@ -1,7 +1,82 @@
 {
   "version": "1.0",
-  "last_updated": "2026-06-28T15:27:13.891Z",
+  "last_updated": "2026-06-30T00:30:00.000Z",
   "pages": {
+    "concepts/italian-digital-signature-law": {
+      "type": "concept",
+      "title": "Quadro normativo italiano per la firma digitale",
+      "created": "2026-06-29",
+      "updated": "2026-06-30",
+      "sources": [
+        "notes/2026-06-28-quadro-normativo-firma-digitale-eidas",
+        "sources/SRC-2026-06-29-001",
+        "sources/SRC-2026-06-29-002",
+        "sources/SRC-2026-06-29-003"
+      ]
+    },
+    "concepts/firma-con-spid": {
+      "type": "concept",
+      "title": "Firma con SPID (sottoscrizione ex art. 20 c. 1-bis CAD)",
+      "created": "2026-06-29",
+      "updated": "2026-06-30",
+      "sources": [
+        "sources/SRC-2026-06-29-001",
+        "sources/SRC-2026-06-29-004"
+      ]
+    },
+    "sources/openapi-spec-sign-verify-2": {
+      "type": "source",
+      "title": "sign-verify-2 OpenAPI contract (openapi.yaml v1.0.0)",
+      "created": "2026-06-29",
+      "updated": "2026-06-29",
+      "sources": [
+        "notes/2026-06-29-openapi-spec-sign-verify-2"
+      ]
+    },
+    "sources/agid-signature-rules-research": {
+      "type": "source",
+      "title": "AgID — regole su firma qualificata/digitale e algoritmi crittografici",
+      "created": "2026-06-29",
+      "updated": "2026-06-29",
+      "category": "regulatory"
+    },
+    "sources/SRC-2026-06-29-001": {
+      "type": "source",
+      "title": "AgID Linee Guida sottoscrizione elettronica art. 20 CAD (Det. 157/2020)",
+      "created": "2026-06-29",
+      "updated": "2026-06-29",
+      "category": "regulatory"
+    },
+    "sources/SRC-2026-06-29-002": {
+      "type": "source",
+      "title": "CNIPA Deliberazione 45/2009 (mod. DT 69/2010)",
+      "created": "2026-06-29",
+      "updated": "2026-06-29",
+      "category": "regulatory"
+    },
+    "sources/SRC-2026-06-29-003": {
+      "type": "source",
+      "title": "AgID Regole Tecniche cap. 6 — algoritmi crittografici",
+      "created": "2026-06-29",
+      "updated": "2026-06-29",
+      "category": "regulatory"
+    },
+    "sources/SRC-2026-06-29-004": {
+      "type": "source",
+      "title": "AgID — Qualified Electronic Signature (pagina piattaforma)",
+      "created": "2026-06-29",
+      "updated": "2026-06-29",
+      "category": "regulatory"
+    },
+    "sources/ll-tsd-jackson-toolchain": {
+      "type": "source",
+      "title": "Lessons Learned: TSD imprint, DSS routing, Jackson CVE, JDK-25 toolchain",
+      "created": "2026-06-29",
+      "updated": "2026-06-29",
+      "sources": [
+        "notes/2026-06-28-ll-tsd-jackson-toolchain"
+      ]
+    },
     "analyses/cades-pades-test-corpus": {
       "type": "analysis",
       "title": "cades-pades-test-corpus",
@@ -360,11 +435,12 @@
       "type": "concept",
       "title": "validation-profiles",
       "created": "2026-06-27",
-      "updated": "2026-06-27",
+      "updated": "2026-06-29",
       "domain": "engineering",
       "sources": [
         "sources/SRC-2026-06-27-002",
-        "sources/SRC-2026-06-27-003"
+        "sources/SRC-2026-06-27-003",
+        "sources/openapi-spec-sign-verify-2"
       ]
     },
     "entities/api_key": {
@@ -807,6 +883,60 @@
         "sources/SRC-2026-06-27-001",
         "sources/SRC-2026-06-27-002"
       ]
+    },
+    "concepts/etsi-ades-formats": {
+      "type": "concept",
+      "title": "ETSI AdES signature formats and baseline profiles",
+      "created": "2026-06-28",
+      "updated": "2026-06-28"
+    },
+    "concepts/siva-deployment-ops": {
+      "type": "concept",
+      "title": "SiVa deployment & operations",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "category": "operations"
+    },
+    "concepts/siva-report-schema": {
+      "type": "concept",
+      "title": "SiVa validation report schema",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "category": "api-reference"
+    },
+    "concepts/siva-rest-interface": {
+      "type": "concept",
+      "title": "SiVa REST interface (3.x)",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "category": "api-reference"
+    },
+    "concepts/siva-validation-policy": {
+      "type": "concept",
+      "title": "SiVa validation policy (POLv3 / POLv4)",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "category": "policy"
+    },
+    "concepts/x509-pki-profiles": {
+      "type": "concept",
+      "title": "X.509 PKI certificate and CRL profiles (RFC 5280, 6960, 5758)",
+      "created": "2026-06-28",
+      "updated": "2026-06-28"
+    },
+    "entities/tsdawareextractionadapter": {
+      "type": "entity",
+      "title": "TsdAwareExtractionAdapter",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "category": "project"
+    },
+    "entities/tsdawarevalidatoradapter": {
+      "type": "entity",
+      "title": "TsdAwareValidatorAdapter",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "category": "project"
     }
   }
 }

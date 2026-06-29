@@ -9,6 +9,7 @@ category: standards
 urls:
   - https://www.etsi.org/deliver/etsi_en/319100_319199/31910201/01.04.01_60/en_31910201v010401p.pdf
 credibility: high
+volatility: warm
 ---
 
 # ETSI EN 319 102-1 V1.4.1 — Validazione timestamp AdES

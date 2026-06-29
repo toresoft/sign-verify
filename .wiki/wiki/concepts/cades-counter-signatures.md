@@ -5,6 +5,7 @@ created: 2026-06-27
 updated: 2026-06-27
 sources:
   - sources/dss-counter-signature-research
+volatility: warm
 ---
 
 # CAdES Counter-Signatures in DSS 6.4

@@ -5,6 +5,7 @@ created: 2026-06-28
 updated: 2026-06-28
 sources:
   - articles/2026-06-28-x509-rfc5280-certificati
+volatility: warm
 ---
 
 # X.509 PKI certificate and CRL profiles (RFC 5280, 6960, 5758)

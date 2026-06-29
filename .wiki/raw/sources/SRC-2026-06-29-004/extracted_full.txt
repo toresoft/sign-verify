@@ -1,0 +1,54 @@
+Qualified Electronic Signature |Agenzia per l'Italia Digitale
+Go to main content
+Go to site navigation
+Main navigation
+Qualified Electronic Signature
+The qualified electronic signature (QES) - or digital signature - is the result of an IT procedure, called validation, which guarantees the authenticity, integrity and non-rejection of electronic documents.
+The digital signature allows users to exchange documents online with full legal validity. All natural persons can have a digital signature: citizens, directors and employees of companies, as well as public administrations. You can contact qualified trust service providers authorised by AgID that guarantee the identity of those who use a digital signature. The list of qualified trust service providers established in the European Union is available here .
+It is also possible to use the Portable Document Format (PDF) signature format: the Adobe System website illustrates the specifications of the PDF format necessary for the development of further verification products and digital signature generation.
+The Agency for Digital Italy provides a guide for Affixing signatures and information on signed documents, which also illustrates the signature in PDF format (PAdES).
+The use of previous versions of the Acrobat suite is strongly discouraged.
+Digital signature
+CAD
+Art. 35 - Dispositivi sicuri e procedure per la generazione della firma qualificata
+Art. 21 - Ulteriori disposizioni relative ai documenti informatici, sottoscritti con firma elettronica avanzata, qualificata o digitale
+Art. 25 - Firma autenticata
+Art. 24 - Firma digitale
+Art. 81 - Articolo abrogato
+Art. 33 - Articolo abrogato
+Art. 45 - Valore giuridico della trasmissione
+Art. 31 - Articolo abrogato
+Related pages
+Electronic invoicing
+Certified email
+Notizie correlate
+Online i dati sulla diffusione dei servizi fiduciari qualificati nel 2° semestre 2023
+29/04/2024
+Dispositivi di firma elettronica qualificata SSCD e QSCD validi anche dopo il 31 dicembre 2022
+22/12/2022
+Domande frequenti
+Firma digitale o firma elettronica qualificata?
+In Italia “firma elettronica qualificata” e “firma digitale” sono sostanzialmente sinonimi.
+firma elettronica qualificata
+Agenzia per l'Italia Digitale
+Via Liszt 21 - 00144 Roma Telefono: +39 06852641 Codice fiscale: 97735020584 PEC: protocollo@pec.agid.gov.it
+Related sites
+Sistema Pubblico di Identità Digitale
+Indice nazionale dei domicili digitali
+Developers Italia
+Designers Italia
+Codice dell'Amministrazione Digitale
+Monitoraggio Accessibilità
+I dati aperti della PA
+National Catalog for Spatial Data
+Indice delle Pubbliche Amministrazioni
+Appalti innovativi
+Fascicolo Sanitario Elettronico
+PEPPOL Authority Italia
+Form AgID
+Follow us on
+Facebook
+Twitter
+Youtube
+Medium
+Return to the top
