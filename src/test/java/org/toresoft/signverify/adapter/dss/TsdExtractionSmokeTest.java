@@ -2,9 +2,8 @@ package org.toresoft.signverify.adapter.dss;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.time.Instant;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +19,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.toresoft.signverify.domain.model.ApiKey;
+import org.toresoft.signverify.domain.model.Role;
 import org.toresoft.signverify.domain.port.ExtractionPort;
+import org.toresoft.signverify.domain.port.PasswordHasherPort;
+import org.toresoft.signverify.persistence.ApiKeyRepository;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -28,6 +31,8 @@ class TsdExtractionSmokeTest {
 
   @Autowired private TestRestTemplate rest;
   @Autowired private ExtractionPort extractor;
+  @Autowired private ApiKeyRepository keys;
+  @Autowired private PasswordHasherPort hasher;
 
   @Value("${local.server.port}")
   private int port;
@@ -35,8 +40,17 @@ class TsdExtractionSmokeTest {
   private String apiKey;
 
   @BeforeEach
-  void setUp() throws IOException {
-    apiKey = Files.readString(Path.of("/tmp/sign-verify-test/bootstrap-api-key.txt")).strip();
+  void setUp() {
+    apiKey = "sv_tsdext01_abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKL";
+    ApiKey k = new ApiKey();
+    k.setId(UUID.randomUUID());
+    k.setName("tsd-extraction-" + UUID.randomUUID());
+    k.setKeyPrefix("tsdext01");
+    k.setKeyHash(hasher.hash(apiKey));
+    k.setRole(Role.STANDARD);
+    k.setEnabled(true);
+    k.setCreatedAt(Instant.now());
+    keys.save(k);
     System.out.println("[TsdExtractionSmokeTest] port=" + port);
     System.out.println("[TsdExtractionSmokeTest] extractor=" + extractor.getClass().getName());
   }
