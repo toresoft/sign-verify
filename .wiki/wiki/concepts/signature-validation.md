@@ -26,3 +26,4 @@ The four DSS report views feed [[entities/sign-verify-2]] responses: `Diagnostic
 ## Related
 - [[entities/dss]] · [[entities/eidas-regulation]] · [[concepts/ades-signature-formats]]
 - [[concepts/validation-profiles]] · [[concepts/baseline-profiles]]
+- [[concepts/x509-pki-profiles]] · [[concepts/etsi-ades-formats]] · [[concepts/timestamping]]

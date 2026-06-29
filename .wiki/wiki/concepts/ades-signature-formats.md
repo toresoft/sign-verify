@@ -31,3 +31,4 @@ Baseline profiles are codified in ETSI TS 103 171 (XAdES), 103 173 (CAdES), 103 
 ## Related
 - [[concepts/baseline-profiles]] · [[entities/dss]] · [[concepts/signature-validation]]
 - [[entities/eidas-regulation]] · [[concepts/file-extraction]]
+- [[concepts/etsi-ades-formats]] (detailed ETSI standards and baseline levels)

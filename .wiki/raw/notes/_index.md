@@ -1,3 +1,4 @@
 # Raw Notes
 
 - [[2026-06-28-ll-tsd-jackson-toolchain]] — Lessons: RFC 5544 imprint resolution, DSS↔BC routing, Jackson CVE pinning, JDK-25 Spotless/JaCoCo gotchas (5 lessons)
+- [[2026-06-28-quadro-normativo-firma-digitale-eidas]] — Quadro normativo firma digitale: eIDAS, CAD, DPCM 2013, ETSI, IETF
