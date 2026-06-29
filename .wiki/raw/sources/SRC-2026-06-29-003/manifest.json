@@ -1,0 +1,11 @@
+{
+  "id": "SRC-2026-06-29-003",
+  "captured": "2026-06-29",
+  "packet_version": "1.0",
+  "title": "AgID Regole Tecniche sottoscrizione (art.20 CAD) — cap. 6 Algoritmi crittografici (SHA-256, RSA-2048, ECDSA P-256, TLS 1.2+)",
+  "url": "https://docs.italia.it/AgID/documenti-in-consultazione/lg-spid-firma-docs/it/1.1/main/06_crittografia.html",
+  "format": "web",
+  "extractor": "curl + html-strip",
+  "extraction_status": "ok",
+  "content_type": "text/html"
+}

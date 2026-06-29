@@ -1,0 +1,65 @@
+{"timestamp":"2026-06-27T10:40:57.355Z","kind":"bootstrap","topic":"Digital signature verification","mode":"personal"}
+{"timestamp":"2026-06-27T10:45:21.462Z","kind":"capture","source_id":"SRC-2026-06-27-001","url":"https://ec.europa.eu/digital-building-blocks/DSS/webapp-demo/doc/dss-documentation.pdf","format":"web"}
+{"timestamp":"2026-06-27T10:49:34.782Z","kind":"observe","slug":"obs-2026-06-27-dss-docs-pdf-capture-required-manual-pdftotext","title":"DSS docs PDF capture required manual pdftotext","relevance":"high"}
+{"timestamp":"2026-06-27T13:28:55.525Z","kind":"capture","source_id":"SRC-2026-06-27-002","file_path":"/home/salvatore/Development/sign-verify-2/docs/superpowers/specs/2026-06-07-sign-verify-design.md","format":"markdown"}
+{"timestamp":"2026-06-27T13:28:55.527Z","kind":"capture","source_id":"SRC-2026-06-27-003","file_path":"/home/salvatore/Development/sign-verify-2/docs/en/05-signature-verification.md","format":"markdown"}
+{"timestamp":"2026-06-27T13:28:55.528Z","kind":"capture","source_id":"SRC-2026-06-27-004","file_path":"/home/salvatore/Development/sign-verify-2/docs/en/04-trusted-certificates.md","format":"markdown"}
+{"timestamp":"2026-06-27T13:28:55.530Z","kind":"capture","source_id":"SRC-2026-06-27-005","file_path":"/home/salvatore/Development/sign-verify-2/docs/en/03-authentication.md","format":"markdown"}
+{"timestamp":"2026-06-27T13:28:55.531Z","kind":"capture","source_id":"SRC-2026-06-27-006","file_path":"/home/salvatore/Development/sign-verify-2/docs/en/06-file-extraction.md","format":"markdown"}
+{"timestamp":"2026-06-27T13:28:55.532Z","kind":"capture","source_id":"SRC-2026-06-27-007","file_path":"/home/salvatore/Development/sign-verify-2/docs/en/07-logging-audit.md","format":"markdown"}
+{"timestamp":"2026-06-27T13:28:55.534Z","kind":"capture","source_id":"SRC-2026-06-27-008","file_path":"/home/salvatore/Development/sign-verify-2/src/main/resources/openapi/openapi.yaml","format":"file"}
+{"timestamp":"2026-06-27T15:30:47.827Z","kind":"ensure_page","page_type":"entity","title":"DSS","path":"entities/dss"}
+{"timestamp":"2026-06-27T15:30:47.828Z","kind":"ensure_page","page_type":"entity","title":"sign-verify-2","path":"entities/sign-verify-2"}
+{"timestamp":"2026-06-27T15:30:47.828Z","kind":"ensure_page","page_type":"entity","title":"eIDAS Regulation","path":"entities/eidas-regulation"}
+{"timestamp":"2026-06-27T15:30:47.828Z","kind":"ensure_page","page_type":"concept","title":"AdES signature formats","path":"concepts/ades-signature-formats"}
+{"timestamp":"2026-06-27T15:30:47.828Z","kind":"ensure_page","page_type":"concept","title":"Baseline profiles","path":"concepts/baseline-profiles"}
+{"timestamp":"2026-06-27T15:30:47.828Z","kind":"ensure_page","page_type":"concept","title":"Validation profiles","path":"concepts/validation-profiles"}
+{"timestamp":"2026-06-27T15:30:47.828Z","kind":"ensure_page","page_type":"concept","title":"Trusted Lists","path":"concepts/trusted-lists"}
+{"timestamp":"2026-06-27T15:30:47.828Z","kind":"ensure_page","page_type":"concept","title":"Hexagonal architecture","path":"concepts/hexagonal-architecture"}
+{"timestamp":"2026-06-27T15:30:47.828Z","kind":"ensure_page","page_type":"concept","title":"Async verification jobs","path":"concepts/async-verification-jobs"}
+{"timestamp":"2026-06-27T15:30:47.828Z","kind":"ensure_page","page_type":"concept","title":"TSL hot-swap refresh","path":"concepts/tsl-hot-swap-refresh"}
+{"timestamp":"2026-06-27T15:33:05.774Z","kind":"ensure_page","page_type":"concept","title":"Signature validation","path":"concepts/signature-validation"}
+{"timestamp":"2026-06-27T15:33:05.775Z","kind":"ensure_page","page_type":"concept","title":"Circuit breaker","path":"concepts/circuit-breaker"}
+{"timestamp":"2026-06-27T15:33:05.775Z","kind":"ensure_page","page_type":"concept","title":"ShedLock","path":"concepts/shedlock"}
+{"timestamp":"2026-06-27T15:33:05.775Z","kind":"ensure_page","page_type":"concept","title":"problem+json","path":"concepts/problemjson"}
+{"timestamp":"2026-06-27T15:33:05.775Z","kind":"ensure_page","page_type":"concept","title":"Design-first OpenAPI","path":"concepts/design-first-openapi"}
+{"timestamp":"2026-06-27T15:33:05.775Z","kind":"ensure_page","page_type":"concept","title":"OJ keystore","path":"concepts/oj-keystore"}
+{"timestamp":"2026-06-27T15:33:05.775Z","kind":"ensure_page","page_type":"concept","title":"File extraction","path":"concepts/file-extraction"}
+{"timestamp":"2026-06-27T15:33:55.327Z","kind":"rebuild_meta"}
+{"timestamp":"2026-06-27T15:33:55.330Z","kind":"lint","orphans":18,"missing_pages":229,"contradictions":0,"auto_fix":true}
+{"timestamp":"2026-06-27T15:41:44.896Z","kind":"ensure_page","page_type":"entity","title":"api_key","path":"entities/apikey"}
+{"timestamp":"2026-06-27T15:41:44.896Z","kind":"ensure_page","page_type":"entity","title":"validation_job","path":"entities/validationjob"}
+{"timestamp":"2026-06-27T15:41:44.896Z","kind":"ensure_page","page_type":"entity","title":"verification_profile","path":"entities/verificationprofile"}
+{"timestamp":"2026-06-27T15:41:44.896Z","kind":"ensure_page","page_type":"entity","title":"audit_log","path":"entities/auditlog"}
+{"timestamp":"2026-06-27T15:43:36.950Z","kind":"rebuild_meta"}
+{"timestamp":"2026-06-27T15:44:31.354Z","kind":"lint","orphans":24,"missing_pages":258,"contradictions":0,"auto_fix":false}
+{"timestamp":"2026-06-27T15:46:49.112Z","kind":"retro","slug":"lint-auto-fix-creates-duplicate-stubs","title":"wiki_lint auto_fix creates duplicate stubs from link text","category":"tool-quirk"}
+{"timestamp":"2026-06-27T16:18:10.813Z","kind":"rebuild_meta"}
+{"timestamp":"2026-06-27T16:19:02.680Z","kind":"lint","orphans":2,"missing_pages":43,"contradictions":0,"auto_fix":false}
+{"timestamp":"2026-06-27T17:39:54.992Z","kind":"ensure_page","page_type":"entity","title":"SignedDocumentValidator","path":"entities/signeddocumentvalidator"}
+{"timestamp":"2026-06-27T17:39:54.992Z","kind":"ensure_page","page_type":"entity","title":"CertificateVerifier","path":"entities/certificateverifier"}
+{"timestamp":"2026-06-27T17:39:54.992Z","kind":"ensure_page","page_type":"concept","title":"DSS Reports","path":"concepts/dss-reports"}
+{"timestamp":"2026-06-27T17:39:54.992Z","kind":"ensure_page","page_type":"concept","title":"DSS policy XML","path":"concepts/dss-policy-xml"}
+{"timestamp":"2026-06-27T17:39:54.993Z","kind":"ensure_page","page_type":"concept","title":"Revocation data","path":"concepts/revocation-data"}
+{"timestamp":"2026-06-27T17:39:54.993Z","kind":"ensure_page","page_type":"concept","title":"HMAC callback","path":"concepts/hmac-callback"}
+{"timestamp":"2026-06-27T17:39:54.993Z","kind":"ensure_page","page_type":"entity","title":"DssValidatorAdapter","path":"entities/dssvalidatoradapter"}
+{"timestamp":"2026-06-27T17:39:54.993Z","kind":"ensure_page","page_type":"entity","title":"DssExtractionAdapter","path":"entities/dssextractionadapter"}
+{"timestamp":"2026-06-27T17:39:54.993Z","kind":"ensure_page","page_type":"entity","title":"DssTslAdapter","path":"entities/dsstsladapter"}
+{"timestamp":"2026-06-27T17:39:54.993Z","kind":"ensure_page","page_type":"entity","title":"trusted_certificate","path":"entities/trustedcertificate"}
+{"timestamp":"2026-06-27T17:39:54.993Z","kind":"ensure_page","page_type":"entity","title":"tsl_refresh","path":"entities/tslrefresh"}
+{"timestamp":"2026-06-27T17:39:54.993Z","kind":"ensure_page","page_type":"concept","title":"API key authentication","path":"concepts/api-key-authentication"}
+{"timestamp":"2026-06-27T17:40:59.166Z","kind":"rebuild_meta"}
+{"timestamp":"2026-06-27T17:41:08.656Z","kind":"lint","orphans":2,"missing_pages":39,"contradictions":0,"auto_fix":false}
+{"timestamp":"2026-06-27T19:31:29.203Z","kind":"ensure_page","page_type":"entity","title":"DetachedTimestampValidator","path":"entities/detachedtimestampvalidator"}
+{"timestamp":"2026-06-27T19:31:29.203Z","kind":"ensure_page","page_type":"concept","title":"Timestamping","path":"concepts/timestamping"}
+{"timestamp":"2026-06-27T19:32:37.740Z","kind":"ensure_page","page_type":"analysis","title":"Verifica firma per file .tsd","path":"analyses/verifica-firma-per-file-tsd"}
+{"timestamp":"2026-06-27T19:33:03.540Z","kind":"rebuild_meta"}
+{"timestamp":"2026-06-27T19:33:05.610Z","kind":"lint","orphans":2,"missing_pages":42,"contradictions":0,"auto_fix":false}
+{"timestamp":"2026-06-27T19:37:46.922Z","kind":"retro","slug":"tsd-is-cades-walk-not-detached-timestamp","title":".tsd (PA) = CAdES firma marcatemporalmente, non timestamp detached","category":"correction"}
+{"timestamp":"2026-06-27T19:37:49.694Z","kind":"rebuild_meta"}
+{"timestamp":"2026-06-27T21:07:31.205Z","kind":"ensure_page","page_type":"synthesis","title":"Validation at a specific date (control time)","path":"syntheses/validation-at-a-specific-date-control-time"}
+{"timestamp":"2026-06-27T21:14:55.329Z","kind":"ensure_page","page_type":"synthesis","title":"Validation time and the timestamp (best-signature-time)","path":"syntheses/validation-time-and-the-timestamp-best-signature-time"}
+{"timestamp":"2026-06-28T15:16:23.570Z","kind":"lint","orphans":6,"missing_pages":48,"contradictions":0,"auto_fix":false}
+{"timestamp":"2026-06-28T15:27:13.890Z","kind":"lint","orphans":6,"missing_pages":39,"contradictions":0,"auto_fix":false}
+{"timestamp":"2026-06-28T19:22:24Z","kind":"audit_started","scope":"artifact","target":"wiki/analyses/siva-vs-sign-verify-2"}
+{"timestamp":"2026-06-28T19:23:38Z","kind":"audit_completed","scope":"artifact","target":"wiki/analyses/siva-vs-sign-verify-2","verdict":"partially_accurate","outputs_scanned":2,"drifted":1,"escalations":3}

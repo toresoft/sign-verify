@@ -415,7 +415,8 @@ Le specifiche OpenAPI sono disponibili a: `http://localhost:8080/v3/api-docs`
 |----------|---------------|-------|
 | `/actuator/health/liveness` | nessuna | Il processo è vivo (Kubernetes `livenessProbe`) |
 | `/actuator/health/readiness` | nessuna | Il servizio è pronto anche con le TSL caricate (`readinessProbe`) |
-| `/actuator/info` | nessuna | Versione build e info Git |
+| `/actuator/health` | nessuna (status) / PRIVILEGED (dettagli) | Stato aggregato; dettagli per-componente (TSL, coda job, DB, disco) solo se autenticato PRIVILEGED |
+| `/actuator/info` | **PRIVILEGED** | Versione build e info Git (non più pubblico) |
 | `/actuator/prometheus` | nessuna | Metriche Prometheus |
 
 Gli altri endpoint (`metrics`, `env`, `beans`…) **non sono pubblici** e

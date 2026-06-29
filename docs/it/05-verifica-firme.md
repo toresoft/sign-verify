@@ -37,6 +37,12 @@ L'esito principale di DSS è espresso da:
   (es. `SIG_CRYPTO_FAILURE`, `NO_CERTIFICATE_CHAIN_FOUND`, `OUT_OF_BOUNDS_NO_POE`…).
 - **`signatureFormat`** — formato/livello rilevato (es. `PAdES-BASELINE-B`).
 - **`signatureCount`** — numero di firme trovate.
+- **`signatures[]`** — dettaglio per firma: `id`, `indication`, `subIndication`,
+  `signatureFormat`, **`signatureLevel`** (qualifica eIDAS DSS: `QESIG`/`QESEAL`,
+  `ADESIG_QC`/…, `NA`, varianti `INDETERMINATE_*`; ortogonale a `indication`),
+  `signedBy`, `bestSignatureTime`, e `timestamps[]` della firma.
+- **`timestamps[]`** — marche del documento: `id`, `indication`, `subIndication`,
+  `productionTime`, `qualification` (`QTSA`/`TSA`/`NA`).
 
 ### Tipi di report
 
@@ -223,10 +229,18 @@ La risposta segnala `overridesApplied: true`.
 
 `POST /api/v1/verifications` — `multipart/form-data`.
 
-| Parte | Obbligatoria | Descrizione |
-|-------|--------------|-------------|
-| `file` | sì | Il documento firmato (binario) |
-| `metadata` | no | JSON: `profileId?`, `profileOverrides?`, `reports[]?` |
+| Parte | Tipo | Obbligatoria | Descrizione |
+|-------|------|--------------|-------------|
+| `file` | binary | sì | Il documento firmato da verificare |
+| `metadata` | application/json | no | Oggetto JSON con opzioni di verifica |
+| `metadata.profileId` | `string` | no | UUID del profilo di validazione; se assente, si usa il profilo di default |
+| `metadata.profileOverrides` | `object` | no | Mappa chiave-valore di override booleani per rilassare controlli specifici (vedi §4.2) |
+| `metadata.profileOverrides.checkRevocation` | `boolean` | no | Porta i vincoli di revoca a `IGNORE` |
+| `metadata.profileOverrides.checkSignatureIntegrity` | `boolean` | no | Porta i vincoli di integrità della firma a `IGNORE` |
+| `metadata.profileOverrides.checkCertificateChain` | `boolean` | no | Porta i vincoli sulla catena di certificati a `IGNORE` |
+| `metadata.profileOverrides.checkTimestamp` | `boolean` | no | Porta i vincoli sui timestamp a `IGNORE` |
+| `metadata.profileOverrides.checkQualified` | `boolean` | no | Porta il vincolo sul certificato qualificato a `IGNORE` |
+| `metadata.reports` | `array[string]` | no | Tipi di report richiesti; default `["simple","etsi"]` |
 
 Se `metadata` è assente, vengono prodotti i report `simple` ed `etsi` con il
 profilo di default.
@@ -249,6 +263,19 @@ Risposta `200`:
   "indication": "TOTAL_PASSED",
   "subIndication": null,
   "signatureCount": 1,
+  "signatures": [
+    {
+      "id": "S-1",
+      "indication": "TOTAL_PASSED",
+      "subIndication": null,
+      "signatureFormat": "PAdES_BASELINE_B",
+      "signatureLevel": "QESIG",
+      "signedBy": "CN=Mario Rossi, …",
+      "bestSignatureTime": "2026-06-08T10:14:00Z",
+      "timestamps": []
+    }
+  ],
+  "timestamps": [],
   "reports": {
     "simple":   { /* … */ },
     "detailed": { /* … */ }
@@ -259,6 +286,140 @@ Risposta `200`:
 Valori ammessi per `reports`: `simple`, `detailed`, `diagnostic`, `etsi`.
 Un valore sconosciuto produce **400** (`unknown report type`). Un JSON di
 metadata malformato produce **400** (`invalid metadata json`).
+
+### Timestamp del documento vs timestamp di archivio
+
+La risposta contiene due array di timestamp a livello di firma:
+
+- **`timestamps[]`** — Timestamp di firma (livello T/LT): timestamp di contenuto
+  incorporati nella firma o che la coprono. Provano che la firma esisteva prima
+  del momento di produzione del timestamp, fornendo evidenza al livello T
+  (Timestamp) o LT (Long-Term).
+- **`archiveTimestamps[]`** — Timestamp di archivio (livello LTA): provengono
+  dagli **evidence record** (RFC 4998 / 6283) e forniscono prova di archiviazione
+  a lungo termine (LTA). Vengono popolati solo quando la libreria DSS rileva
+  evidence record nella firma.
+
+> **Nota:** `archiveTimestamps` può essere vuoto anche su firme LTA se la EU
+> Trusted List (TSL) non è attiva, perché DSS richiede l'accesso alla TSL per
+> elaborare completamente gli evidence record.
+
+### Campi della risposta
+
+| Campo | Tipo JSON | Obbligatorio | Descrizione | Valori possibili |
+|-------|-----------|--------------|-------------|------------------|
+| `verifiedAt` | `string` | sì | Timestamp della verifica (ISO-8601 UTC) | es. `2026-06-08T10:15:30Z` |
+| `profileUsed` | `string` | sì | Nome del profilo di validazione applicato | `BASIC`, `STANDARD`, `STRICT`, oppure un nome personalizzato |
+| `overridesApplied` | `boolean` | sì | Indica se sono stati applicati override al volo sulla policy | `true`, `false` |
+| `signatureFormat` | `string` | sì | Formato/livello della firma rilevato | es. `PAdES-BASELINE-B`, `CAdES-BASELINE-B` |
+| `indication` | `string` | sì | Esito complessivo della validazione | `TOTAL_PASSED`, `TOTAL_FAILED`, `INDETERMINATE` |
+| `subIndication` | `string` o `null` | sì | Motivazione di dettaglio quando non è `TOTAL_PASSED` | `null`, oppure codici definiti da DSS come `SIG_CRYPTO_FAILURE`, `NO_CERTIFICATE_CHAIN_FOUND`, `OUT_OF_BOUNDS_NO_POE` |
+| `signatureCount` | `integer` | sì | Numero di firme trovate nel documento | `0`, `1`, `2`… |
+| `signatures` | `array` | sì | Dettagli per firma | Array di oggetti `Signature` |
+| `signatures[].id` | `string` | sì | Identificativo della firma | es. `S-1` |
+| `signatures[].indication` | `string` | sì | Esito a livello di firma | `TOTAL_PASSED`, `TOTAL_FAILED`, `INDETERMINATE` |
+| `signatures[].subIndication` | `string` o `null` | sì | Motivazione di dettaglio a livello di firma | `null`, oppure codici definiti da DSS |
+| `signatures[].signatureFormat` | `string` | sì | Formato di firma rilevato per questa firma | es. `PAdES_BASELINE_B` |
+| `signatures[].signatureLevel` | `string` | sì | Qualifica eIDAS della firma | `QESIG`, `QESEAL`, `ADESIG_QC`, `NA`, `INDETERMINATE_*` |
+| `signatures[].signedBy` | `string` | sì | Distinguished Name del firmatario | es. `CN=Mario Rossi, …` |
+| `signatures[].bestSignatureTime` | `string` o `null` | sì | Miglior tempo di firma provato (ISO-8601 UTC) | es. `2026-06-08T10:14:00Z`, oppure `null` |
+| `signatures[].claimedSigningTime` | `string` o `null` | no | Tempo di firma dichiarato negli attributi firmati (ISO-8601 UTC) | es. `2026-06-08T10:13:00Z`, oppure `null` |
+| `signatures[].timestamps` | `array` | sì | Marche temporali della firma (livello T/LT) | Array di oggetti `Timestamp` |
+| `signatures[].timestamps[].id` | `string` | sì | Identificativo della marca temporale | es. `T-1` |
+| `signatures[].timestamps[].indication` | `string` | sì | Esito della validazione della marca temporale | `PASSED`, `FAILED`, `INDETERMINATE` |
+| `signatures[].timestamps[].subIndication` | `string` o `null` | sì | Motivazione di dettaglio della marca temporale | `null`, oppure codici definiti da DSS |
+| `signatures[].timestamps[].productionTime` | `string` o `null` | sì | Tempo di produzione della marca temporale (ISO-8601 UTC) | es. `2026-06-08T10:14:00Z`, oppure `null` |
+| `signatures[].timestamps[].qualification` | `string` | sì | Qualifica della TSA | `QTSA`, `TSA`, `NA` |
+| `signatures[].archiveTimestamps` | `array` | sì | Marche temporali di archivio (livello LTA/evidence record) | Array di oggetti `ArchiveTimestamp`; vuoto se assenti |
+| `signatures[].archiveTimestamps[].id` | `string` | sì | Identificativo della marca di archivio | es. `A-1` |
+| `signatures[].archiveTimestamps[].productionTime` | `string` o `null` | sì | Tempo di produzione della marca di archivio (ISO-8601 UTC) | es. `2026-06-08T10:14:00Z`, oppure `null` |
+| `signatures[].certificates` | `array` | sì | Certificati coinvolti nella firma | Array di oggetti `Certificate` |
+| `signatures[].certificates[].id` | `string` | sì | Identificativo del certificato | es. `C-1` |
+| `signatures[].certificates[].qualifiedName` | `string` | sì | Nome qualificato del soggetto del certificato | es. `CN=Mario Rossi, …` |
+| `signatures[].certificates[].sunsetDate` | `string` o `null` | sì | Data di sunset del certificato se applicabile (ISO-8601 UTC) | es. `2027-12-31T23:59:59Z`, oppure `null` |
+| `timestamps` | `array` | sì | Marche temporali a livello documento | Array di oggetti `Timestamp` (stesso schema di `signatures[].timestamps[]`) |
+| `reports` | `object` | sì | Report di validazione richiesti | Oggetto con chiavi `simple`, `detailed`, `diagnostic`, `etsi` |
+| `reports.simple` | `object` o `null` | sì* | Report sintetico (esito per firma) | `null` se non richiesto |
+| `reports.detailed` | `object` o `null` | sì* | Report dettagliato dei singoli vincoli di policy | `null` se non richiesto |
+| `reports.diagnostic` | `object` o `null` | sì* | Dati grezzi (diagnostic data) raccolti da DSS | `null` se non richiesto |
+| `reports.etsi` | `object` o `null` | sì* | Validation report ETSI (TS 119 102-2) | `null` se non richiesto |
+
+> \* I sotto-campi di `reports` sono sempre presenti ma possono essere `null` quando il corrispondente tipo di report non è stato richiesto.
+
+### Valori degli enum
+
+**`indication`**
+
+| Valore | Significato |
+|--------|-------------|
+| `TOTAL_PASSED` | La firma è valida e tutti i vincoli sono stati superati |
+| `TOTAL_FAILED` | La firma non è valida: almeno un vincolo FAIL non è stato superato |
+| `INDETERMINATE` | L'esito non può essere determinato (es. TSL mancante, informazioni insufficienti) |
+
+**`signatureLevel`** — Qualifica eIDAS DSS (ETSI TS 119 102-1); ortogonale a `indication`.
+
+| Valore | Significato |
+|--------|-------------|
+| `QESIG` | Firma Elettronica Qualificata |
+| `QESEAL` | Sigillo Elettronico Qualificato |
+| `ADESIG_QC` | Firma Elettronica Avanzata con certificato qualificato |
+| `ADESEAL_QC` | Sigillo Elettronico Avanzato con certificato qualificato |
+| `NA` | Non valutato / non applicabile |
+| `INDETERMINATE_QESIG` | Firma elettronica qualificata indeterminata |
+| `INDETERMINATE_QESEAL` | Sigillo elettronico qualificato indeterminato |
+| `INDETERMINATE_ADESIG_QC` | AdESig con certificato qualificato indeterminata |
+| `INDETERMINATE_ADESEAL_QC` | AdESeal con certificato qualificato indeterminata |
+
+### Risposte di errore
+
+**400 — metadata malformato**
+
+```json
+{"type":"about:blank","title":"Bad Request","status":400,"detail":"Invalid metadata JSON","instance":"/api/v1/verifications"}
+```
+
+**413 — file troppo grande**
+
+```json
+{"type":"about:blank","title":"Payload Too Large","status":413,"detail":"File exceeds maximum allowed size","instance":"/api/v1/verifications"}
+```
+
+**429 — backpressure concorrenza**
+
+```json
+{"type":"about:blank","title":"Too Many Requests","status":429,"detail":"Maximum concurrent verifications reached; try again later","instance":"/api/v1/verifications"}
+```
+
+**200 con `INDETERMINATE`**
+
+```json
+{
+  "verifiedAt": "2026-06-08T10:15:30Z",
+  "profileUsed": "STANDARD",
+  "overridesApplied": false,
+  "signatureFormat": "PAdES-BASELINE-B",
+  "indication": "INDETERMINATE",
+  "subIndication": "NO_CERTIFICATE_CHAIN_FOUND",
+  "signatureCount": 1,
+  "signatures": [
+    {
+      "id": "S-1",
+      "indication": "INDETERMINATE",
+      "subIndication": "NO_CERTIFICATE_CHAIN_FOUND",
+      "signatureFormat": "PAdES_BASELINE_B",
+      "signatureLevel": "INDETERMINATE_QESIG",
+      "signedBy": "CN=Mario Rossi, …",
+      "bestSignatureTime": "2026-06-08T10:14:00Z",
+      "claimedSigningTime": null,
+      "timestamps": [],
+      "archiveTimestamps": [],
+      "certificates": []
+    }
+  ],
+  "timestamps": [],
+  "reports": { "simple": { }, "etsi": { } }
+}
+```
 
 ```mermaid
 sequenceDiagram
@@ -329,6 +490,18 @@ stateDiagram-v2
 
 Stati (`JobStatus`): `PENDING`, `RUNNING`, `COMPLETED`, `FAILED`, `DELIVERED`,
 `DELIVERY_FAILED`, `DELETED`.
+
+### Valori di JobStatus
+
+| Valore | Significato |
+|--------|-------------|
+| `PENDING` | Job sottomesso, in attesa di essere prelevato |
+| `RUNNING` | Job in elaborazione |
+| `COMPLETED` | Validazione completata con successo |
+| `FAILED` | Validazione fallita con errore |
+| `DELIVERED` | Risultato consegnato al callback con successo |
+| `DELIVERY_FAILED` | Consegna al callback esaurita senza successo |
+| `DELETED` | Job scaduto e rimosso dalla retention |
 
 Il **ValidationWorker** fa polling (`async.worker.poll-interval`, default `5s`),
 preleva i job pending e li elabora; se il circuit breaker `dssValidator` è

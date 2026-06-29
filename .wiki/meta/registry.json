@@ -1,0 +1,942 @@
+{
+  "version": "1.0",
+  "last_updated": "2026-06-30T00:30:00.000Z",
+  "pages": {
+    "concepts/italian-digital-signature-law": {
+      "type": "concept",
+      "title": "Quadro normativo italiano per la firma digitale",
+      "created": "2026-06-29",
+      "updated": "2026-06-30",
+      "sources": [
+        "notes/2026-06-28-quadro-normativo-firma-digitale-eidas",
+        "sources/SRC-2026-06-29-001",
+        "sources/SRC-2026-06-29-002",
+        "sources/SRC-2026-06-29-003"
+      ]
+    },
+    "concepts/firma-con-spid": {
+      "type": "concept",
+      "title": "Firma con SPID (sottoscrizione ex art. 20 c. 1-bis CAD)",
+      "created": "2026-06-29",
+      "updated": "2026-06-30",
+      "sources": [
+        "sources/SRC-2026-06-29-001",
+        "sources/SRC-2026-06-29-004"
+      ]
+    },
+    "sources/openapi-spec-sign-verify-2": {
+      "type": "source",
+      "title": "sign-verify-2 OpenAPI contract (openapi.yaml v1.0.0)",
+      "created": "2026-06-29",
+      "updated": "2026-06-29",
+      "sources": [
+        "notes/2026-06-29-openapi-spec-sign-verify-2"
+      ]
+    },
+    "sources/agid-signature-rules-research": {
+      "type": "source",
+      "title": "AgID — regole su firma qualificata/digitale e algoritmi crittografici",
+      "created": "2026-06-29",
+      "updated": "2026-06-29",
+      "category": "regulatory"
+    },
+    "sources/SRC-2026-06-29-001": {
+      "type": "source",
+      "title": "AgID Linee Guida sottoscrizione elettronica art. 20 CAD (Det. 157/2020)",
+      "created": "2026-06-29",
+      "updated": "2026-06-29",
+      "category": "regulatory"
+    },
+    "sources/SRC-2026-06-29-002": {
+      "type": "source",
+      "title": "CNIPA Deliberazione 45/2009 (mod. DT 69/2010)",
+      "created": "2026-06-29",
+      "updated": "2026-06-29",
+      "category": "regulatory"
+    },
+    "sources/SRC-2026-06-29-003": {
+      "type": "source",
+      "title": "AgID Regole Tecniche cap. 6 — algoritmi crittografici",
+      "created": "2026-06-29",
+      "updated": "2026-06-29",
+      "category": "regulatory"
+    },
+    "sources/SRC-2026-06-29-004": {
+      "type": "source",
+      "title": "AgID — Qualified Electronic Signature (pagina piattaforma)",
+      "created": "2026-06-29",
+      "updated": "2026-06-29",
+      "category": "regulatory"
+    },
+    "sources/ll-tsd-jackson-toolchain": {
+      "type": "source",
+      "title": "Lessons Learned: TSD imprint, DSS routing, Jackson CVE, JDK-25 toolchain",
+      "created": "2026-06-29",
+      "updated": "2026-06-29",
+      "sources": [
+        "notes/2026-06-28-ll-tsd-jackson-toolchain"
+      ]
+    },
+    "analyses/cades-pades-test-corpus": {
+      "type": "analysis",
+      "title": "cades-pades-test-corpus",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "query": "\"quali file .p7m e PDF firmati usare per i test funzionali di sign-verify-2\"",
+      "sources": [
+        "sources/signed-files-test-corpus-research"
+      ]
+    },
+    "analyses/siva-vs-sign-verify-2": {
+      "type": "analysis",
+      "title": "siva-vs-sign-verify-2",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "query": "\"confronto open-eid/SiVa vs sign-verify-2 e punti di miglioramento\"",
+      "sources": [
+        "sources/siva-research",
+        "sources/SRC-2026-06-27-002",
+        "sources/SRC-2026-06-27-008"
+      ]
+    },
+    "analyses/tsd-dto-mapping": {
+      "type": "analysis",
+      "title": "tsd-dto-mapping",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "query": "\"come mappare DSS Reports in DTO REST per file .tsd\"",
+      "sources": [
+        "sources/dss-timestamp-api-research",
+        "sources/etsi-en-319-102-1-timestamp"
+      ]
+    },
+    "analyses/tsd-test-corpus": {
+      "type": "analysis",
+      "title": "tsd-test-corpus",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "query": "\"dove trovare o come generare file .tsd per i test di sign-verify-2\"",
+      "sources": [
+        "sources/tsd-test-corpus-research",
+        "sources/rfc5544-tsd-standard"
+      ]
+    },
+    "analyses/verifica-file-tsd": {
+      "type": "analysis",
+      "title": "verifica-file-tsd",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "query": "\"implementazione verifica firma per file .tsd\"",
+      "sources": [
+        "sources/SRC-2026-06-27-001",
+        "sources/SRC-2026-06-27-002",
+        "sources/SRC-2026-06-27-003"
+      ]
+    },
+    "concepts/ades-signature-formats": {
+      "type": "concept",
+      "title": "ades-signature-formats",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "engineering",
+      "sources": [
+        "sources/SRC-2026-06-27-001",
+        "sources/SRC-2026-06-27-003"
+      ]
+    },
+    "concepts/api-key-authentication": {
+      "type": "concept",
+      "title": "api-key-authentication",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "engineering",
+      "sources": [
+        "sources/SRC-2026-06-27-002",
+        "sources/SRC-2026-06-27-005"
+      ]
+    },
+    "concepts/async-verification-jobs": {
+      "type": "concept",
+      "title": "async-verification-jobs",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "engineering",
+      "sources": [
+        "sources/SRC-2026-06-27-002",
+        "sources/SRC-2026-06-27-003"
+      ]
+    },
+    "concepts/baseline-profiles": {
+      "type": "concept",
+      "title": "baseline-profiles",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "engineering",
+      "sources": [
+        "sources/SRC-2026-06-27-001",
+        "sources/SRC-2026-06-27-002"
+      ]
+    },
+    "concepts/cades-counter-signatures": {
+      "type": "concept",
+      "title": "cades-counter-signatures",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "engineering",
+      "sources": [
+        "sources/dss-counter-signature-research"
+      ]
+    },
+    "concepts/circuit-breaker": {
+      "type": "concept",
+      "title": "circuit-breaker",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "engineering",
+      "sources": [
+        "sources/SRC-2026-06-27-002"
+      ]
+    },
+    "concepts/design-first-openapi": {
+      "type": "concept",
+      "title": "design-first-openapi",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "engineering",
+      "sources": [
+        "sources/SRC-2026-06-27-002",
+        "sources/SRC-2026-06-27-008"
+      ]
+    },
+    "concepts/dss-format-detection": {
+      "type": "concept",
+      "title": "dss-format-detection",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "engineering",
+      "sources": [
+        "sources/dss-format-detection-research"
+      ]
+    },
+    "concepts/dss-policy-xml": {
+      "type": "concept",
+      "title": "dss-policy-xml",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "engineering",
+      "sources": [
+        "sources/SRC-2026-06-27-003",
+        "sources/SRC-2026-06-27-001"
+      ]
+    },
+    "concepts/dss-timestamp-api": {
+      "type": "concept",
+      "title": "dss-timestamp-api",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "engineering",
+      "sources": [
+        "sources/dss-timestamp-api-research"
+      ]
+    },
+    "concepts/etsi-en-319-102-1-validation": {
+      "type": "concept",
+      "title": "etsi-en-319-102-1-validation",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "standards",
+      "sources": [
+        "sources/etsi-en-319-102-1-timestamp"
+      ]
+    },
+    "concepts/file-extraction": {
+      "type": "concept",
+      "title": "file-extraction",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "engineering",
+      "sources": [
+        "sources/SRC-2026-06-27-006",
+        "sources/SRC-2026-06-27-002"
+      ]
+    },
+    "concepts/hexagonal-architecture": {
+      "type": "concept",
+      "title": "hexagonal-architecture",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "engineering",
+      "sources": [
+        "sources/SRC-2026-06-27-002"
+      ]
+    },
+    "concepts/hmac-callback": {
+      "type": "concept",
+      "title": "hmac-callback",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "engineering",
+      "sources": [
+        "sources/SRC-2026-06-27-001",
+        "sources/SRC-2026-06-27-002"
+      ]
+    },
+    "concepts/oj-keystore": {
+      "type": "concept",
+      "title": "oj-keystore",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "engineering",
+      "sources": [
+        "sources/SRC-2026-06-27-004"
+      ]
+    },
+    "concepts/problemjson": {
+      "type": "concept",
+      "title": "problemjson",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "engineering",
+      "sources": [
+        "sources/SRC-2026-06-27-002",
+        "sources/SRC-2026-06-27-007",
+        "sources/SRC-2026-06-27-008"
+      ]
+    },
+    "concepts/reports": {
+      "type": "concept",
+      "title": "reports",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "engineering",
+      "sources": [
+        "sources/SRC-2026-06-27-001",
+        "sources/SRC-2026-06-27-003"
+      ]
+    },
+    "concepts/revocation-data": {
+      "type": "concept",
+      "title": "revocation-data",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "engineering",
+      "sources": [
+        "sources/SRC-2026-06-27-001",
+        "sources/SRC-2026-06-27-002"
+      ]
+    },
+    "concepts/rfc5544-tsd": {
+      "type": "concept",
+      "title": "rfc5544-tsd",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "standards",
+      "sources": [
+        "sources/rfc5544-tsd-standard",
+        "sources/etsi-en-319-102-1-timestamp"
+      ]
+    },
+    "concepts/shedlock": {
+      "type": "concept",
+      "title": "shedlock",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "engineering",
+      "sources": [
+        "sources/SRC-2026-06-27-002"
+      ]
+    },
+    "concepts/signature-qualification": {
+      "type": "concept",
+      "title": "signature-qualification",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "sources": [
+        "sources/siva-research",
+        "sources/dss-timestamp-api-research"
+      ],
+      "confidence": "high"
+    },
+    "concepts/signature-validation": {
+      "type": "concept",
+      "title": "signature-validation",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "engineering",
+      "sources": [
+        "sources/SRC-2026-06-27-001",
+        "sources/SRC-2026-06-27-002"
+      ]
+    },
+    "concepts/structured-logging": {
+      "type": "concept",
+      "title": "structured-logging",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "engineering",
+      "sources": [
+        "sources/SRC-2026-06-27-001"
+      ]
+    },
+    "concepts/timestamping": {
+      "type": "concept",
+      "title": "timestamping",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "engineering",
+      "sources": [
+        "sources/SRC-2026-06-27-001"
+      ]
+    },
+    "concepts/tl-validation-job": {
+      "type": "concept",
+      "title": "tl-validation-job",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "engineering",
+      "sources": [
+        "sources/SRC-2026-06-27-001"
+      ]
+    },
+    "concepts/trusted-lists-certificate-source": {
+      "type": "concept",
+      "title": "trusted-lists-certificate-source",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "engineering",
+      "sources": [
+        "sources/SRC-2026-06-27-001"
+      ]
+    },
+    "concepts/trusted-lists": {
+      "type": "concept",
+      "title": "trusted-lists",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "engineering",
+      "sources": [
+        "sources/SRC-2026-06-27-001",
+        "sources/SRC-2026-06-27-002",
+        "sources/SRC-2026-06-27-004"
+      ]
+    },
+    "concepts/tsl-hot-swap-refresh": {
+      "type": "concept",
+      "title": "tsl-hot-swap-refresh",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "domain": "engineering",
+      "sources": [
+        "sources/SRC-2026-06-27-002",
+        "sources/SRC-2026-06-27-004"
+      ]
+    },
+    "concepts/validation-profiles": {
+      "type": "concept",
+      "title": "validation-profiles",
+      "created": "2026-06-27",
+      "updated": "2026-06-29",
+      "domain": "engineering",
+      "sources": [
+        "sources/SRC-2026-06-27-002",
+        "sources/SRC-2026-06-27-003",
+        "sources/openapi-spec-sign-verify-2"
+      ]
+    },
+    "entities/api_key": {
+      "type": "entity",
+      "title": "api_key",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "category": "project",
+      "sources": [
+        "sources/SRC-2026-06-27-002",
+        "sources/SRC-2026-06-27-005"
+      ]
+    },
+    "entities/audit_log": {
+      "type": "entity",
+      "title": "audit_log",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "category": "project",
+      "sources": [
+        "sources/SRC-2026-06-27-002",
+        "sources/SRC-2026-06-27-007"
+      ]
+    },
+    "entities/certificateverifier": {
+      "type": "entity",
+      "title": "certificateverifier",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "category": "tool",
+      "sources": [
+        "sources/SRC-2026-06-27-001",
+        "sources/SRC-2026-06-27-002"
+      ]
+    },
+    "entities/detachedtimestampvalidator": {
+      "type": "entity",
+      "title": "detachedtimestampvalidator",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "category": "tool",
+      "sources": [
+        "sources/SRC-2026-06-27-001"
+      ]
+    },
+    "entities/dss": {
+      "type": "entity",
+      "title": "dss",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "category": "tool",
+      "sources": [
+        "sources/SRC-2026-06-27-001",
+        "sources/SRC-2026-06-27-002"
+      ]
+    },
+    "entities/dssextractionadapter": {
+      "type": "entity",
+      "title": "dssextractionadapter",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "category": "project",
+      "sources": [
+        "sources/SRC-2026-06-27-002",
+        "sources/SRC-2026-06-27-006"
+      ]
+    },
+    "entities/dsstsladapter": {
+      "type": "entity",
+      "title": "dsstsladapter",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "category": "project",
+      "sources": [
+        "sources/SRC-2026-06-27-002",
+        "sources/SRC-2026-06-27-004"
+      ]
+    },
+    "entities/dssvalidatoradapter": {
+      "type": "entity",
+      "title": "dssvalidatoradapter",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "category": "project",
+      "sources": [
+        "sources/SRC-2026-06-27-002"
+      ]
+    },
+    "entities/eidas-regulation": {
+      "type": "entity",
+      "title": "eidas-regulation",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "category": "tool",
+      "sources": [
+        "sources/SRC-2026-06-27-001",
+        "sources/SRC-2026-06-27-002"
+      ]
+    },
+    "entities/sign-verify-2": {
+      "type": "entity",
+      "title": "sign-verify-2",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "category": "project",
+      "sources": [
+        "sources/SRC-2026-06-27-002",
+        "sources/SRC-2026-06-27-008"
+      ]
+    },
+    "entities/signeddocumentvalidator": {
+      "type": "entity",
+      "title": "signeddocumentvalidator",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "category": "tool",
+      "sources": [
+        "sources/SRC-2026-06-27-001"
+      ]
+    },
+    "entities/siva": {
+      "type": "entity",
+      "title": "siva",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "category": "project",
+      "sources": [
+        "sources/siva-research"
+      ]
+    },
+    "entities/trusted_certificate": {
+      "type": "entity",
+      "title": "trusted_certificate",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "category": "project",
+      "sources": [
+        "sources/SRC-2026-06-27-002",
+        "sources/SRC-2026-06-27-004"
+      ]
+    },
+    "entities/tsl_refresh": {
+      "type": "entity",
+      "title": "tsl_refresh",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "category": "project",
+      "sources": [
+        "sources/SRC-2026-06-27-002",
+        "sources/SRC-2026-06-27-004"
+      ]
+    },
+    "entities/validation_job": {
+      "type": "entity",
+      "title": "validation_job",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "category": "project",
+      "sources": [
+        "sources/SRC-2026-06-27-002",
+        "sources/SRC-2026-06-27-003"
+      ]
+    },
+    "entities/verification_profile": {
+      "type": "entity",
+      "title": "verification_profile",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "category": "project",
+      "sources": [
+        "sources/SRC-2026-06-27-002",
+        "sources/SRC-2026-06-27-003"
+      ]
+    },
+    "sources/SRC-2026-06-27-001": {
+      "type": "source",
+      "title": "SRC-2026-06-27-001",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "format": "web",
+      "source_id": "SRC-2026-06-27-001",
+      "raw_path": "raw/sources/SRC-2026-06-27-001/extracted.md",
+      "captured": "2026-06-27",
+      "status": "processed"
+    },
+    "sources/SRC-2026-06-27-002": {
+      "type": "source",
+      "title": "SRC-2026-06-27-002",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "format": "markdown",
+      "source_id": "SRC-2026-06-27-002",
+      "raw_path": "raw/sources/SRC-2026-06-27-002/extracted.md",
+      "captured": "2026-06-27",
+      "status": "processed"
+    },
+    "sources/SRC-2026-06-27-003": {
+      "type": "source",
+      "title": "SRC-2026-06-27-003",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "format": "markdown",
+      "source_id": "SRC-2026-06-27-003",
+      "raw_path": "raw/sources/SRC-2026-06-27-003/extracted.md",
+      "captured": "2026-06-27",
+      "status": "processed"
+    },
+    "sources/SRC-2026-06-27-004": {
+      "type": "source",
+      "title": "SRC-2026-06-27-004",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "format": "markdown",
+      "source_id": "SRC-2026-06-27-004",
+      "raw_path": "raw/sources/SRC-2026-06-27-004/extracted.md",
+      "captured": "2026-06-27",
+      "status": "processed"
+    },
+    "sources/SRC-2026-06-27-005": {
+      "type": "source",
+      "title": "SRC-2026-06-27-005",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "format": "markdown",
+      "source_id": "SRC-2026-06-27-005",
+      "raw_path": "raw/sources/SRC-2026-06-27-005/extracted.md",
+      "captured": "2026-06-27",
+      "status": "processed"
+    },
+    "sources/SRC-2026-06-27-006": {
+      "type": "source",
+      "title": "SRC-2026-06-27-006",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "format": "markdown",
+      "source_id": "SRC-2026-06-27-006",
+      "raw_path": "raw/sources/SRC-2026-06-27-006/extracted.md",
+      "captured": "2026-06-27",
+      "status": "processed"
+    },
+    "sources/SRC-2026-06-27-007": {
+      "type": "source",
+      "title": "SRC-2026-06-27-007",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "format": "markdown",
+      "source_id": "SRC-2026-06-27-007",
+      "raw_path": "raw/sources/SRC-2026-06-27-007/extracted.md",
+      "captured": "2026-06-27",
+      "status": "processed"
+    },
+    "sources/SRC-2026-06-27-008": {
+      "type": "source",
+      "title": "SRC-2026-06-27-008",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "format": "yaml",
+      "source_id": "SRC-2026-06-27-008",
+      "raw_path": "raw/sources/SRC-2026-06-27-008/extracted.md",
+      "captured": "2026-06-27",
+      "status": "processed"
+    },
+    "sources/dss-counter-signature-research": {
+      "type": "source",
+      "title": "\"DSS 6.4 source: CAdES counter-signature limitations e API\"",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "slug": "dss-counter-signature-research",
+      "status": "ingested",
+      "category": "engineering",
+      "urls": [
+        "https://github.com/esig/dss/blob/master/dss-diagnostic-jaxb/src/main/java/eu/europa/esig/dss/diagnostic/DiagnosticData.java",
+        "https://github.com/esig/dss/blob/master/dss-cades/src/test/java/eu/europa/esig/dss/cades/signature/CAdESLevelBNestedCounterSignatureTest.java",
+        "https://github.com/esig/dss/blob/master/dss-cades/src/test/java/eu/europa/esig/dss/cades/signature/CAdESLevelLTACounterSignatureTest.java",
+        "https://github.com/esig/dss/blob/master/dss-cades/src/test/java/eu/europa/esig/dss/cades/signature/CAdESCounterSignSignaturesConsequentlyTest.java"
+      ],
+      "credibility": "high"
+    },
+    "sources/dss-format-detection-research": {
+      "type": "source",
+      "title": "\"DSS 6.4 source code: CMSDocumentAnalyzer, DetachedTimestampAnalyzer, DSSUtils.isTimestampToken\"",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "slug": "dss-format-detection-research",
+      "status": "ingested",
+      "category": "engineering",
+      "urls": [
+        "https://github.com/esig/dss/blob/master/dss-cades/src/main/java/eu/europa/esig/dss/cades/validation/CMSDocumentAnalyzer.java",
+        "https://github.com/esig/dss/blob/master/dss-validation/src/main/java/eu/europa/esig/dss/validation/timestamp/DetachedTimestampAnalyzer.java",
+        "https://github.com/esig/dss/blob/master/dss-spi/src/main/java/eu/europa/esig/dss/spi/DSSUtils.java"
+      ],
+      "credibility": "high"
+    },
+    "sources/dss-timestamp-api-research": {
+      "type": "source",
+      "title": "\"DSS 6.4 Javadoc: TimestampWrapper, SignatureWrapper, SimpleReport API\"",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "slug": "dss-timestamp-api-research",
+      "status": "ingested",
+      "category": "engineering",
+      "urls": [
+        "https://ec.europa.eu/digital-building-blocks/DSS/webapp-demo/apidocs/eu/europa/esig/dss/diagnostic/TimestampWrapper.html",
+        "https://ec.europa.eu/digital-building-blocks/DSS/webapp-demo/apidocs/eu/europa/esig/dss/diagnostic/SignatureWrapper.html",
+        "https://ec.europa.eu/digital-building-blocks/DSS/webapp-demo/apidocs/eu/europa/esig/dss/diagnostic/DiagnosticData.html",
+        "https://ec.europa.eu/digital-building-blocks/DSS/webapp-demo/apidocs/eu/europa/esig/dss/simplereport/SimpleReport.html"
+      ],
+      "credibility": "high"
+    },
+    "sources/etsi-en-319-102-1-timestamp": {
+      "type": "source",
+      "title": "\"ETSI EN 319 102-1 V1.4.1 — §5.4-§5.6 timestamp validation algorithm\"",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "slug": "etsi-en-319-102-1-timestamp",
+      "status": "ingested",
+      "category": "standards",
+      "urls": [
+        "https://www.etsi.org/deliver/etsi_en/319100_319199/31910201/01.04.01_60/en_31910201v010401p.pdf"
+      ],
+      "credibility": "high"
+    },
+    "sources/lint-auto-fix-creates-duplicate-stubs": {
+      "type": "source",
+      "title": "\"wiki_lint auto_fix creates duplicate stubs from link text\"",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "slug": "lint-auto-fix-creates-duplicate-stubs",
+      "status": "insight",
+      "category": "tool-quirk"
+    },
+    "sources/obs-2026-06-27-dss-docs-pdf-capture-required-manual-pdftotext": {
+      "type": "source",
+      "title": "\"Observation: DSS docs PDF capture required manual pdftotext\"",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "slug": "obs-2026-06-27-dss-docs-pdf-capture-required-manual-pdftotext",
+      "status": "observation",
+      "relevance": "high",
+      "observed_at": "2026-06-27T10:49:34.782Z",
+      "tags": [
+        "dss",
+        "pdf-extraction",
+        "wiki",
+        "source-capture"
+      ],
+      "source_context": "\"Initializing the Digital signature verification wiki and capturing the DSS docs PDF\""
+    },
+    "sources/rfc5544-tsd-standard": {
+      "type": "source",
+      "title": "\"RFC 5544 + RFC 5955: definizione formale formato TSD e adozione italiana\"",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "slug": "rfc5544-tsd-standard",
+      "status": "ingested",
+      "category": "standards",
+      "urls": [
+        "https://www.rfc-editor.org/rfc/rfc5544.html",
+        "https://datatracker.ietf.org/doc/html/rfc5955"
+      ],
+      "credibility": "high"
+    },
+    "sources/signed-files-test-corpus-research": {
+      "type": "source",
+      "title": "\"Corpus pubblici di file firmati (CAdES .p7m / PAdES PDF) per test — ricerca multi-agente\"",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "slug": "signed-files-test-corpus-research",
+      "status": "ingested",
+      "category": "testing",
+      "urls": [
+        "https://github.com/esig/dss/tree/master/dss-pades/src/test/resources/validation",
+        "https://github.com/esig/dss/tree/master/dss-cades/src/test/resources/validation",
+        "https://github.com/open-eid/SiVa-Test",
+        "https://github.com/open-eid/digidoc4j",
+        "https://docs.openssl.org/3.1/man1/openssl-cms/"
+      ],
+      "credibility": "high"
+    },
+    "sources/siva-research": {
+      "type": "source",
+      "title": "\"open-eid/SiVa — architecture, formats, policy, report schema, ops (research 2026-06-28)\"",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "url": "https://open-eid.github.io/SiVa/",
+      "tags": [
+        "siva",
+        "eidas",
+        "dss",
+        "validation",
+        "comparison"
+      ],
+      "confidence": "high"
+    },
+    "sources/tsd-is-cades-walk-not-detached-timestamp": {
+      "type": "source",
+      "title": "\".tsd (PA) = CAdES firma marcatemporalmente, non timestamp detached\"",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "slug": "tsd-is-cades-walk-not-detached-timestamp",
+      "status": "insight",
+      "category": "correction"
+    },
+    "sources/tsd-test-corpus-research": {
+      "type": "source",
+      "title": "\"Corpus e generazione file .tsd (RFC 5544) per test — ricerca multi-agente\"",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "slug": "tsd-test-corpus-research",
+      "status": "ingested",
+      "category": "testing",
+      "urls": [
+        "https://metacpan.org/release/BRUGNARA/Crypt-TimestampedData-0.01-TRIAL",
+        "https://github.com/bcgit/bc-java/blob/master/pkix/src/test/java/org/bouncycastle/tsp/test/CMSTimeStampedDataGeneratorTest.java",
+        "https://www.freetsa.org/index_en.php",
+        "https://gist.github.com/Manouchehri/fd754e402d98430243455713efada710",
+        "https://www.jimby.name/techbits/recent/openssl_tsa/",
+        "https://docs.openssl.org/3.1/man1/openssl-ts/"
+      ],
+      "credibility": "high"
+    },
+    "syntheses/validation-at-a-specific-date-control-time": {
+      "type": "synthesis",
+      "title": "validation-at-a-specific-date-control-time",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "sources": [
+        "sources/SRC-2026-06-27-001",
+        "sources/SRC-2026-06-27-002",
+        "sources/SRC-2026-06-27-003",
+        "sources/SRC-2026-06-27-008"
+      ]
+    },
+    "syntheses/validation-time-and-the-timestamp-best-signature-time": {
+      "type": "synthesis",
+      "title": "validation-time-and-the-timestamp-best-signature-time",
+      "created": "2026-06-27",
+      "updated": "2026-06-27",
+      "sources": [
+        "sources/SRC-2026-06-27-001",
+        "sources/SRC-2026-06-27-002"
+      ]
+    },
+    "concepts/etsi-ades-formats": {
+      "type": "concept",
+      "title": "ETSI AdES signature formats and baseline profiles",
+      "created": "2026-06-28",
+      "updated": "2026-06-28"
+    },
+    "concepts/siva-deployment-ops": {
+      "type": "concept",
+      "title": "SiVa deployment & operations",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "category": "operations"
+    },
+    "concepts/siva-report-schema": {
+      "type": "concept",
+      "title": "SiVa validation report schema",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "category": "api-reference"
+    },
+    "concepts/siva-rest-interface": {
+      "type": "concept",
+      "title": "SiVa REST interface (3.x)",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "category": "api-reference"
+    },
+    "concepts/siva-validation-policy": {
+      "type": "concept",
+      "title": "SiVa validation policy (POLv3 / POLv4)",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "category": "policy"
+    },
+    "concepts/x509-pki-profiles": {
+      "type": "concept",
+      "title": "X.509 PKI certificate and CRL profiles (RFC 5280, 6960, 5758)",
+      "created": "2026-06-28",
+      "updated": "2026-06-28"
+    },
+    "entities/tsdawareextractionadapter": {
+      "type": "entity",
+      "title": "TsdAwareExtractionAdapter",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "category": "project"
+    },
+    "entities/tsdawarevalidatoradapter": {
+      "type": "entity",
+      "title": "TsdAwareValidatorAdapter",
+      "created": "2026-06-28",
+      "updated": "2026-06-28",
+      "category": "project"
+    }
+  }
+}

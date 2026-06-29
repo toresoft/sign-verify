@@ -32,7 +32,7 @@ public class SecurityConfiguration {
             e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
         .authorizeHttpRequests(
             a ->
-                a.requestMatchers("/actuator/health/**", "/actuator/info", "/actuator/prometheus")
+                a.requestMatchers("/actuator/health/**", "/actuator/prometheus")
                     .permitAll()
                     .requestMatchers("/v3/api-docs/**", "/swagger-ui/**")
                     .permitAll()

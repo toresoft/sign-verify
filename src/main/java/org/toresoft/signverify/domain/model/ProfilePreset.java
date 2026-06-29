@@ -4,5 +4,7 @@ public enum ProfilePreset {
   BASIC,
   STANDARD,
   STRICT,
+  AGID,
+  AGID_TS,
   CUSTOM
 }

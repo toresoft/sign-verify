@@ -127,7 +127,9 @@ sequenceDiagram
   conto della prontezza delle Trusted Lists (`TslReadinessIndicator`).
 
 Endpoint `actuator` esposti: `health`, `info`, `metrics`, `prometheus`.
-Sono pubblici (senza autenticazione) solo `health/**`, `info`, `prometheus`.
+Sono pubblici (senza autenticazione) solo `health/**` e `prometheus`; `info`
+richiede autenticazione. Su `health` gli anonimi vedono solo lo `status`
+aggregato — i dettagli per-componente richiedono un chiamante PRIVILEGED.
 
 ## 2.5 Primo avvio
 

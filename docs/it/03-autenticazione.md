@@ -35,11 +35,26 @@ flowchart TD
 
 ### Endpoint pubblici (senza autenticazione)
 
-- `/actuator/health/**`, `/actuator/info`, `/actuator/prometheus`
+- `/actuator/health/**`, `/actuator/prometheus`
 - `/v3/api-docs/**`, `/swagger-ui/**`
+
+`/actuator/info` (dettagli build + git) ora **richiede autenticazione**.
+`/actuator/health` è pubblico ma agli anonimi mostra solo lo `status` aggregato;
+i dettagli per-componente (conteggi TSL, coda job, DB, disco) sono visibili solo
+a un chiamante autenticato **PRIVILEGED** (`show-details: when-authorized`).
 
 Tutto il resto richiede autenticazione (`anyRequest().authenticated()`).
 Un fallimento produce **401** con corpo `application/problem+json`.
+
+```json
+{
+  "type": "about:blank",
+  "title": "Unauthorized",
+  "status": 401,
+  "detail": "Invalid or missing API key",
+  "instance": "/api/v1/verifications"
+}
+```
 
 ### Ruoli e Principal
 
@@ -55,6 +70,18 @@ Gli endpoint amministrativi sono protetti via `@EnableMethodSecurity` +
 `POST /api/v1/tsl/refresh`.
 
 Tipi di `Principal` (`PrincipalType`): `API_KEY`, `OAUTH_USER`, `SYSTEM`.
+
+**403 Forbidden** (ruolo insufficiente):
+
+```json
+{
+  "type": "about:blank",
+  "title": "Forbidden",
+  "status": 403,
+  "detail": "Access denied: PRIVILEGED role required",
+  "instance": "/api/v1/tsl/refresh"
+}
+```
 
 ## 2.2 Uso delle API key
 
@@ -92,6 +119,16 @@ Non è possibile eliminare **né disabilitare** l'ultima chiave `PRIVILEGED`
 abilitata: l'operazione fallisce con **409 Conflict**
 (`cannot remove last enabled privileged api key`). Questo previene il lock-out.
 Il controllo usa un lock pessimistico per evitare race condition (TOCTOU).
+
+```json
+{
+  "type": "about:blank",
+  "title": "Conflict",
+  "status": 409,
+  "detail": "Cannot remove the last enabled privileged API key",
+  "instance": "/api/v1/api-keys/..."
+}
+```
 
 ### Gestione delle chiavi (API)
 

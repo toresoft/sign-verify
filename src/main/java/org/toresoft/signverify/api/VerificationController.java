@@ -55,6 +55,8 @@ public class VerificationController {
     out.put("indication", res.result().indication());
     out.put("subIndication", res.result().subIndication());
     out.put("signatureCount", res.result().signatureCount());
+    out.put("signatures", res.result().signatures());
+    out.put("timestamps", res.result().timestamps());
     Map<String, Object> reportsOut = new LinkedHashMap<>();
     for (var e : res.result().reportsJson().entrySet()) {
       reportsOut.put(e.getKey().name().toLowerCase(), om.readTree(e.getValue()));

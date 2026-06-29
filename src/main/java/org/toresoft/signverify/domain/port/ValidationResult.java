@@ -1,5 +1,6 @@
 package org.toresoft.signverify.domain.port;
 
+import java.util.List;
 import java.util.Map;
 
 public record ValidationResult(
@@ -7,4 +8,6 @@ public record ValidationResult(
     String indication,
     String subIndication,
     int signatureCount,
-    Map<ReportType, String> reportsJson) {}
+    Map<ReportType, String> reportsJson,
+    List<SignatureSummary> signatures,
+    List<TimestampSummary> timestamps) {}

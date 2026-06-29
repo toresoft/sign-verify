@@ -1,0 +1,392 @@
+{
+  "id": "SRC-2026-06-28-001",
+  "captured": "2026-06-28",
+  "packet_version": "1.0",
+  "title": "open-eid/SiVa documentation collection (SiVa 3.x signature validation service)",
+  "url": "https://open-eid.github.io/SiVa/",
+  "format": "git-collection",
+  "extractor": "git-clone --depth 1",
+  "extraction_status": "success",
+  "source_type": "collection",
+  "collection": {
+    "slug": "open-eid-siva",
+    "adapter": "git",
+    "upstream_repo": "https://github.com/open-eid/SiVa",
+    "revision": "348a6b261df9a16167eea4ef46593c442d2d6bc8",
+    "canonical_url": "https://open-eid.github.io/SiVa/",
+    "license": "EUPL-1.1",
+    "namespace": "docs/ + root README/LICENSE/OSS_USED",
+    "excludes": [
+      ".git/",
+      ".github/",
+      "validation-services-parent/**/test-files/",
+      "binaries",
+      "images",
+      "vendored deps",
+      "scripts"
+    ],
+    "file_count": 60
+  },
+  "files": [
+    {
+      "path": "LICENSE.md",
+      "sha": "02e2aa7434b3d88bcdbd59cbac734c76325d8084",
+      "bytes": 13222,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/LICENSE.md"
+    },
+    {
+      "path": "OSS_USED.md",
+      "sha": "815a27c0f5146110de7d53ae516d8b10a1f444eb",
+      "bytes": 7981,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/OSS_USED.md"
+    },
+    {
+      "path": "README.md",
+      "sha": "970b8766374b5209e403305ce7a703c9a222d937",
+      "bytes": 5234,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/README.md"
+    },
+    {
+      "path": "docs/documentation_deployment_instructions.txt",
+      "sha": "227d6c4be619215f88ecca7ca8291d0f0f148b89",
+      "bytes": 1908,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/documentation_deployment_instructions.txt"
+    },
+    {
+      "path": "docs/index.md",
+      "sha": "55d2db819f637f9c17ad06606d51e0bd6852fae1",
+      "bytes": 1699,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/index.md"
+    },
+    {
+      "path": "docs/siva/appendix/known_issues.md",
+      "sha": "fac0a741104cdb31dcb994aef3622b62f2590d14",
+      "bytes": 171,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva/appendix/known_issues.md"
+    },
+    {
+      "path": "docs/siva/appendix/test_cases.md",
+      "sha": "8340781f2de79d576d3c3db302c99bbe96616975",
+      "bytes": 165322,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva/appendix/test_cases.md"
+    },
+    {
+      "path": "docs/siva/appendix/validation_policy.md",
+      "sha": "b139e1e60ad317aefa6d1633abd4dcf5c9a2b0f6",
+      "bytes": 15661,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva/appendix/validation_policy.md"
+    },
+    {
+      "path": "docs/siva/appendix/wsdl.md",
+      "sha": "5f82b7ee72a2205b9755b13a1209cf1aed8502aa",
+      "bytes": 15818,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva/appendix/wsdl.md"
+    },
+    {
+      "path": "docs/siva/component_diagram.md",
+      "sha": "57a36c87ea92c584d1fc77d37c766e8b7431a213",
+      "bytes": 4885,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva/component_diagram.md"
+    },
+    {
+      "path": "docs/siva/definitions.md",
+      "sha": "b609712b283ffc43cb03210c5337df2804933764",
+      "bytes": 2167,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva/definitions.md"
+    },
+    {
+      "path": "docs/siva/deployment_view.md",
+      "sha": "a275666818384fcfe0c2756fb9a4de0b64e6af48",
+      "bytes": 1497,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva/deployment_view.md"
+    },
+    {
+      "path": "docs/siva/introduction.md",
+      "sha": "3e5db00f852a07c9bf1c8f075247a16fd4b8fda5",
+      "bytes": 1828,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva/introduction.md"
+    },
+    {
+      "path": "docs/siva/logging.md",
+      "sha": "39c30472dcfc5197fe9fac336fedb3fb2b572abc",
+      "bytes": 3120,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva/logging.md"
+    },
+    {
+      "path": "docs/siva/overview.md",
+      "sha": "dc077772e856ee8e4e0a45518aec76308409a4ab",
+      "bytes": 4027,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva/overview.md"
+    },
+    {
+      "path": "docs/siva/qa_strategy.md",
+      "sha": "1d2e13d795e9568016e29ca80c395b81897daa03",
+      "bytes": 9812,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva/qa_strategy.md"
+    },
+    {
+      "path": "docs/siva/references.md",
+      "sha": "4d57fad8422b28a5fa9533cf05dfba9f3a952069",
+      "bytes": 185,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva/references.md"
+    },
+    {
+      "path": "docs/siva/test_plan.md",
+      "sha": "fc71c8844c0ce72dea3b39b065bc3f077a1dcf30",
+      "bytes": 18704,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva/test_plan.md"
+    },
+    {
+      "path": "docs/siva/v2/deployment.md",
+      "sha": "fcc25c79bf27f44cfbe742ed8b6825caf8304b92",
+      "bytes": 2752,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva/v2/deployment.md"
+    },
+    {
+      "path": "docs/siva/v2/interfaces.md",
+      "sha": "ca1d793ee94006e80ec4fa22c024fe7cacce41d2",
+      "bytes": 25582,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva/v2/interfaces.md"
+    },
+    {
+      "path": "docs/siva/v2/links.md",
+      "sha": "8adb384d701390ca8e05faa86b86b87aee485fe5",
+      "bytes": 124,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva/v2/links.md"
+    },
+    {
+      "path": "docs/siva/v2/siva_service_overview.md",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "bytes": 0,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva/v2/siva_service_overview.md"
+    },
+    {
+      "path": "docs/siva/v2/structure_and_activities.md",
+      "sha": "f3f26f002d8144f9f8fba5009a9cad1c21f511f8",
+      "bytes": 12159,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva/v2/structure_and_activities.md"
+    },
+    {
+      "path": "docs/siva/v2/systemintegrators_guide.md",
+      "sha": "91129356c2d1a575dd6a3cba7cd3b5934463fbe1",
+      "bytes": 30966,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva/v2/systemintegrators_guide.md"
+    },
+    {
+      "path": "docs/siva/v2/use_cases.md",
+      "sha": "fbe9b8bd054b77379db44e5e042a3dc5e82b223b",
+      "bytes": 3025,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva/v2/use_cases.md"
+    },
+    {
+      "path": "docs/siva/version_info.md",
+      "sha": "a83167fc442fc15d176157401f97faaf7df7db7e",
+      "bytes": 792,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva/version_info.md"
+    },
+    {
+      "path": "docs/siva2/appendix/known_issues.md",
+      "sha": "3fcd1b2b494909d4e44ac1784ed10dd13107c8a8",
+      "bytes": 174,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva2/appendix/known_issues.md"
+    },
+    {
+      "path": "docs/siva2/appendix/test_cases.md",
+      "sha": "0f20d02a4e5c6691c10f36c34955353b06b5c875",
+      "bytes": 228762,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva2/appendix/test_cases.md"
+    },
+    {
+      "path": "docs/siva2/appendix/validation_policy.md",
+      "sha": "8a7a73da57de643cad3a2716fade13455b3f9b55",
+      "bytes": 17729,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva2/appendix/validation_policy.md"
+    },
+    {
+      "path": "docs/siva2/appendix/wsdl.md",
+      "sha": "3c02696790eaae6353c10d0c3558c2626bcbc011",
+      "bytes": 29893,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva2/appendix/wsdl.md"
+    },
+    {
+      "path": "docs/siva2/component_diagram.md",
+      "sha": "1cf4ead1923432ea0113ff802880c206e3bf7752",
+      "bytes": 4972,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva2/component_diagram.md"
+    },
+    {
+      "path": "docs/siva2/definitions.md",
+      "sha": "bbac7bcacd2c16e777faaf55ee3b808c748c28f3",
+      "bytes": 2209,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva2/definitions.md"
+    },
+    {
+      "path": "docs/siva2/deployment.md",
+      "sha": "cb7616169127d724b8eb770124ce330d9d35576c",
+      "bytes": 2769,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva2/deployment.md"
+    },
+    {
+      "path": "docs/siva2/deployment_view.md",
+      "sha": "ba021290d126cc9f7cdafdcb02d5e3c623506271",
+      "bytes": 1531,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva2/deployment_view.md"
+    },
+    {
+      "path": "docs/siva2/interfaces.md",
+      "sha": "989cb04829df2a08b695bced72cf285387575284",
+      "bytes": 46241,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva2/interfaces.md"
+    },
+    {
+      "path": "docs/siva2/introduction.md",
+      "sha": "3e5db00f852a07c9bf1c8f075247a16fd4b8fda5",
+      "bytes": 1828,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva2/introduction.md"
+    },
+    {
+      "path": "docs/siva2/links.md",
+      "sha": "8adb384d701390ca8e05faa86b86b87aee485fe5",
+      "bytes": 124,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva2/links.md"
+    },
+    {
+      "path": "docs/siva2/logging.md",
+      "sha": "15e2b75b5b5ed1c5577ac1eb413ce89abbcce9c0",
+      "bytes": 3213,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva2/logging.md"
+    },
+    {
+      "path": "docs/siva2/overview.md",
+      "sha": "0ed43ff080e731f778951fae743085e1c3ce7ecb",
+      "bytes": 2308,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva2/overview.md"
+    },
+    {
+      "path": "docs/siva2/qa_strategy.md",
+      "sha": "2262abaf9835cc4646b6c32a5c21c3a6b6e5b6cd",
+      "bytes": 8993,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva2/qa_strategy.md"
+    },
+    {
+      "path": "docs/siva2/references.md",
+      "sha": "938b6d45321ab876eb1ab141e320e15b85128b58",
+      "bytes": 193,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva2/references.md"
+    },
+    {
+      "path": "docs/siva2/siva_service_overview.md",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "bytes": 0,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva2/siva_service_overview.md"
+    },
+    {
+      "path": "docs/siva2/structure_and_activities.md",
+      "sha": "f9a5d2cc86dd1548b4c5bb57882fad80ef0c7d7a",
+      "bytes": 10887,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva2/structure_and_activities.md"
+    },
+    {
+      "path": "docs/siva2/systemintegrators_guide.md",
+      "sha": "afd5f09beabba6d5ebc72c4a08238f2d0a3fe41d",
+      "bytes": 34417,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva2/systemintegrators_guide.md"
+    },
+    {
+      "path": "docs/siva2/test_plan.md",
+      "sha": "696389dba4f9cebccd35e47a37d4e6193e0245cc",
+      "bytes": 20230,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva2/test_plan.md"
+    },
+    {
+      "path": "docs/siva2/use_cases.md",
+      "sha": "9160a55b7fc6854213fa4a0ae5e5c79e465f3198",
+      "bytes": 3143,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva2/use_cases.md"
+    },
+    {
+      "path": "docs/siva3/LOTL_update_April_2026.md",
+      "sha": "1d436063cb31832dacd3eb28a4a636b419946235",
+      "bytes": 3373,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva3/LOTL_update_April_2026.md"
+    },
+    {
+      "path": "docs/siva3/appendix/known_issues.md",
+      "sha": "fac0a741104cdb31dcb994aef3622b62f2590d14",
+      "bytes": 171,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva3/appendix/known_issues.md"
+    },
+    {
+      "path": "docs/siva3/appendix/validation_policy.md",
+      "sha": "d0768330b36e2c8dff7df68f85288618435645af",
+      "bytes": 17142,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva3/appendix/validation_policy.md"
+    },
+    {
+      "path": "docs/siva3/background.md",
+      "sha": "495e5f7d7c26d2e32e4ab35982a5753137a3cce0",
+      "bytes": 1640,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva3/background.md"
+    },
+    {
+      "path": "docs/siva3/definitions.md",
+      "sha": "304c0db436a09cd708cfb065abb9dbcf271608bf",
+      "bytes": 2160,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva3/definitions.md"
+    },
+    {
+      "path": "docs/siva3/deployment.md",
+      "sha": "c680bc57b06ae50114bc851173abb21540492aad",
+      "bytes": 2871,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva3/deployment.md"
+    },
+    {
+      "path": "docs/siva3/deployment_guide.md",
+      "sha": "077ed9f0a4a1a1885ecf34959c154c02f908e355",
+      "bytes": 32728,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva3/deployment_guide.md"
+    },
+    {
+      "path": "docs/siva3/interfaces.md",
+      "sha": "3e82b0b78fd19ad17d6cbe85f64fc853b7e8ab66",
+      "bytes": 50353,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva3/interfaces.md"
+    },
+    {
+      "path": "docs/siva3/qa_strategy.md",
+      "sha": "8ecb5b8cb63e7de0bf7d6150d163b089db0c14ac",
+      "bytes": 6160,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva3/qa_strategy.md"
+    },
+    {
+      "path": "docs/siva3/roadmap.md",
+      "sha": "a4bfd12b085cd620367313c2e239ecd6392d273b",
+      "bytes": 450,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva3/roadmap.md"
+    },
+    {
+      "path": "docs/siva3/structure_and_activities.md",
+      "sha": "3bbc07956c798651b43df9ae74621725268fdf82",
+      "bytes": 9057,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva3/structure_and_activities.md"
+    },
+    {
+      "path": "docs/siva3/test_plan.md",
+      "sha": "62440db88cd36b93885267a8729354a160d66c0b",
+      "bytes": 10708,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva3/test_plan.md"
+    },
+    {
+      "path": "docs/siva3/use_cases.md",
+      "sha": "1af779b2e4fdb9206e31010cbd6f9ed1e83c143f",
+      "bytes": 2763,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/siva3/use_cases.md"
+    },
+    {
+      "path": "docs/version_info.md",
+      "sha": "0873f5edbce1c09f749f80e8b774cc6bdbcaa1a0",
+      "bytes": 4096,
+      "canonical_url": "https://github.com/open-eid/SiVa/blob/348a6b261df9a16167eea4ef46593c442d2d6bc8/docs/version_info.md"
+    }
+  ]
+}

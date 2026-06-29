@@ -159,8 +159,10 @@ paths:
       operationId: createProfile
       summary: Create a validation profile
       description: >-
-        Creates a validation profile from a preset (BASIC, STANDARD, STRICT) or
-        a custom DSS policy. `policyXml` is required when `preset=CUSTOM`.
+        Creates a validation profile from a preset (BASIC, STANDARD, STRICT, AGID,
+        AGID_TS) or a custom DSS policy. AGID/AGID_TS encode the Italian digital
+        signature law baseline (qualified-only); AGID_TS additionally requires a
+        valid T-level timestamp. `policyXml` is required when `preset=CUSTOM`.
       requestBody:
         required: true
         content:
@@ -516,11 +518,20 @@ components:
     HealthStatus:
       type: object
       required: [status]
+      additionalProperties: true
       properties:
         status: { type: string, enum: [UP, DOWN, OUT_OF_SERVICE, UNKNOWN] }
         groups:
           type: array
           items: { type: string }
+        components:
+          type: object
+          additionalProperties: true
+          description: >
+            Per-component health (visible to authenticated PRIVILEGED callers only;
+            management.endpoint.health.show-details=when-authorized, roles: PRIVILEGED).
+            Includes tslReadiness (certificateCount, lastRefresh*), jobQueue (activeJobs), dss, db,
+            and the liveness/readiness state groups.
 
     Problem:
       type: object
@@ -586,7 +597,16 @@ components:
         id: { type: string, format: uuid }
         name: { type: string }
         description: { type: string, nullable: true }
-        preset: { type: string, enum: [BASIC, STANDARD, STRICT, CUSTOM] }
+        preset:
+          type: string
+          enum: [BASIC, STANDARD, STRICT, AGID, AGID_TS, CUSTOM]
+          description: >
+            Validation policy preset. BASIC/STANDARD accept AdES and qualified signatures
+            (type-agnostic, cf. SiVa POLv3). STRICT enforces qualified-only semantics
+            (QES/QESeal, cf. SiVa POLv4). AGID encodes the Italian digital signature law
+            baseline: qualified certificate (QcCompliance) + nonRepudiation key usage
+            required (CAD art. 24, DPCM 22/02/2013 art. 28). AGID_TS adds a mandatory
+            valid T-level timestamp. CUSTOM requires an explicit policyXml.
         policyXml: { type: string, nullable: true }
         isDefault: { type: boolean }
         createdAt: { type: string, format: date-time }
@@ -597,7 +617,16 @@ components:
       properties:
         name: { type: string, minLength: 1, maxLength: 120 }
         description: { type: string, nullable: true }
-        preset: { type: string, enum: [BASIC, STANDARD, STRICT, CUSTOM] }
+        preset:
+          type: string
+          enum: [BASIC, STANDARD, STRICT, AGID, AGID_TS, CUSTOM]
+          description: >
+            Validation policy preset. BASIC/STANDARD accept AdES and qualified signatures
+            (type-agnostic, cf. SiVa POLv3). STRICT enforces qualified-only semantics
+            (QES/QESeal, cf. SiVa POLv4). AGID encodes the Italian digital signature law
+            baseline: qualified certificate (QcCompliance) + nonRepudiation key usage
+            required (CAD art. 24, DPCM 22/02/2013 art. 28). AGID_TS adds a mandatory
+            valid T-level timestamp. CUSTOM requires an explicit policyXml.
         policyXml: { type: string, nullable: true, description: "Required when preset=CUSTOM" }
     ProfileUpdateRequest:
       type: object
@@ -620,12 +649,65 @@ components:
         profileUsed: { type: string }
         overridesApplied: { type: boolean }
         signatureFormat: { type: string }
-        indication: { type: string }
+        indication:
+          type: string
+          description: >
+            ETSI EN 319 102-1 outcome: TOTAL_PASSED / TOTAL_FAILED / INDETERMINATE — i.e. is the
+            signature cryptographically valid. The eIDAS *qualification* (QES vs AdES) is reported
+            separately per signature in `signatures[].signatureLevel`.
         subIndication: { type: string, nullable: true }
         signatureCount: { type: integer }
+        signatures:
+          type: array
+          items: { $ref: '#/components/schemas/SignatureSummary' }
+        timestamps:
+          type: array
+          items: { $ref: '#/components/schemas/TimestampSummary' }
         reports:
           type: object
           additionalProperties: { type: object }
+
+    SignatureSummary:
+      type: object
+      properties:
+        id: { type: string }
+        indication: { type: string }
+        subIndication: { type: string, nullable: true }
+        signatureFormat: { type: string, nullable: true }
+        signatureLevel:
+          type: string
+          description: >
+            eIDAS qualification level (DSS SignatureQualification): QESIG/QESEAL (qualified),
+            ADESIG_QC/ADESEAL_QC (AdES/QC), ADESIG/ADESEAL/UNKNOWN (AdES), NOT_ADES*, NA, or an
+            INDETERMINATE_* variant. Orthogonal to `indication` (cryptographic validity).
+        signedBy: { type: string, nullable: true }
+        bestSignatureTime: { type: string, format: date-time, nullable: true }
+        claimedSigningTime: { type: string, format: date-time, nullable: true }
+        archiveTimestamps:
+          type: array
+          items: { $ref: '#/components/schemas/TimestampSummary' }
+        certificates:
+          type: array
+          items: { $ref: '#/components/schemas/CertificateSummary' }
+        timestamps:
+          type: array
+          items: { $ref: '#/components/schemas/TimestampSummary' }
+    CertificateSummary:
+      type: object
+      properties:
+        id: { type: string }
+        qualifiedName: { type: string }
+        sunsetDate: { type: string, format: date-time, nullable: true }
+    TimestampSummary:
+      type: object
+      properties:
+        id: { type: string }
+        indication: { type: string, nullable: true }
+        subIndication: { type: string, nullable: true }
+        productionTime: { type: string, format: date-time, nullable: true }
+        qualification:
+          type: string
+          description: "DSS TimestampQualification: QTSA (qualified TSA), TSA, or NA."
 
     JobAcceptedResponse:
       type: object

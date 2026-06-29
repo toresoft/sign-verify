@@ -67,3 +67,27 @@ curl -sS -X POST http://localhost:8080/api/v1/extractions \
   (see error handling in [7. Logging and audit](07-logging-audit.md)).
 - Extraction is a **stateless** operation: it creates no job and persists no
   content.
+
+## 5.5 TSD extraction
+
+The service supports extraction from **RFC 5544 TimeStampedData** (`.tsd`)
+files, commonly produced by Italian PA tools (ArubaSign, GoSign, Namirial).
+
+DSS 6.4 does not natively recognise the TSD format, so the extraction adapter
+unwraps the TSD envelope via **Bouncy Castle** (`CMSTimeStampedData`) and
+returns the inner content directly. The response carries
+`X-Signature-Format: RFC5544_TSD`.
+
+```bash
+curl -sS -X POST http://localhost:8080/api/v1/extractions \
+  -H "X-API-Key: $KEY" \
+  -F 'file=@document.tsd' \
+  -D - -o document.pdf
+# X-Signature-Format: RFC5544_TSD
+# X-Document-Count: 1
+```
+
+> **Note:** if the inner content is itself a signed CAdES `.p7m`, the raw
+> `.p7m` bytes are returned — not the originals inside it. For full extraction
+> from a TSD-wrapped signed document, extract in two steps: first the `.tsd`,
+> then the resulting `.p7m`.

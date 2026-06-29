@@ -1,0 +1,42 @@
+Our documentation is written using [MkDocs](http://www.mkdocs.org/) static documentation site generator with [Material theme](https://squidfunk.github.io/mkdocs-material/)  and [Markdown](https://daringfireball.net/projects/markdown/).
+
+System requirements
+-------------------
+
+* **Python 3** - currently used version is 3.10
+* **pip** - Python package manager
+* **Text Editor** - to edit Markdown documents (i.e [Haroopad](http://pad.haroopress.com/#))
+
+Installing required software
+-----------------
+
+### Ubuntu and Mac OS X
+
+Both Ubuntu and Mac OS X come `python` already installed (the version depends on OS)
+
+1.  Install `pip` on Ubuntu 18.04 `sudo apt-get install python-pip` on Mac OS X `sudo easy_install pip`
+2.  Install `mkdocs` using [pip](https://pip.pypa.io/en/stable/): `pip install mkdocs`
+3.  Install material theme `pip install mkdocs-material`
+
+### Windows
+
+1. Install python. Download the installer from the official `python` homepage: <https://www.python.org/downloads/> and install
+> **NOTE:** Starting with version 2.7.9 and onwards `pip` ships along with python, so there shouldn't be any need to install `pip` separately.
+2. Install `mkdocs` using [pip](https://pip.pypa.io/en/stable/): `pip install mkdocs`
+3.  Install material theme `pip install mkdocs-material`
+
+PS! There can be a need to add the directory, were `mkdocs` and `mkdocs-material` were installed, manually to the PATH.
+
+Editing content
+---------------
+
+1.  Edit markdown files inside the `docs` directory
+2.  Preview Your changes by issuing `mkdocs serve` and navigating to <http://localhost:8000>
+3.  Commit and push Your changes to `git`
+
+Deploying changes to GitHub pages
+---------------------------------
+
+1.  Generate the static site `mkdocs build`
+2.  Deploy the generated site to GitHub Pages: `mkdocs gh-deploy`
+3.  You are done and can go check the updated documentation at: <http://open-eid.github.io/SiVa>

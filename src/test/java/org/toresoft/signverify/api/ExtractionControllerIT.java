@@ -53,7 +53,7 @@ class ExtractionControllerIT {
   @Test
   void extract_pades_returns_200_with_headers() throws Exception {
     byte[] pdf =
-        Files.readAllBytes(Path.of("src/test/resources/signatures/sample-pades-valid.pdf"));
+        Files.readAllBytes(Path.of("src/test/resources/assets/pades/sample-pades-valid.pdf"));
     var filePart = new MockMultipartFile("file", "sample.pdf", "application/pdf", pdf);
 
     mvc.perform(multipart("/api/v1/extractions").file(filePart).header("X-API-Key", apiKey))

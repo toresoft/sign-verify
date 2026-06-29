@@ -1,0 +1,11 @@
+{
+  "id": "SRC-2026-06-27-001",
+  "captured": "2026-06-27",
+  "packet_version": "1.0",
+  "title": "https://ec.europa.eu/digital-building-blocks/DSS/webapp-demo/doc/dss-documentation.pdf",
+  "url": "https://ec.europa.eu/digital-building-blocks/DSS/webapp-demo/doc/dss-documentation.pdf",
+  "format": "web",
+  "extractor": "markitdown",
+  "extraction_status": "failed",
+  "content_type": "application/pdf"
+}

@@ -1,0 +1,11 @@
+{
+  "id": "SRC-2026-06-29-001",
+  "captured": "2026-06-29",
+  "packet_version": "1.0",
+  "title": "AgID — Linee Guida Regole Tecniche per la sottoscrizione elettronica di documenti ai sensi dell'art. 20 del CAD (Det. 157/2020, v1.0)",
+  "url": "https://www.agid.gov.it/sites/default/files/repository_files/linee_guida_per_la_sottoscrizione_elettronica_di_documenti_ai_sensi_dellart.20_del_cad.pdf",
+  "format": "pdf",
+  "extractor": "pdftotext -layout",
+  "extraction_status": "ok",
+  "content_type": "application/pdf"
+}

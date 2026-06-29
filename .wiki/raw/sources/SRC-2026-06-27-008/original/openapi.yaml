@@ -1,0 +1,650 @@
+openapi: 3.0.3
+info:
+  title: sign-verify-2 API
+  version: 1.0.0
+  description: REST service for electronic signature verification, extraction, profile and key management.
+  contact:
+    name: Toresoft
+    url: https://gitlab.com/toresoft/sign-verify
+    email: toresoft@gmail.com
+  license:
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+servers:
+  - url: /
+tags:
+  - name: ApiKeys
+    description: Management of API keys (create, list, enable/disable, delete).
+  - name: Profiles
+    description: Validation profiles wrapping DSS validation policies.
+  - name: Verifications
+    description: Synchronous and asynchronous electronic signature verification.
+  - name: Extractions
+    description: Extraction of the original documents from signed files and ASiC containers.
+  - name: Tsl
+    description: EU Trusted Lists status, refresh and trusted certificate lookup.
+  - name: Audit
+    description: Querying of the audit log.
+  - name: Health
+    description: Service health probes.
+
+security:
+  - ApiKeyAuth: []
+  - OAuth2Bearer: []
+
+paths:
+  /actuator/health:
+    get:
+      tags: [Health]
+      operationId: health
+      summary: Service health probe
+      description: >-
+        Returns the aggregate health of the service and its components.
+        Public endpoint (no authentication required).
+      security: []
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthStatus' }
+            application/vnd.spring-boot.actuator.v3+json:
+              schema: { $ref: '#/components/schemas/HealthStatus' }
+        '503':
+          description: one or more components are down
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthStatus' }
+
+  /api/v1/api-keys:
+    get:
+      tags: [ApiKeys]
+      operationId: listApiKeys
+      summary: List API keys
+      description: Returns a paginated list of API keys. Requires PRIVILEGED role.
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 0 } }
+        - { name: size, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiKeyPage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [ApiKeys]
+      operationId: createApiKey
+      summary: Create an API key
+      description: >-
+        Creates a new API key and returns it once in plaintext (it is not
+        retrievable afterwards). Requires PRIVILEGED role.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApiKeyCreateRequest' }
+      responses:
+        '201':
+          description: created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiKeyCreatedResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /api/v1/api-keys/{id}:
+    delete:
+      tags: [ApiKeys]
+      operationId: deleteApiKey
+      summary: Delete an API key
+      description: >-
+        Deletes an API key. The last enabled PRIVILEGED key cannot be removed.
+        Requires PRIVILEGED role.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    patch:
+      tags: [ApiKeys]
+      operationId: patchApiKey
+      summary: Enable or disable an API key
+      description: >-
+        Toggles the `enabled` flag of an API key. The last enabled PRIVILEGED
+        key cannot be disabled. Requires PRIVILEGED role.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApiKeyPatchRequest' }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiKeyView' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/profiles:
+    get:
+      tags: [Profiles]
+      operationId: listProfiles
+      summary: List validation profiles
+      description: Returns a paginated list of validation profiles.
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 0 } }
+        - { name: size, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProfilePage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Profiles]
+      operationId: createProfile
+      summary: Create a validation profile
+      description: >-
+        Creates a validation profile from a preset (BASIC, STANDARD, STRICT) or
+        a custom DSS policy. `policyXml` is required when `preset=CUSTOM`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProfileCreateRequest' }
+      responses:
+        '201':
+          description: created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProfileView' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/v1/profiles/{id}:
+    get:
+      tags: [Profiles]
+      operationId: getProfile
+      summary: Get a validation profile
+      description: Returns a single validation profile by its identifier.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProfileView' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Profiles]
+      operationId: updateProfile
+      summary: Update a validation profile
+      description: Updates the description and/or the policy XML of a validation profile.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProfileUpdateRequest' }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProfileView' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Profiles]
+      operationId: deleteProfile
+      summary: Delete a validation profile
+      description: Deletes a validation profile. The default profile cannot be deleted.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/profiles/{id}/default:
+    post:
+      tags: [Profiles]
+      operationId: setDefaultProfile
+      summary: Set a profile as the default
+      description: >-
+        Marks the given profile as the default one used when a request does not
+        specify a profileId. Clears the flag on the previous default.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProfileView' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/verifications:
+    post:
+      tags: [Verifications]
+      operationId: verifySync
+      summary: Verify electronic signatures synchronously
+      description: >-
+        Verifies the signatures of an uploaded document and returns the result
+        inline. The optional `metadata` part selects the profile, per-request
+        overrides and the report types to produce.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                metadata:
+                  type: string
+                  description: "JSON con profileId?, profileOverrides?, reports[]?"
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VerificationResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/v1/verifications/async:
+    post:
+      tags: [Verifications]
+      operationId: verifyAsync
+      summary: Submit an asynchronous verification job
+      description: >-
+        Queues a verification job for large documents or webhook delivery and
+        returns a job identifier. The result is retrieved by polling the job or
+        via an optional signed callback.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                metadata: { type: string }
+      responses:
+        '202':
+          description: accepted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JobAcceptedResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/v1/verifications/jobs/{jobId}:
+    get:
+      tags: [Verifications]
+      operationId: getJob
+      summary: Get the status and result of a verification job
+      description: >-
+        Returns the status and, when completed, the result of an asynchronous
+        verification job. Visible only to the job owner or a PRIVILEGED
+        principal; a deleted job returns 410 Gone.
+      parameters:
+        - { name: jobId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JobView' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '410':
+          description: gone (result no longer available)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /api/v1/extractions:
+    post:
+      tags: [Extractions]
+      operationId: extract
+      summary: Extract the original documents from a signed file
+      description: >-
+        Extracts the original signed content from a signed file or ASiC
+        container. Returns the document directly, or a ZIP when the input wraps
+        multiple files.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '200':
+          description: ok (binary diretto o zip)
+          headers:
+            X-Signature-Format:
+              schema: { type: string }
+            X-Document-Count:
+              schema: { type: integer }
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+            application/zip:
+              schema: { type: string, format: binary }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/tsl/status:
+    get:
+      tags: [Tsl]
+      operationId: tslStatus
+      summary: Get the Trusted List status
+      description: Returns the status of the EU Trusted Lists mirror (last refresh, readiness).
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/v1/tsl/refresh:
+    post:
+      tags: [Tsl]
+      operationId: tslForceRefresh
+      summary: Force a Trusted List refresh
+      description: Triggers an asynchronous refresh of the EU Trusted Lists. Requires PRIVILEGED role.
+      responses:
+        '202':
+          description: scheduled
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/v1/tsl/certificates:
+    get:
+      tags: [Tsl]
+      operationId: listTrustedCertificates
+      summary: List trusted certificates
+      description: >-
+        Returns a paginated list of certificates from the Trusted Lists,
+        filterable by subject/issuer, key identifiers, country, TSP and validity.
+      parameters:
+        - { name: ski, in: query, schema: { type: string } }
+        - { name: aki, in: query, schema: { type: string } }
+        - { name: subjectCn, in: query, schema: { type: string } }
+        - { name: subjectDn, in: query, schema: { type: string } }
+        - { name: issuerCn, in: query, schema: { type: string } }
+        - { name: issuerDn, in: query, schema: { type: string } }
+        - { name: country, in: query, schema: { type: string } }
+        - { name: tspName, in: query, schema: { type: string } }
+        - { name: tspServiceType, in: query, schema: { type: string } }
+        - { name: tspServiceStatus, in: query, schema: { type: string } }
+        - { name: serialNumber, in: query, schema: { type: string } }
+        - { name: validAt, in: query, schema: { type: string, format: date-time } }
+        - { name: includeRemoved, in: query, schema: { type: boolean, default: false } }
+        - { name: page, in: query, schema: { type: integer, default: 0 } }
+        - { name: size, in: query, schema: { type: integer, default: 50 } }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/v1/tsl/certificates/{id}:
+    get:
+      tags: [Tsl]
+      operationId: getTrustedCertificate
+      summary: Get a trusted certificate
+      description: Returns a single trusted certificate by its identifier.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/audit-log:
+    get:
+      tags: [Audit]
+      operationId: listAuditLog
+      summary: List audit log entries
+      description: >-
+        Returns a paginated, filterable view of the audit log (principal,
+        action, target, outcome and time range). Requires PRIVILEGED role.
+      parameters:
+        - { name: principalId, in: query, required: false, schema: { type: string } }
+        - { name: action, in: query, required: false, schema: { type: string } }
+        - { name: from, in: query, required: false, schema: { type: string, format: date-time } }
+        - { name: to, in: query, required: false, schema: { type: string, format: date-time } }
+        - { name: targetType, in: query, required: false, schema: { type: string } }
+        - { name: targetId, in: query, required: false, schema: { type: string } }
+        - { name: success, in: query, required: false, schema: { type: boolean } }
+        - { name: page, in: query, required: false, schema: { type: integer, default: 0 } }
+        - { name: size, in: query, required: false, schema: { type: integer, default: 50 } }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    OAuth2Bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Forbidden:
+      description: Insufficient privileges
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NotFound:
+      description: Resource not found
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Conflict:
+      description: Operation conflicts with the current state
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    TooManyRequests:
+      description: Excessive load / rate limited
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+  schemas:
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [UP, DOWN, OUT_OF_SERVICE, UNKNOWN] }
+        groups:
+          type: array
+          items: { type: string }
+
+    Problem:
+      type: object
+      description: RFC 9457 problem detail (application/problem+json).
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer, format: int32 }
+        detail: { type: string }
+        instance: { type: string }
+        traceId: { type: string }
+
+    Page:
+      type: object
+      properties:
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer, format: int64 }
+        totalPages: { type: integer }
+
+    ApiKeyCreateRequest:
+      type: object
+      required: [name, role]
+      properties:
+        name: { type: string, maxLength: 120, minLength: 1 }
+        role: { type: string, enum: [PRIVILEGED, STANDARD] }
+        expiresAt: { type: string, format: date-time, nullable: true }
+    ApiKeyPatchRequest:
+      type: object
+      properties:
+        enabled: { type: boolean }
+    ApiKeyView:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        keyPrefix: { type: string }
+        role: { type: string, enum: [PRIVILEGED, STANDARD] }
+        enabled: { type: boolean }
+        bootstrap: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        lastUsedAt: { type: string, format: date-time, nullable: true }
+    ApiKeyCreatedResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiKeyView'
+        - type: object
+          required: [plaintextKey]
+          properties:
+            plaintextKey: { type: string }
+    ApiKeyPage:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          properties:
+            content:
+              type: array
+              items: { $ref: '#/components/schemas/ApiKeyView' }
+
+    ProfileView:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        preset: { type: string, enum: [BASIC, STANDARD, STRICT, CUSTOM] }
+        policyXml: { type: string, nullable: true }
+        isDefault: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ProfileCreateRequest:
+      type: object
+      required: [name, preset]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        description: { type: string, nullable: true }
+        preset: { type: string, enum: [BASIC, STANDARD, STRICT, CUSTOM] }
+        policyXml: { type: string, nullable: true, description: "Required when preset=CUSTOM" }
+    ProfileUpdateRequest:
+      type: object
+      properties:
+        description: { type: string, nullable: true }
+        policyXml: { type: string, nullable: true }
+    ProfilePage:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          properties:
+            content:
+              type: array
+              items: { $ref: '#/components/schemas/ProfileView' }
+
+    VerificationResponse:
+      type: object
+      properties:
+        verifiedAt: { type: string, format: date-time }
+        profileUsed: { type: string }
+        overridesApplied: { type: boolean }
+        signatureFormat: { type: string }
+        indication: { type: string }
+        subIndication: { type: string, nullable: true }
+        signatureCount: { type: integer }
+        reports:
+          type: object
+          additionalProperties: { type: object }
+
+    JobAcceptedResponse:
+      type: object
+      properties:
+        jobId: { type: string, format: uuid }
+        status: { type: string, enum: [PENDING, RUNNING, COMPLETED, FAILED, DELIVERED, DELIVERY_FAILED, DELETED] }
+
+    JobView:
+      type: object
+      properties:
+        jobId: { type: string, format: uuid }
+        status: { type: string, enum: [PENDING, RUNNING, COMPLETED, FAILED, DELIVERED, DELIVERY_FAILED, DELETED] }
+        createdAt: { type: string, format: date-time }
+        startedAt: { type: string, format: date-time, nullable: true }
+        completedAt: { type: string, format: date-time, nullable: true }
+        deliveredAt: { type: string, format: date-time, nullable: true }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        callbackAttempts: { type: integer }
+        result:
+          type: object
+          additionalProperties: true
+          nullable: true

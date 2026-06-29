@@ -1,0 +1,11 @@
+{
+  "id": "SRC-2026-06-29-004",
+  "captured": "2026-06-29",
+  "packet_version": "1.0",
+  "title": "AgID — Qualified Electronic Signature (pagina istituzionale piattaforma FEQ)",
+  "url": "https://www.agid.gov.it/en/platforms/qualified-electronic-signature",
+  "format": "web",
+  "extractor": "curl + html-strip",
+  "extraction_status": "ok",
+  "content_type": "text/html"
+}
