@@ -387,6 +387,9 @@
                          on self-attach, which is deprecated and disallowed on recent JDKs.
                          @{argLine} preserves the JaCoCo-injected argLine. -->
                     <argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar}</argLine>
+                    <!-- Tests tagged 'network' hit live revocation/AIA endpoints; opt in with
+                         -Dgroups=network. Excluded by default for speed and determinism. -->
+                    <excludedGroups>network</excludedGroups>
                 </configuration>
             </plugin>
 
@@ -398,6 +401,9 @@
                          @MockitoBean also need the inline mock-maker loaded explicitly.
                          @{argLine} preserves the JaCoCo-injected argLine. -->
                     <argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar}</argLine>
+                    <!-- Tests tagged 'network' hit live revocation/AIA endpoints; opt in with
+                         -Dgroups=network. Excluded by default for speed and determinism. -->
+                    <excludedGroups>network</excludedGroups>
                 </configuration>
                 <executions>
                     <execution>
