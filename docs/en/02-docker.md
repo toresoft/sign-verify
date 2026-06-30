@@ -7,7 +7,7 @@ The service ships as the Docker image
 (registry: Docker Hub). The image is built with a multi-stage `Dockerfile` and a
 hardened, non-root **Alpine** runtime.
 
-> **📘 Want a walkthrough?** See [Docker operational guide](02b-docker-operational-guide.md) for a guided path from first run to production.
+> **Want a walkthrough?** See [Docker operational guide](02b-docker-operational-guide.md) for a guided path from first run to production.
 
 ```bash
 docker pull toresoft/sign-verify:latest
@@ -28,6 +28,11 @@ flowchart TB
         L --> HC[HEALTHCHECK BusyBox wget]
     end
     EX -->|exploded layers| L
+
+    classDef build fill:#ede7f6,stroke:#6c4f9c,color:#2c1f47
+    classDef runtime fill:#e1f5e9,stroke:#2f8a4e,color:#0d3a1d
+    class M,GO,PKG,EX build
+    class R,U,L,HC runtime
 ```
 
 `Dockerfile` security features:
@@ -113,6 +118,7 @@ APP_OJ_KEYSTORE_PASSWORD=<OJ keystore password>
 
 ```mermaid
 sequenceDiagram
+    autonumber
     participant O as Orchestrator
     participant A as App (8080)
     O->>A: GET /actuator/health/liveness
@@ -121,8 +127,8 @@ sequenceDiagram
     A-->>O: 200 UP only if TSL ready
 ```
 
-- **Liveness** `/actuator/health/liveness` — used by the dev image HEALTHCHECK.
-- **Readiness** `/actuator/health/readiness` — used by `compose.prod`; accounts
+- **Liveness** `/actuator/health/liveness`: used by the dev image HEALTHCHECK.
+- **Readiness** `/actuator/health/readiness`: used by `compose.prod`; accounts
   for Trusted Lists readiness (`TslReadinessIndicator`).
 
 Exposed `actuator` endpoints: `health`, `info`, `metrics`, `prometheus`.
@@ -141,6 +147,15 @@ flowchart TD
     R --> T{TSL startup-mode}
     T -- BACKGROUND --> TL[Load LOTL/TSL in background]
     T -- SKIP --> R
+
+    classDef step fill:#eef1f5,stroke:#5b6b7c,color:#1f2733
+    classDef decision fill:#fff1d6,stroke:#b9842a,color:#4a3203
+    classDef ready fill:#e1f5e9,stroke:#2f8a4e,color:#0d3a1d
+    classDef external fill:#dbeeff,stroke:#2f6fbb,color:#0b2e4f
+    class S,F,P,G step
+    class B,T decision
+    class R ready
+    class TL external
 ```
 
 On first boot, if no enabled `PRIVILEGED` key exists, the service generates a

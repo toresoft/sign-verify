@@ -27,21 +27,31 @@ flowchart TD
     DSS --> TSL[(EU Trusted Lists)]
     DSS --> R[Risultato:\nindication / subIndication\nsignatureFormat / count]
     R --> REP[Report richiesti\nsimple / detailed / diagnostic / etsi]
+
+    classDef input fill:#dbeeff,stroke:#2f6fbb,color:#0b2e4f
+    classDef app fill:#eef1f5,stroke:#5b6b7c,color:#1f2733
+    classDef adapter fill:#ede7f6,stroke:#6c4f9c,color:#2c1f47
+    classDef external fill:#fff1d6,stroke:#b9842a,color:#4a3203
+    class F input
+    class P,O,R,REP app
+    class AP,DSS adapter
+    class TSL external
 ```
 
 L'esito principale di DSS è espresso da:
 
-- **`indication`** — esito complessivo: `TOTAL_PASSED`, `TOTAL_FAILED`,
+- **`indication`** è l'esito complessivo: `TOTAL_PASSED`, `TOTAL_FAILED`,
   `INDETERMINATE`.
-- **`subIndication`** — motivazione di dettaglio quando non è `TOTAL_PASSED`
-  (es. `SIG_CRYPTO_FAILURE`, `NO_CERTIFICATE_CHAIN_FOUND`, `OUT_OF_BOUNDS_NO_POE`…).
-- **`signatureFormat`** — formato/livello rilevato (es. `PAdES-BASELINE-B`).
-- **`signatureCount`** — numero di firme trovate.
-- **`signatures[]`** — dettaglio per firma: `id`, `indication`, `subIndication`,
+- **`subIndication`** è la motivazione di dettaglio quando l'esito non è
+  `TOTAL_PASSED` (es. `SIG_CRYPTO_FAILURE`, `NO_CERTIFICATE_CHAIN_FOUND`,
+  `OUT_OF_BOUNDS_NO_POE`…).
+- **`signatureFormat`** è il formato/livello rilevato (es. `PAdES-BASELINE-B`).
+- **`signatureCount`** è il numero di firme trovate.
+- **`signatures[]`** elenca il dettaglio per firma: `id`, `indication`, `subIndication`,
   `signatureFormat`, **`signatureLevel`** (qualifica eIDAS DSS: `QESIG`/`QESEAL`,
   `ADESIG_QC`/…, `NA`, varianti `INDETERMINATE_*`; ortogonale a `indication`),
   `signedBy`, `bestSignatureTime`, e `timestamps[]` della firma.
-- **`timestamps[]`** — marche del documento: `id`, `indication`, `subIndication`,
+- **`timestamps[]`** elenca le marche del documento: `id`, `indication`, `subIndication`,
   `productionTime`, `qualification` (`QTSA`/`TSA`/`NA`).
 
 ### Tipi di report
@@ -54,7 +64,7 @@ L'esito principale di DSS è espresso da:
 | `etsi` | Validation report ETSI (TS 119 102-2) |
 
 Concorrenza: le verifiche sincrone sono limitate da un semaforo
-(`app.verify.max-concurrent`, default `8`); oltre il limite si ottiene **429**
+(`app.verify.max-concurrent`, default `8`); oltre il limite si ottiene **503**
 (`excessive-load.concurrency`).
 
 ## 4.2 Profili di validazione
@@ -68,9 +78,9 @@ qualificazione, timestamp, ecc.).
 | Preset | File policy | Note |
 |--------|-------------|------|
 | `BASIC` | `policy/BASIC.xml` | Vincoli minimi |
-| `STANDARD` | `policy/STANDARD.xml` | Policy DSS di default (QES/AES su base TSL) — **seminato come default** |
+| `STANDARD` | `policy/STANDARD.xml` | Policy DSS di default (QES/AES su base TSL), **seminato come default** |
 | `STRICT` | `policy/STRICT.xml` | Vincoli più severi |
-| `CUSTOM` | — | Policy XML fornita dall'utente |
+| `CUSTOM` | - | Policy XML fornita dall'utente |
 
 All'avvio, se non esiste alcun profilo, viene seminato il profilo **STANDARD**
 (`isDefault = true`).
@@ -80,7 +90,7 @@ All'avvio, se non esiste alcun profilo, viene seminato il profilo **STANDARD**
 La policy è un documento XML nel **namespace DSS**
 `http://dss.esig.europa.eu/validation/policy`, con radice
 `<ConstraintsParameters>`. È lo stesso formato usato dalla libreria DSS (cfr.
-*DSS — Validation policy*); i file `policy/BASIC.xml`, `policy/STANDARD.xml`,
+*DSS: Validation policy*); i file `policy/BASIC.xml`, `policy/STANDARD.xml`,
 `policy/STRICT.xml` sono esempi completi inclusi nel servizio.
 
 #### Il concetto chiave: l'attributo `Level`
@@ -126,23 +136,23 @@ più `<SignedAttributes>` per gli attributi firmati (es. `SigningTime`).
 
 #### Forme dei vincoli
 
-- **Vincolo semplice** — solo `Level`:
+- **Vincolo semplice**: ha solo `Level`:
   ```xml
   <SignatureIntact Level="FAIL" />
   ```
-- **Vincolo con elenco di valori** — uno o più `<Id>` ammessi:
+- **Vincolo con elenco di valori**: accetta uno o più `<Id>` ammessi:
   ```xml
   <AcceptableContainerTypes Level="FAIL">
       <Id>ASiC-S</Id>
       <Id>ASiC-E</Id>
   </AcceptableContainerTypes>
   ```
-- **Vincolo temporale** — con `Unit` e `Value`:
+- **Vincolo temporale**: usa `Unit` e `Value`:
   ```xml
   <RevocationFreshness Level="IGNORE" Unit="DAYS" Value="0" />
   <TLFreshness Level="WARN" Unit="HOURS" Value="6" />
   ```
-- **Sezione `<Cryptographic>`** — algoritmi di cifratura/digest ammessi,
+- **Sezione `<Cryptographic>`**: elenca algoritmi di cifratura/digest ammessi,
   dimensioni minime di chiave e date di scadenza (`<AlgoExpirationDate>`), per
   rifiutare crittografia obsoleta (es. SHA-1, RSA-1024 oltre una certa data).
 
@@ -182,7 +192,7 @@ più `<SignedAttributes>` per gli attributi firmati (es. `SigningTime`).
 ```
 
 > Differenza fra i preset: `BASIC`, `STANDARD` e `STRICT` condividono la stessa
-> struttura ma si distinguono per i `Level` assegnati ai singoli vincoli —
+> struttura ma si distinguono per i `Level` assegnati ai singoli vincoli:
 > `STRICT` promuove a `FAIL` controlli che `BASIC` lascia a `WARN`/`IGNORE`.
 > Per i dettagli completi della grammatica fare riferimento alla documentazione
 > ufficiale DSS (*Validation policy* / XSD `policy.xsd`).
@@ -191,7 +201,7 @@ più `<SignedAttributes>` per gli attributi firmati (es. `SigningTime`).
 
 | Metodo | Path | Operazione |
 |--------|------|-----------|
-| `GET` | `/api/v1/profiles?page=&size=` | Elenco |
+| `GET` | `/api/v1/profiles?page=&size=` | Elenco (paginato, vedi [Convenzioni](README.md#paginazione)) |
 | `POST` | `/api/v1/profiles` | Crea (`name`, `preset`, `policyXml?`) |
 | `GET` | `/api/v1/profiles/{id}` | Dettaglio |
 | `PUT` | `/api/v1/profiles/{id}` | Aggiorna (`description?`, `policyXml?`) |
@@ -227,7 +237,7 @@ La risposta segnala `overridesApplied: true`.
 
 ## 4.3 API di verifica sincrona
 
-`POST /api/v1/verifications` — `multipart/form-data`.
+`POST /api/v1/verifications`: `multipart/form-data`.
 
 | Parte | Tipo | Obbligatoria | Descrizione |
 |-------|------|--------------|-------------|
@@ -291,14 +301,14 @@ metadata malformato produce **400** (`invalid metadata json`).
 
 La risposta contiene due array di timestamp a livello di firma:
 
-- **`timestamps[]`** — Timestamp di firma (livello T/LT): timestamp di contenuto
-  incorporati nella firma o che la coprono. Provano che la firma esisteva prima
-  del momento di produzione del timestamp, fornendo evidenza al livello T
+- **`timestamps[]`** contiene i timestamp di firma (livello T/LT): timestamp di
+  contenuto incorporati nella firma o che la coprono. Provano che la firma
+  esisteva prima del momento di produzione del timestamp, al livello T
   (Timestamp) o LT (Long-Term).
-- **`archiveTimestamps[]`** — Timestamp di archivio (livello LTA): provengono
-  dagli **evidence record** (RFC 4998 / 6283) e forniscono prova di archiviazione
-  a lungo termine (LTA). Vengono popolati solo quando la libreria DSS rileva
-  evidence record nella firma.
+- **`archiveTimestamps[]`** contiene i timestamp di archivio (livello LTA).
+  Provengono dagli **evidence record** (RFC 4998 / 6283) e forniscono prova di
+  archiviazione a lungo termine (LTA). Vengono popolati solo quando la libreria
+  DSS rileva evidence record nella firma.
 
 > **Nota:** `archiveTimestamps` può essere vuoto anche su firme LTA se la EU
 > Trusted List (TSL) non è attiva, perché DSS richiede l'accesso alla TSL per
@@ -356,7 +366,7 @@ La risposta contiene due array di timestamp a livello di firma:
 | `TOTAL_FAILED` | La firma non è valida: almeno un vincolo FAIL non è stato superato |
 | `INDETERMINATE` | L'esito non può essere determinato (es. TSL mancante, informazioni insufficienti) |
 
-**`signatureLevel`** — Qualifica eIDAS DSS (ETSI TS 119 102-1); ortogonale a `indication`.
+**`signatureLevel`** è la qualifica eIDAS DSS (ETSI TS 119 102-1) ed è ortogonale a `indication`.
 
 | Valore | Significato |
 |--------|-------------|
@@ -372,22 +382,25 @@ La risposta contiene due array di timestamp a livello di firma:
 
 ### Risposte di errore
 
-**400 — metadata malformato**
+Vedi il [catalogo errori](07-log-audit.md#62-gestione-degli-errori-problemjson)
+completo per ogni codice. Quelli più probabili su questo endpoint:
+
+**400: metadata malformato**
 
 ```json
-{"type":"about:blank","title":"Bad Request","status":400,"detail":"Invalid metadata JSON","instance":"/api/v1/verifications"}
+{"type":"urn:signverify:error:validation.invalid-input","title":"Bad Request","status":400,"detail":"invalid metadata json","instance":"/api/v1/verifications"}
 ```
 
-**413 — file troppo grande**
+**413: file troppo grande**
 
 ```json
-{"type":"about:blank","title":"Payload Too Large","status":413,"detail":"File exceeds maximum allowed size","instance":"/api/v1/verifications"}
+{"type":"urn:signverify:error:payload.too-large","title":"Payload Too Large","status":413,"detail":"max upload size exceeded","instance":"/api/v1/verifications"}
 ```
 
-**429 — backpressure concorrenza**
+**503: limite di concorrenza raggiunto**
 
 ```json
-{"type":"about:blank","title":"Too Many Requests","status":429,"detail":"Maximum concurrent verifications reached; try again later","instance":"/api/v1/verifications"}
+{"type":"urn:signverify:error:excessive-load.concurrency","title":"Service Unavailable","status":503,"detail":"verify concurrency limit reached","instance":"/api/v1/verifications"}
 ```
 
 **200 con `INDETERMINATE`**
@@ -423,15 +436,20 @@ La risposta contiene due array di timestamp a livello di firma:
 
 ```mermaid
 sequenceDiagram
+    autonumber
+    box rgb(219,238,255) Client
     participant C as Client
+    end
+    box rgb(238,241,245) sign-verify
     participant V as VerificationController
     participant S as VerificationService
     participant D as Adapter DSS
+    end
     C->>V: POST /verifications (file + metadata)
     V->>S: verifySync(file, profileId, overrides, reports)
     S->>S: tryAcquire semaforo (max-concurrent)
     alt limite raggiunto
-        S-->>C: 429 excessive-load.concurrency
+        S-->>C: 503 excessive-load.concurrency
     else acquisito
         S->>D: validate(file, policyXml, reports)
         D-->>S: ValidationResult
@@ -447,7 +465,7 @@ asincrono basato su job persistiti.
 
 ### Sottomissione
 
-`POST /api/v1/verifications/async` — `multipart/form-data` (`file` + `metadata`).
+`POST /api/v1/verifications/async`: `multipart/form-data` (`file` + `metadata`).
 
 Campi di `metadata` (JSON): `profileId?`, `profileOverrides?`, `reports[]?`
 (default `simple,diagnostic`), `callbackUrl?`, `callbackSecret?`,
@@ -486,6 +504,15 @@ stateDiagram-v2
     DELIVERED --> DELETED: retention/cleanup
     FAILED --> DELETED: retention/cleanup
     DELETED --> [*]
+
+    classDef inProgress fill:#dbeeff,stroke:#2f6fbb,color:#0b2e4f
+    classDef success fill:#e1f5e9,stroke:#2f8a4e,color:#0d3a1d
+    classDef failure fill:#fde2e1,stroke:#b8413a,color:#4a0f0c
+    classDef terminal fill:#eef1f5,stroke:#5b6b7c,color:#1f2733
+    class PENDING,RUNNING inProgress
+    class COMPLETED,DELIVERED success
+    class FAILED,DELIVERY_FAILED failure
+    class DELETED terminal
 ```
 
 Stati (`JobStatus`): `PENDING`, `RUNNING`, `COMPLETED`, `FAILED`, `DELIVERED`,
@@ -531,12 +558,17 @@ preleva i job pending e li elabora; se il circuit breaker `dssValidator` è
 
 ```mermaid
 sequenceDiagram
+    autonumber
+    box rgb(238,241,245) sign-verify
     participant W as ValidationWorker
     participant CW as CallbackWorker
+    end
+    box rgb(255,241,214) Esterno
     participant E as Endpoint del client
+    end
     W->>W: job COMPLETED, callbackUrl presente
     CW->>CW: SSRF guard (no HTTP, no reti private)
-    CW->>E: POST body firmato HMAC\nX-Signature, X-Timestamp, X-Nonce, X-Delivery-Id
+    CW->>E: POST body firmato HMAC<br/>X-Signature, X-Timestamp, X-Nonce, X-Delivery-Id
     alt 2xx
         E-->>CW: 200 → DELIVERED
     else stato ritentabile
@@ -555,6 +587,35 @@ include header di firma e anti-replay:
 | `X-Signature-Algorithm` | algoritmo usato |
 | `X-Timestamp`, `X-Nonce` | anti-replay |
 | `X-Job-Id`, `X-Delivery-Id`, `X-Delivery-Attempt` | correlazione |
+
+**Corpo**: `Content-Type: application/json`. Su `COMPLETED`, `result` è lo
+stesso oggetto restituito da `GET /api/v1/verifications/jobs/{jobId}`:
+
+```json
+{
+  "jobId": "5e9b1f2a-...",
+  "status": "COMPLETED",
+  "result": { "indication": "TOTAL_PASSED", "...": "..." }
+}
+```
+
+Su `FAILED`, `result` è assente e `error` riporta il messaggio di errore:
+
+```json
+{
+  "jobId": "5e9b1f2a-...",
+  "status": "FAILED",
+  "error": "signature.parse-error: unrecognised document format"
+}
+```
+
+> **Verificare `X-Signature`**: non è un semplice HMAC del corpo. Calcola
+> `sha256(corpo)` come stringa hex, costruisci la stringa canonica
+> `<X-Timestamp>\n<X-Nonce>\n<X-Delivery-Id>\n<bodyHashHex>`, poi calcola
+> l'HMAC di questa stringa con `callbackSecret` usando l'algoritmo indicato in
+> `X-Signature-Algorithm`. Il valore dell'header è `sha256=<hex>` oppure
+> `sha512=<hex>`. Ricalcola e confronta prima di fidarti del corpo, e rifiuta
+> richieste con un `X-Timestamp` non recente per prevenire replay.
 
 **Guardia anti-SSRF**: di default sono ammessi solo URL **HTTPS**
 (`allow-http=false`) e sono bloccati gli host che risolvono a indirizzi

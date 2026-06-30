@@ -21,11 +21,16 @@ flowchart LR
     D --> E[5. Bootstrap key\nand operational keys]
     E --> F[6. Functional\nverification]
     F --> G[7. Observability\nand updates]
+
+    classDef step fill:#eef1f5,stroke:#5b6b7c,color:#1f2733
+    classDef milestone fill:#e1f5e9,stroke:#2f8a4e,color:#0d3a1d
+    class A,B,C,D,E,F step
+    class G milestone
 ```
 
 ---
 
-## Step 1 — Prerequisites
+## Step 1: Prerequisites
 
 | Requirement | Version | Notes |
 |-------------|---------|-------|
@@ -53,7 +58,7 @@ psql -h db.example.internal -U signverify -d signverify -c 'SELECT 1'
 
 ---
 
-## Step 2 — First run with `docker run`
+## Step 2: First run with `docker run`
 
 For a quick smoke test, run the image directly with `docker run`. This mode
 is **not** suitable for production (no hardening), but allows you to verify the
@@ -123,11 +128,11 @@ docker volume rm svdata   # optional: remove persistent test data
 
 ---
 
-## Step 3 — Production configuration
+## Step 3: Production configuration
 
 For production, use `docker-compose.prod.yml`, a Compose file with full
-hardening. The complete file content is provided below — no repository clone
-is needed.
+hardening. The complete file content is provided below (no repository clone
+is needed).
 
 ### 3.1 Create the working directory
 
@@ -177,7 +182,7 @@ SENTRY_BREADCRUMB_LEVEL=INFO    # INFO / WARN / ERROR
 EOF
 ```
 
-> ⚠️ **Never commit `.env`** to a repository — protect it as a secret.
+> **Warning:** Never commit `.env` to a repository. Protect it as a secret.
 
 ### 3.3 Create `docker-compose.prod.yml`
 
@@ -242,7 +247,7 @@ volumes:
   svdata:
 ```
 
-### 3.4 Container hardening — summary
+### 3.4 Container hardening: summary
 
 The Compose file above applies:
 
@@ -261,7 +266,7 @@ The container runs as non-root user (`uid:gid 10001:10001`).
 
 ---
 
-## Step 4 — Start with hardened Compose
+## Step 4: Start with hardened Compose
 
 ### 4.1 Start the service
 
@@ -301,7 +306,7 @@ Internet → [Reverse proxy :443 → localhost:8080] → Container
 
 Recommended proxy configurations:
 
-- **TLS termination** on the reverse proxy.
+- TLS termination on the reverse proxy.
 - Header `X-Forwarded-Proto: https` so Spring generates correct URLs.
 - Sufficiently long timeouts for async verification requests
   (jobs are processed in background; the synchronous response is immediate).
@@ -315,7 +320,7 @@ SERVER_FORWARD_HEADERS_STRATEGY=native
 
 ---
 
-## Step 5 — Bootstrap key and operational API keys
+## Step 5: Bootstrap key and operational API keys
 
 On first boot, if no enabled `PRIVILEGED` key exists, the service generates a
 **bootstrap key** and writes it to `/var/lib/sign-verify/bootstrap-api-key.txt`
@@ -348,8 +353,8 @@ curl -sS -X POST http://localhost:8080/api/v1/api-keys \
   -d '{"name":"ci-pipeline","role":"STANDARD","expiresAt":"2027-01-01T00:00:00Z"}' | jq .
 ```
 
-The `201` response contains `plaintextKey` — the clear-text value is **returned
-only once**. Store it securely (vault, secrets manager).
+The `201` response contains `plaintextKey`: the clear-text value is returned
+only once. Store it securely (vault, secrets manager).
 
 ### 5.3 Delete the bootstrap file
 
@@ -365,7 +370,7 @@ For more details: [Authentication](03-authentication.md).
 
 ---
 
-## Step 6 — Post-deploy functional verification
+## Step 6: Post-deploy functional verification
 
 ### 6.1 Verify authentication
 
@@ -405,7 +410,7 @@ OpenAPI spec available at: `http://localhost:8080/v3/api-docs`
 
 ---
 
-## Step 7 — Observability and maintenance
+## Step 7: Observability and maintenance
 
 ### 7.1 Actuator endpoints
 
@@ -464,8 +469,8 @@ SENTRY_BREADCRUMB_LEVEL=INFO    # min level for breadcrumbs
 ```
 
 Behavior:
-- Client errors (4xx, `AppException` with status < 500) are **filtered out** —
-  they do not create Sentry issues.
+- Client errors (4xx, `AppException` with status < 500) are **filtered out**
+  and do not create Sentry issues.
 - Server errors (5xx, `AppException` with status ≥ 500) are reported.
 - `send-default-pii: false` for GDPR compliance.
 - Breadcrumbs are captured at the level configured in
@@ -509,7 +514,7 @@ docker compose -f docker-compose.prod.yml up -d app
 | Where | Contents | Backup strategy |
 |-------|----------|-----------------|
 | PostgreSQL (external) | Schema, API keys, jobs, audit | Managed backup (e.g. `pg_dump`) |
-| `/var/lib/sign-verify/` (`svdata`) | DSS cache, job temp files | Docker volume — recreatable data |
+| `/var/lib/sign-verify/` (`svdata`) | DSS cache, job temp files | Docker volume (recreatable data) |
 
 The `svdata` volume contains DSS cache and job temporary files. If deleted,
 the service recreates it: re-downloads TSLs and empties pending jobs
@@ -561,13 +566,13 @@ docker compose -f docker-compose.prod.yml down -v   # removes containers and vol
 docker compose -f docker-compose.prod.yml up -d      # recreates everything
 ```
 
-> ⚠️ `down -v` deletes the local `svdata` volume (DSS cache and temp files),
-> but **does not touch the external PostgreSQL database**. Data persisted in
-> the DB remains intact.
+> **Warning:** `down -v` deletes the local `svdata` volume (DSS cache and temp
+> files), but does not touch the external PostgreSQL database. Data persisted
+> in the DB remains intact.
 
 ---
 
-## Environment variables — quick reference
+## Environment variables: quick reference
 
 ### Required in production
 
@@ -575,7 +580,7 @@ docker compose -f docker-compose.prod.yml up -d      # recreates everything
 |----------|-------------|---------|
 | `SPRING_DATASOURCE_URL` | Database JDBC URL | `jdbc:postgresql://db:5432/signverify` |
 | `SPRING_DATASOURCE_USERNAME` | Database user | `signverify` |
-| `SPRING_DATASOURCE_PASSWORD` | Database password | — |
+| `SPRING_DATASOURCE_PASSWORD` | Database password | n/a |
 | `APP_SECRET_MASTER_KEY` | Encryption key (base64 32 bytes) | output of `openssl rand -base64 32` |
 
 ### Conditional

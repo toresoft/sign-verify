@@ -1,13 +1,13 @@
 # 1. Compilazione e configurazione
 
-← [Indice](README.md) · → [2. Docker](02-docker.md)
+← [0. Glossario](00-glossario.md) · [Indice](README.md) · → [2. Docker](02-docker.md)
 
 ## 1.1 Prerequisiti
 
 | Requisito | Versione | Note |
 |-----------|----------|------|
 | JDK | **21** | `maven.compiler.source`/`target` = 21 nel `pom.xml` |
-| Maven | 3.9+ | nessun wrapper committato — usare un `mvn` di sistema |
+| Maven | 3.9+ | nessun wrapper committato; usare un `mvn` di sistema |
 | PostgreSQL | 16 (runtime) | in test/dev si usa H2 in memoria |
 | Docker | opzionale | per i test di integrazione (Testcontainers) e per il deploy |
 
@@ -41,7 +41,7 @@ mvn spotless:apply
 mvn package
 ```
 
-> ⚠️ **Spotless** (Google Java Format) è applicato in `verify`. Eseguire sempre
+> **Spotless** (Google Java Format) è applicato in `verify`. Eseguire sempre
 > `mvn spotless:apply` prima di committare.
 
 ### Pipeline di build
@@ -55,6 +55,13 @@ flowchart LR
     E --> F[Spotless check]
     F --> G[JaCoCo report]
     G --> H[sign-verify-2.jar]
+
+    classDef source fill:#dbeeff,stroke:#2f6fbb,color:#0b2e4f
+    classDef step fill:#eef1f5,stroke:#5b6b7c,color:#1f2733
+    classDef artifact fill:#e1f5e9,stroke:#2f8a4e,color:#0d3a1d
+    class A source
+    class B,C,D,E,F,G step
+    class H artifact
 ```
 
 L'API è **design-first**: il contratto vive in

@@ -1,4 +1,4 @@
-# Guida operativa passo-passo — immagine Docker
+# Guida operativa passo-passo: immagine Docker
 
 ← [2. Docker e configurazione](02-docker.md) · [Indice](README.md)
 
@@ -21,11 +21,16 @@ flowchart LR
     D --> E[5. Bootstrap key\ne API key operative]
     E --> F[6. Verifiche\nfunzionali]
     F --> G[7. Osservabilità\ne aggiornamenti]
+
+    classDef step fill:#eef1f5,stroke:#5b6b7c,color:#1f2733
+    classDef milestone fill:#e1f5e9,stroke:#2f8a4e,color:#0d3a1d
+    class A,B,C,D,E,F step
+    class G milestone
 ```
 
 ---
 
-## Passo 1 — Prerequisiti
+## Passo 1: Prerequisiti
 
 | Requisito | Versione | Note |
 |-----------|----------|------|
@@ -53,7 +58,7 @@ psql -h db.example.internal -U signverify -d signverify -c 'SELECT 1'
 
 ---
 
-## Passo 2 — Prima esecuzione con `docker run`
+## Passo 2: Prima esecuzione con `docker run`
 
 Per un rapido smoke test, avviare l'immagine direttamente con `docker run`.
 Questa modalità **non** è adatta alla produzione (manca l'hardening), ma
@@ -123,7 +128,7 @@ docker volume rm svdata   # opzionale: cancella i dati persistenti del test
 
 ---
 
-## Passo 3 — Configurazione per la produzione
+## Passo 3: Configurazione per la produzione
 
 Per la produzione si usa `docker-compose.prod.yml`, un file Compose con
 hardening completo. Vedere sotto per il contenuto completo del file (non serve
@@ -177,8 +182,8 @@ SENTRY_BREADCRUMB_LEVEL=INFO    # INFO / WARN / ERROR
 EOF
 ```
 
-> ⚠️ **Non committare mai `.env`** nel repository — È già in `.gitignore` se si
-> usa il repo, e in ogni caso va protetto come segreto.
+> **Attenzione:** non committare mai `.env` nel repository. È già incluso in
+> `.gitignore` se si usa il repo, ma va comunque protetto come segreto.
 
 ### 3.3 Creare `docker-compose.prod.yml`
 
@@ -244,7 +249,7 @@ volumes:
   svdata:
 ```
 
-### 3.4 Hardening del container — riepilogo
+### 3.4 Hardening del container: riepilogo
 
 Il file Compose sopra applica:
 
@@ -263,7 +268,7 @@ Il container gira come utente non-root (`uid:gid 10001:10001`).
 
 ---
 
-## Passo 4 — Avvio con Compose hardenizzato
+## Passo 4: Avvio con Compose hardenizzato
 
 ### 4.1 Avviare il servizio
 
@@ -303,7 +308,7 @@ Internet → [Reverse proxy :443 → localhost:8080] → Container
 
 Configurazioni consigliate per il proxy:
 
-- **Terminazione TLS** sul reverse proxy.
+- Terminazione TLS sul reverse proxy.
 - Header `X-Forwarded-Proto: https` affinché Spring generi URL corretti.
 - Time-out sufficientemente lunghi per le richieste di verifica asincrona
   (i job sono processati in background, la risposta sincrona è immediata).
@@ -317,7 +322,7 @@ SERVER_FORWARD_HEADERS_STRATEGY=native
 
 ---
 
-## Passo 5 — Chiave di bootstrap e API key operative
+## Passo 5: Chiave di bootstrap e API key operative
 
 Al primo avvio, se non esiste alcuna chiave `PRIVILEGED` abilitata, il servizio
 genera una **chiave di bootstrap** e la scrive nel file
@@ -350,8 +355,8 @@ curl -sS -X POST http://localhost:8080/api/v1/api-keys \
   -d '{"name":"ci-pipeline","role":"STANDARD","expiresAt":"2027-01-01T00:00:00Z"}' | jq .
 ```
 
-La risposta `201` contiene `plaintextKey` — il valore in chiaro **viene restituito
-una sola volta**. Conservarlo in modo sicuro (vault, secrets manager).
+La risposta `201` contiene `plaintextKey`: il valore in chiaro viene restituito
+una sola volta. Conservarlo in modo sicuro (vault, secrets manager).
 
 ### 5.3 Eliminare il file di bootstrap
 
@@ -367,7 +372,7 @@ Per approfondire: [Autenticazione](03-autenticazione.md).
 
 ---
 
-## Passo 6 — Verifiche funzionali post-deploy
+## Passo 6: Verifiche funzionali post-deploy
 
 ### 6.1 Verificare l'autenticazione
 
@@ -407,7 +412,7 @@ Le specifiche OpenAPI sono disponibili a: `http://localhost:8080/v3/api-docs`
 
 ---
 
-## Passo 7 — Osservabilità e manutenzione
+## Passo 7: Osservabilità e manutenzione
 
 ### 7.1 Endpoint Actuator
 
@@ -438,7 +443,7 @@ curl -sS http://localhost:8080/actuator/health/readiness | jq .
 
 ### 7.3 Log applicativi
 
-I log vanno su stdout (JSON strukturato tramite Logback). Con Docker Compose:
+I log vanno su stdout (JSON strutturato tramite Logback). Con Docker Compose:
 
 ```bash
 # Ultimi 100 log del container
@@ -466,8 +471,8 @@ SENTRY_BREADCRUMB_LEVEL=INFO    # min livello per i breadcrumb
 ```
 
 Comportamento:
-- Gli errori client (4xx, `AppException` con status < 500) sono **filtrati** —
-  non creano issue Sentry.
+- Gli errori client (4xx, `AppException` con status < 500) sono **filtrati**
+  e non creano issue Sentry.
 - Gli errori server (5xx, `AppException` con status ≥ 500) sono segnalati.
 - `send-default-pii: false` per conformità GDPR.
 - I breadcrumb catturati sono al livello configurato in
@@ -511,7 +516,7 @@ docker compose -f docker-compose.prod.yml up -d app
 | Dove | Contenuto | Strategia di backup |
 |------|-----------|---------------------|
 | PostgreSQL (esterno) | Schema, API key, job, audit | Backup gestito (es. `pg_dump`) |
-| `/var/lib/sign-verify/` (`svdata`) | Cache DSS, file temporanei job | Volume Docker — dati ricreabili |
+| `/var/lib/sign-verify/` (`svdata`) | Cache DSS, file temporanei job | Volume Docker (dati ricreabili) |
 
 Il volume `svdata` contiene cache DSS e file temporanei dei job. Se cancellato,
 il servizio lo ricrea: scarica nuovamente le TSL e svuota i job pending
@@ -563,13 +568,13 @@ docker compose -f docker-compose.prod.yml down -v   # cancella container e volum
 docker compose -f docker-compose.prod.yml up -d      # ricrea tutto
 ```
 
-> ⚠️ `down -v` cancella il volume `svdata` locale (cache DSS e temp file), ma
-> **non tocca il database PostgreSQL esterno**. I dati persistiti nel DB
+> **Attenzione:** `down -v` cancella il volume `svdata` locale (cache DSS e temp
+> file), ma non tocca il database PostgreSQL esterno. I dati persistiti nel DB
 > rimangono intatti.
 
 ---
 
-## Variabili d'ambiente — riferimento rapido
+## Variabili d'ambiente: riferimento rapido
 
 ### Obbligatorie in produzione
 
@@ -577,7 +582,7 @@ docker compose -f docker-compose.prod.yml up -d      # ricrea tutto
 |-----------|-------------|---------|
 | `SPRING_DATASOURCE_URL` | URL JDBC del database | `jdbc:postgresql://db:5432/signverify` |
 | `SPRING_DATASOURCE_USERNAME` | Utente del database | `signverify` |
-| `SPRING_DATASOURCE_PASSWORD` | Password del database | — |
+| `SPRING_DATASOURCE_PASSWORD` | Password del database | n/d |
 | `APP_SECRET_MASTER_KEY` | Chiave di cifratura (base64 32 byte) | output di `openssl rand -base64 32` |
 
 ### Condizionali

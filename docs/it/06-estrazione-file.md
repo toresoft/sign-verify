@@ -3,12 +3,12 @@
 ← [5. Verifica firme](05-verifica-firme.md) · [Indice](README.md) · → [7. Log e audit](07-log-audit.md)
 
 Oltre a verificare la firma, il servizio può **estrarre il contenuto originale**
-incapsulato in un documento firmato — per esempio il PDF dentro un `.p7m`
+incapsulato in un documento firmato, per esempio il PDF dentro un `.p7m`
 (CAdES) o i file all'interno di un contenitore **ASiC**.
 
 ## 5.1 Endpoint
 
-`POST /api/v1/extractions` — `multipart/form-data`, parte `file` obbligatoria.
+`POST /api/v1/extractions`: `multipart/form-data`, parte `file` obbligatoria.
 
 ```mermaid
 flowchart TD
@@ -16,6 +16,15 @@ flowchart TD
     X --> N{Numero di\noriginali estratti}
     N -- 1 --> S[Risposta binaria singola\nContent-Type del file]
     N -- più di 1 --> Z[Risposta ZIP\napplication/zip → originals.zip]
+
+    classDef input fill:#dbeeff,stroke:#2f6fbb,color:#0b2e4f
+    classDef adapter fill:#ede7f6,stroke:#6c4f9c,color:#2c1f47
+    classDef decision fill:#fff1d6,stroke:#b9842a,color:#4a3203
+    classDef output fill:#e1f5e9,stroke:#2f8a4e,color:#0d3a1d
+    class F input
+    class X adapter
+    class N decision
+    class S,Z output
 ```
 
 ## 5.2 Comportamento della risposta

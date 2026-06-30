@@ -17,6 +17,9 @@ The [[entities/dss]] component that holds the trust/revocation configuration dri
 
 Passed to `SignedDocumentValidator.setCertificateVerifier(cv)` for validation and to the `*AdESService` for augmentation to B/T/LT/LTA levels ([[concepts/baseline-profiles]]).
 
+## Gotcha: not network-free by default (AIA)
+A fresh `CommonCertificateVerifier` **seeds a `DefaultAIASource` even if you never call `setAIASource(...)`**, so it performs AIA (Authority Information Access) issuer-certificate fetches over the network independently of revocation. To run validation fully offline (e.g. tests without trust anchors) you must null all three sources explicitly: `setAIASource(null)`, `setOcspSource(null)`, `setCrlSource(null)` (and `setRevocationFallback(false)`). Dropping only OCSP/CRL is insufficient — AIA was the dominant network cost that made the offline SiVa corpus suite take ~717s vs ~40s once AIA was disabled. Getters to verify wiring: `getAIASource()/getOcspSource()/getCrlSource()/isRevocationFallback()`. — see [[sources/ll-dss-offline-test-verifier]]
+
 ## Related
 - [[entities/dss]] · [[entities/signeddocumentvalidator]]
 - [[concepts/revocation-data]] · [[concepts/trusted-lists]]

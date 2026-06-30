@@ -7,7 +7,7 @@ Il servizio viene distribuito come immagine Docker
 (registry: Docker Hub). L'immagine è costruita con un `Dockerfile` multi-stage e
 una runtime **Alpine** non-root e hardenizzata.
 
-> **📘 Guida passo-passo?** Vedi [Guida operativa Docker](02b-guida-operativa-docker.md) per un percorso guidato dalla prima esecuzione alla produzione.
+> **Guida passo-passo?** Vedi [Guida operativa Docker](02b-guida-operativa-docker.md) per un percorso guidato dalla prima esecuzione alla produzione.
 
 ```bash
 docker pull toresoft/sign-verify:latest
@@ -28,6 +28,11 @@ flowchart TB
         L --> HC[HEALTHCHECK BusyBox wget]
     end
     EX -->|layer esplosi| L
+
+    classDef build fill:#ede7f6,stroke:#6c4f9c,color:#2c1f47
+    classDef runtime fill:#e1f5e9,stroke:#2f8a4e,color:#0d3a1d
+    class M,GO,PKG,EX build
+    class R,U,L,HC runtime
 ```
 
 Caratteristiche di sicurezza del `Dockerfile`:
@@ -113,6 +118,7 @@ APP_OJ_KEYSTORE_PASSWORD=<password keystore OJ>
 
 ```mermaid
 sequenceDiagram
+    autonumber
     participant O as Orchestratore
     participant A as App (8080)
     O->>A: GET /actuator/health/liveness
@@ -121,15 +127,15 @@ sequenceDiagram
     A-->>O: 200 UP solo se TSL pronta
 ```
 
-- **Liveness** `/actuator/health/liveness` — usata dall'HEALTHCHECK
+- **Liveness** `/actuator/health/liveness`: usata dall'HEALTHCHECK
   dell'immagine di sviluppo.
-- **Readiness** `/actuator/health/readiness` — usata dal `compose.prod`; tiene
+- **Readiness** `/actuator/health/readiness`: usata dal `compose.prod`; tiene
   conto della prontezza delle Trusted Lists (`TslReadinessIndicator`).
 
 Endpoint `actuator` esposti: `health`, `info`, `metrics`, `prometheus`.
 Sono pubblici (senza autenticazione) solo `health/**` e `prometheus`; `info`
 richiede autenticazione. Su `health` gli anonimi vedono solo lo `status`
-aggregato — i dettagli per-componente richiedono un chiamante PRIVILEGED.
+aggregato, mentre i dettagli per-componente richiedono un chiamante PRIVILEGED.
 
 ## 2.5 Primo avvio
 
@@ -144,6 +150,15 @@ flowchart TD
     R --> T{startup-mode TSL}
     T -- BACKGROUND --> TL[Carica LOTL/TSL in background]
     T -- SKIP --> R
+
+    classDef step fill:#eef1f5,stroke:#5b6b7c,color:#1f2733
+    classDef decision fill:#fff1d6,stroke:#b9842a,color:#4a3203
+    classDef ready fill:#e1f5e9,stroke:#2f8a4e,color:#0d3a1d
+    classDef external fill:#dbeeff,stroke:#2f6fbb,color:#0b2e4f
+    class S,F,P,G step
+    class B,T decision
+    class R ready
+    class TL external
 ```
 
 Al primo avvio, se non esiste alcuna chiave `PRIVILEGED` abilitata, il servizio

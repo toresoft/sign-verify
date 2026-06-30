@@ -8,29 +8,29 @@
 
 > 🇬🇧 **English** · 🇮🇹 [Leggi in italiano](README.it.md)
 
-> REST service for **eIDAS electronic-signature verification** (PAdES, CAdES, XAdES, JAdES, ASiC) built on Spring Boot 3.4 and the EU **DSS 6.4** library, with EU Trusted List (LOTL/TSL) management.
+> REST service for **eIDAS electronic-signature verification** (PAdES, CAdES, XAdES, JAdES, ASiC), built on Spring Boot 3.4 and the EU **DSS 6.4** library, with EU Trusted List (LOTL/TSL) management.
 
 ---
 
 
 ## 1. Application overview
 
-`sign-verify` exposes REST APIs to validate digitally signed documents against the eIDAS
-standards, returning the outcome (`indication`/`subIndication`) and the DSS validation
-reports (Simple, Detailed, Diagnostic, ETSI).
+`sign-verify` checks digitally signed documents against the eIDAS standards and tells you
+whether the signature holds up. It returns an outcome (`indication`/`subIndication`) plus
+the DSS validation reports (Simple, Detailed, Diagnostic, ETSI).
 
 **Key features**
 
-- **Signature verification**, synchronous and **asynchronous** (job + HMAC-signed HTTP
+- Signature verification, both synchronous and asynchronous (job + HMAC-signed HTTP
   callback).
-- **Verification profiles** (presets `BASIC` / `STANDARD` / `STRICT`) with per-request
+- Verification profiles (presets `BASIC` / `STANDARD` / `STRICT`) with per-request
   policy overrides.
-- **Extraction** of the original document from a signed container.
-- **TSL management**: download and mirror of the EU List of Trusted Lists (LOTL),
+- Extraction of the original document from a signed container.
+- TSL management: download and mirror of the EU List of Trusted Lists (LOTL),
   scheduled refresh, inspection of trusted certificates.
-- **Authentication** via API key (`X-API-Key`) and/or OAuth2 JWT; roles `STANDARD` and
-  `PRIVILEGED`.
-- **Audit log**, **observability** (health/readiness, Prometheus metrics, JSON logs),
+- Authentication via API key (`X-API-Key`) and/or OAuth2 JWT, with `STANDARD` and
+  `PRIVILEGED` roles.
+- Audit log and observability (health/readiness, Prometheus metrics, JSON logs), with
   automatic job retention and cleanup.
 
 **Supported signature formats:** PAdES (PDF), CAdES (CMS), XAdES (XML), JAdES (JSON),
@@ -40,19 +40,7 @@ ASiC-S/ASiC-E.
 
 Hexagonal (ports & adapters) architecture, enforced by ArchUnit.
 
-```mermaid
-flowchart LR
-    Client -->|"REST + X-API-Key/JWT"| API["api · controllers"]
-    API --> APP["application · services"]
-    APP --> PORTS{{"domain · ports"}}
-    PORTS --> DSS["adapter/dss · DSS 6.4"]
-    PORTS --> CRYPTO["adapter/crypto · AES-GCM / bcrypt"]
-    PORTS --> CB["adapter/callback · HMAC webhook"]
-    PORTS --> STORE["adapter/storage · filesystem"]
-    APP --> REPO["persistence · Spring Data JPA"]
-    REPO --> DB[("PostgreSQL")]
-    DSS --> TSL[("EU LOTL / TSL")]
-```
+![sign-verify component map](docs/assets/component-map.svg)
 
 | Layer | Package | Responsibility |
 |---|---|---|
@@ -103,8 +91,8 @@ Activation: `-Dspring.profiles.active=dev` (host) or `SPRING_PROFILES_ACTIVE=doc
 > openssl rand -base64 32
 > ```
 
-Without a valid `APP_SECRET_MASTER_KEY` (32 bytes) and — when OAuth is enabled — without
-`APP_SECURITY_OAUTH_ISSUER_URI`, the application **fails fast at startup**.
+Without a valid `APP_SECRET_MASTER_KEY` (32 bytes), and without `APP_SECURITY_OAUTH_ISSUER_URI`
+when OAuth is enabled, the application **fails fast at startup**.
 The database schema is managed by Flyway (`db/migration`), with Hibernate in
 `ddl-auto: validate`.
 
@@ -112,8 +100,8 @@ The database schema is managed by Flyway (`db/migration`), with Hibernate in
 
 - **API key**: header `X-API-Key: sv_<prefix>_<body>` (bcrypt-hashed at rest).
   At first start, if no `PRIVILEGED` key exists, a *bootstrap* one is generated and written
-  to the file pointed to by `APP_SECURITY_BOOTSTRAP_KEY_FILE` (mode `0600`) — **read it and
-  then remove it**.
+  to the file pointed to by `APP_SECURITY_BOOTSTRAP_KEY_FILE` (mode `0600`). **Read it and
+  then remove it.**
 - **OAuth2 JWT**: enable with `APP_SECURITY_OAUTH_ENABLED=true` + an OIDC issuer.
 
 ---
@@ -244,12 +232,12 @@ mvn spotless:apply      # auto-format (Google Java Format) before committing
 
 ---
 
-## 6. CI/CD — publishing to Docker Hub
+## 6. CI/CD: publishing to Docker Hub
 
 Two equivalent pipelines are provided:
 
-- **GitLab CI** — `.gitlab-ci.yml`
-- **GitHub Actions** — `.github/workflows/ci.yml`
+- **GitLab CI**: `.gitlab-ci.yml`
+- **GitHub Actions**: `.github/workflows/ci.yml`
 
 Stages: `validate → test → build → package → security`. The **package** stage builds and
 publishes the image to Docker Hub as `toresoft/sign-verify`:
@@ -257,8 +245,8 @@ publishes the image to Docker Hub as `toresoft/sign-verify`:
 - every default-branch pipeline → tags `:<short-sha>` and `:latest`
 - every git tag `vX.Y.Z` → tags `:<short-sha>` and `:<tag>`
 
-Required credentials — on GitLab as masked CI/CD variables (Settings → CI/CD → Variables),
-on GitHub as repository secrets (Settings → Secrets and variables → Actions):
+Set the credentials as masked CI/CD variables on GitLab (Settings → CI/CD → Variables) or
+as repository secrets on GitHub (Settings → Secrets and variables → Actions):
 
 | Name | Value |
 |---|---|
@@ -296,5 +284,5 @@ Italian (`docs/it/`), with Mermaid diagrams. Indexes:
 
 ## 8. References
 
-- API: OpenAPI contract in `src/main/resources/openapi/openapi.yaml` —
+- API: OpenAPI contract in `src/main/resources/openapi/openapi.yaml`.
   Swagger UI at `/swagger-ui/index.html`

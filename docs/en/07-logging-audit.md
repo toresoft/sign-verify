@@ -14,6 +14,15 @@ flowchart LR
     DB -->|GET /api/v1/audit-log| ADM[PRIVILEGED admin]
     LOG --> COLL[Collector\nLoki/ELK/...]
     MET --> PROM[Prometheus]
+
+    classDef app fill:#eef1f5,stroke:#5b6b7c,color:#1f2733
+    classDef store fill:#e1f5e9,stroke:#2f8a4e,color:#0d3a1d
+    classDef client fill:#dbeeff,stroke:#2f6fbb,color:#0b2e4f
+    classDef external fill:#fff1d6,stroke:#b9842a,color:#4a3203
+    class APP app
+    class DB store
+    class ADM client
+    class LOG,MET,COLL,PROM external
 ```
 
 ## 6.1 Application logs
@@ -59,22 +68,53 @@ Application errors derive from `AppException` and are serialised as **RFC 9457**
 
 | Error code | HTTP | When |
 |------------|------|------|
-| `validation.invalid-input` | 400 | invalid input |
-| `validation.invalid-profile-overrides` | 400 | invalid policy overrides |
-| `auth.missing-credentials` | 401 | credentials absent |
-| `auth.invalid-token` | 401 | invalid API key/JWT |
-| `authz.forbidden` | 403 | insufficient role |
+| `validation.invalid-input` | 400 | invalid input (bean validation, malformed JSON body, bad query param) |
+| `auth.invalid-token` | 401 | missing, malformed, unknown, disabled, expired API key, or invalid JWT |
+| `authz.forbidden` | 403 | insufficient role (e.g. `STANDARD` calling a `PRIVILEGED` endpoint) |
 | `resource.not-found` | 404 | missing (or invisible) resource |
-| `resource.gone` | 410 | job result no longer available |
 | `resource.conflict` | 409 | conflict (e.g. last privileged key) |
 | `payload.too-large` | 413 | upload over limits |
-| `media.unsupported` | 415 | unsupported media type |
-| `signature.parse-error` | — | unsigned/unreadable document |
-| `excessive-load.concurrency` | 429 | sync verification limit |
+| `signature.parse-error` | 422 | unsigned/unreadable document |
 | `excessive-load.async-backpressure` | 429 | async job backpressure |
-| `tsl.not-ready` | — | Trusted Lists not yet loaded |
-| `dss.unavailable` | — | DSS circuit open/unavailable |
+| `excessive-load.concurrency` | 503 | sync verification semaphore exhausted |
+| `tsl.not-ready` | 503 | Trusted Lists not yet loaded |
+| `dss.unavailable` | 503 | DSS circuit breaker open |
 | `internal-error` | 500 | unexpected error |
+
+> **Reserved, not currently emitted**: `validation.invalid-profile-overrides`,
+> `auth.missing-credentials` and `media.unsupported` are declared error codes
+> with no live call site today. A missing `X-API-Key`/`Authorization` header
+> currently also surfaces as `auth.invalid-token`; an invalid `profileOverrides`
+> value is currently swallowed into the generic `internal-error` (500) instead
+> of a 400. This is a known gap, not yet fixed.
+
+Every response shares the same envelope; only `type`, `status`, `title` and
+`detail` change:
+
+```json
+{
+  "type": "urn:signverify:error:resource.conflict",
+  "title": "Conflict",
+  "status": 409,
+  "detail": "cannot remove last enabled privileged api key",
+  "instance": "/api/v1/api-keys/3f1e..."
+}
+```
+
+| Error code | Example `detail` |
+|------------|-------------------|
+| `validation.invalid-input` | `"size must be between 1 and 100"` |
+| `auth.invalid-token` | `"invalid credentials"` |
+| `authz.forbidden` | `"insufficient role"` |
+| `resource.not-found` | `"api key not found"` |
+| `resource.conflict` | `"cannot remove last enabled privileged api key"` |
+| `payload.too-large` | `"max upload size exceeded"` |
+| `signature.parse-error` | `"cannot parse signed document: ..."` |
+| `excessive-load.async-backpressure` | `"global async backpressure"` or `"per-principal async backpressure"` |
+| `excessive-load.concurrency` | `"verify concurrency limit reached"` |
+| `tsl.not-ready` | `"tsl not ready"` |
+| `dss.unavailable` | `"dss circuit breaker open: ..."` |
+| `internal-error` | `"unexpected error"` |
 
 > By default `server.error.include-message: never` and
 > `include-stacktrace: never`: internal details do not leak into responses.
@@ -97,7 +137,9 @@ There is an **`audit_log`** table and an admin-only read API. Record structure
 
 ### Querying
 
-`GET /api/v1/audit-log` — **requires the `PRIVILEGED` role**. Available filters:
+`GET /api/v1/audit-log`: **requires the `PRIVILEGED` role**. Returns the
+shared pagination envelope (see [Conventions](README.md#pagination)). Available
+filters:
 
 | Parameter | Type |
 |-----------|------|
@@ -122,19 +164,19 @@ curl -sS "http://localhost:8080/api/v1/audit-log?action=verify&success=false&siz
 }
 ```
 
-> ℹ️ **Current implementation status.** The `audit_log` table, the
+> **Current implementation status.** The `audit_log` table, the
 > `AuditService` (write) component and the read API are present and indexed
 > (`occurred_at`, `principal_id`, `action`). In the current code `AuditService`
 > is **not yet wired** into the operational paths (verification, key management,
 > TSL refresh), so the table may be empty: operational traceability is presently
 > provided by the **structured logs** with MDC (§6.1). The persistent audit
-> infrastructure is ready to be hooked into the operations that require it.
+> infrastructure exists and can be wired into those operations when needed.
 
 ## 6.4 Metrics
 
 Exposed Actuator endpoints: `health`, `info`, `metrics`, `prometheus`.
 
-- `GET /actuator/prometheus` — Prometheus-format metrics (Micrometer), public.
+- `GET /actuator/prometheus`: Prometheus-format metrics (Micrometer), public.
 - The `dssValidator` circuit breaker (Resilience4j) publishes a health indicator
   and exposes state metrics (`CLOSED`/`OPEN`/`HALF_OPEN`), useful to monitor DSS
   validation availability.
@@ -145,4 +187,11 @@ flowchart LR
     MM[Micrometer] --> P[/actuator/prometheus/]
     P --> PR[(Prometheus)]
     PR --> GR[Grafana]
+
+    classDef app fill:#eef1f5,stroke:#5b6b7c,color:#1f2733
+    classDef external fill:#fff1d6,stroke:#b9842a,color:#4a3203
+    classDef store fill:#e1f5e9,stroke:#2f8a4e,color:#0d3a1d
+    class R4J,MM app
+    class H,GR external
+    class P,PR store
 ```

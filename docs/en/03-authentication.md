@@ -12,8 +12,8 @@ The service is **stateless** (no sessions, CSRF disabled since it is a pure
 API). It supports **two authentication mechanisms**, applied in the same filter
 chain:
 
-1. **API key** — header `X-API-Key: sv_<prefix>_<body>` (always active).
-2. **OAuth2 JWT** — header `Authorization: Bearer <jwt>` (toggled via
+1. **API key**: header `X-API-Key: sv_<prefix>_<body>` (always active).
+2. **OAuth2 JWT**: header `Authorization: Bearer <jwt>` (toggled via
    `app.security.oauth.enabled`).
 
 ```mermaid
@@ -31,6 +31,17 @@ flowchart TD
     ANON -- no --> U401
     CTX --> OK
     CTX2 --> OK
+
+    classDef input fill:#dbeeff,stroke:#2f6fbb,color:#0b2e4f
+    classDef decision fill:#fff1d6,stroke:#b9842a,color:#4a3203
+    classDef app fill:#eef1f5,stroke:#5b6b7c,color:#1f2733
+    classDef success fill:#e1f5e9,stroke:#2f8a4e,color:#0d3a1d
+    classDef failure fill:#fde2e1,stroke:#b8413a,color:#4a0f0c
+    class R input
+    class AK,O,ANON decision
+    class V,J app
+    class CTX,CTX2,OK success
+    class U401 failure
 ```
 
 ### Public endpoints (no authentication)
@@ -44,14 +55,22 @@ callers; per-component details (TSL counts, job queue, DB, disk) appear only for
 an authenticated **PRIVILEGED** caller (`show-details: when-authorized`).
 
 Everything else requires authentication (`anyRequest().authenticated()`).
-A failure produces **401** with an `application/problem+json` body.
+A failure produces **401** with an `application/problem+json` body. An invalid
+`X-API-Key` is rejected directly by the filter (no `detail`/`instance`):
+
+```json
+{ "type": "urn:signverify:error:auth.invalid-token", "title": "Unauthorized", "status": 401 }
+```
+
+A missing/invalid `Authorization: Bearer` (OAuth path) goes through the
+generic handler instead, which adds `detail` and `instance`:
 
 ```json
 {
-  "type": "about:blank",
+  "type": "urn:signverify:error:auth.invalid-token",
   "title": "Unauthorized",
   "status": 401,
-  "detail": "Invalid or missing API key",
+  "detail": "invalid credentials",
   "instance": "/api/v1/verifications"
 }
 ```
@@ -75,10 +94,10 @@ Principal types (`PrincipalType`): `API_KEY`, `OAUTH_USER`, `SYSTEM`.
 
 ```json
 {
-  "type": "about:blank",
+  "type": "urn:signverify:error:authz.forbidden",
   "title": "Forbidden",
   "status": 403,
-  "detail": "Access denied: PRIVILEGED role required",
+  "detail": "insufficient role",
   "instance": "/api/v1/tsl/refresh"
 }
 ```
@@ -121,10 +140,10 @@ check uses a pessimistic lock to avoid a TOCTOU race.
 
 ```json
 {
-  "type": "about:blank",
+  "type": "urn:signverify:error:resource.conflict",
   "title": "Conflict",
   "status": 409,
-  "detail": "Cannot remove the last enabled privileged API key",
+  "detail": "cannot remove last enabled privileged api key",
   "instance": "/api/v1/api-keys/..."
 }
 ```
@@ -135,7 +154,7 @@ All `/api/v1/api-keys` endpoints require the `PRIVILEGED` role.
 
 | Method | Path | Operation |
 |--------|------|-----------|
-| `GET` | `/api/v1/api-keys?page=&size=` | List (paginated) |
+| `GET` | `/api/v1/api-keys?page=&size=` | List (paginated, see [Conventions](README.md#pagination)) |
 | `POST` | `/api/v1/api-keys` | Create a key |
 | `PATCH` | `/api/v1/api-keys/{id}` | Enable/disable (`{"enabled": false}`) |
 | `DELETE` | `/api/v1/api-keys/{id}` | Delete |
@@ -149,7 +168,7 @@ curl -sS -X POST http://localhost:8080/api/v1/api-keys \
   -d '{"name":"ci-pipeline","role":"STANDARD","expiresAt":"2027-01-01T00:00:00Z"}'
 ```
 
-`201` response — the plaintext `plaintextKey` is returned **only once**:
+`201` response: the plaintext `plaintextKey` is returned only once.
 
 ```json
 {
@@ -160,7 +179,7 @@ curl -sS -X POST http://localhost:8080/api/v1/api-keys \
 }
 ```
 
-`ApiKeyCreateRequest` fields: `name` (1–120 chars, unique), `role`
+`ApiKeyCreateRequest` fields: `name` (1-120 chars, unique), `role`
 (`PRIVILEGED`/`STANDARD`), `expiresAt` (optional).
 
 ### Using a key in a request
@@ -176,7 +195,7 @@ unknown prefix, disabled key, expired key, or hash mismatch.
 
 ## 2.3 OAuth configuration and usage
 
-> ✅ OAuth2 (JWT resource server) is **implemented**. It is controlled by the
+> OAuth2 (JWT resource server) is implemented. It is controlled by the
 > `app.security.oauth.enabled` flag (default `true` in the production profile,
 > `false` in the `dev`/`docker` profiles).
 
@@ -187,15 +206,20 @@ incoming JWTs against the configured **issuer** and derives the `Principal`.
 
 ```mermaid
 sequenceDiagram
+    autonumber
+    box rgb(219,238,255) External
     participant C as Client
     participant IdP as Identity Provider
+    end
+    box rgb(238,241,245) sign-verify
     participant S as sign-verify
+    end
     C->>IdP: obtain access token (JWT)
     IdP-->>C: signed JWT
-    C->>S: GET /api/v1/... \n Authorization: Bearer <JWT>
+    C->>S: GET /api/v1/...<br/>Authorization: Bearer <JWT>
     S->>IdP: fetch JWKS (issuer-uri/.well-known)
     S->>S: validate signature, expiry, issuer
-    S->>S: OAuthPrincipalConverter\nextract sub + roles from claim
+    S->>S: OAuthPrincipalConverter<br/>extract sub + roles from claim
     S-->>C: 200 / 401 / 403
 ```
 
@@ -219,14 +243,16 @@ APP_SECURITY_OAUTH_PRIVILEGED_VALUES=admin,sign-admin
 
 ### Mapping the Principal from the JWT
 
-`OAuthPrincipalConverter`:
+`OAuthPrincipalConverter` maps:
 
-- principal **id** = the token `sub`.
-- **displayName** = `preferred_username` claim (falls back to `sub`).
-- **role** = `PRIVILEGED` if the `role-claim` contains at least one of the
-  `privileged-values`, otherwise `STANDARD`.
-- The roles claim may be a **list** (e.g. `["admin","user"]`) or a
-  space/comma-separated **string** (e.g. `"admin user"`).
+| Principal field    | Source                                                                                          |
+|---------------------|--------------------------------------------------------------------------------------------------|
+| `id` | the token `sub` |
+| `displayName` | `preferred_username` claim (falls back to `sub`) |
+| `role` | `PRIVILEGED` if the `role-claim` contains at least one of the `privileged-values`, otherwise `STANDARD` |
+
+The roles claim may be a list (e.g. `["admin","user"]`) or a space/comma-separated
+string (e.g. `"admin user"`).
 
 ### Usage
 

@@ -11,12 +11,23 @@ so they are queryable via API.
 
 ```mermaid
 sequenceDiagram
+    autonumber
+    box rgb(219,238,255) Trigger
     participant Sched as Scheduler (cron 02:00)
     participant Adm as Admin (PRIVILEGED)
+    end
+    box rgb(238,241,245) sign-verify
     participant T as TslService
+    end
+    box rgb(237,231,246) Adapter
     participant DSS as DSS TLValidationJob
+    end
+    box rgb(255,241,214) External
     participant EU as EU LOTL/TSL
+    end
+    box rgb(225,245,233) Store
     participant DB as DB (trusted_certificate)
+    end
 
     alt scheduled or manual refresh
         Sched->>T: refresh(SCHEDULED)
@@ -30,10 +41,11 @@ sequenceDiagram
     T->>DB: TslRefresh (SUCCESS/FAILED) + ready=true
 ```
 
-- **Scheduled**: cron `0 0 2 * * *` (timezone `Europe/Rome`).
-- **Startup**: `app.tsl.refresh.startup-mode` = `BACKGROUND` (load at start,
-  non-blocking) or `SKIP` (for dev/offline).
-- **Manual**: `POST /api/v1/tsl/refresh` (`PRIVILEGED` only).
+| Trigger | Detail |
+|---------|--------|
+| Scheduled | cron `0 0 2 * * *` (timezone `Europe/Rome`) |
+| Startup | `app.tsl.refresh.startup-mode` = `BACKGROUND` (load at start, non-blocking) or `SKIP` (for dev/offline) |
+| Manual | `POST /api/v1/tsl/refresh` (`PRIVILEGED` only) |
 
 Each refresh records a `TslRefresh` row with outcome and diff (certificates
 added / removed / unchanged). Certificates no longer present in the lists are
@@ -42,7 +54,7 @@ not deleted but **flagged as removed** (`removedAt`): they remain queryable with
 
 ## 3.2 TSL status
 
-`GET /api/v1/tsl/status` — available to any authenticated user.
+`GET /api/v1/tsl/status` is available to any authenticated user.
 
 ```bash
 curl -sS http://localhost:8080/api/v1/tsl/status -H "X-API-Key: $KEY"
@@ -65,7 +77,7 @@ once; it also drives `/actuator/health/readiness`.
 
 ## 3.3 Force a refresh
 
-`POST /api/v1/tsl/refresh` — **requires `PRIVILEGED`**.
+`POST /api/v1/tsl/refresh` requires the `PRIVILEGED` role.
 
 ```bash
 curl -sS -X POST http://localhost:8080/api/v1/tsl/refresh -H "X-API-Key: $ADMIN_KEY"
@@ -77,7 +89,8 @@ curl -sS -X POST http://localhost:8080/api/v1/tsl/refresh -H "X-API-Key: $ADMIN_
 
 ## 3.4 List trusted certificates
 
-`GET /api/v1/tsl/certificates` — supports many filters and pagination.
+`GET /api/v1/tsl/certificates` supports many filters and pagination (envelope
+described in [Conventions](README.md#pagination)).
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -132,7 +145,7 @@ Each item contains (`certToMap`): `id`, `ski`, `aki`, `subjectDn`, `subjectCn`,
 
 ## 3.5 Certificate detail
 
-`GET /api/v1/tsl/certificates/{id}` — returns the same object as above for the
+`GET /api/v1/tsl/certificates/{id}` returns the same object as above for the
 certificate with that `id`.
 
 ```bash
@@ -165,7 +178,7 @@ app:
         oj-url: https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv:OJ.C_.2019.276.01.0001.01.ENG
 ```
 
-> ⚠️ **Symptom of a missing/placeholder keystore**: if the keystore holds no
+> **Symptom of a missing/placeholder keystore**: if the keystore holds no
 > real OJ certificate, every pivot fails with
 > `INDETERMINATE/NO_CERTIFICATE_CHAIN_FOUND` and **no Trusted List is loaded**.
 > At startup the service logs an explicit WARN:

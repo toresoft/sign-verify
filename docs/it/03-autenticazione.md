@@ -12,8 +12,8 @@ Il servizio è **stateless** (nessuna sessione, CSRF disabilitato perché è una
 API pura). Supporta **due meccanismi di autenticazione**, applicati nello stesso
 filter chain:
 
-1. **API key** — header `X-API-Key: sv_<prefix>_<body>` (sempre attiva).
-2. **OAuth2 JWT** — header `Authorization: Bearer <jwt>` (attivabile con
+1. **API key**: header `X-API-Key: sv_<prefix>_<body>` (sempre attiva).
+2. **OAuth2 JWT**: header `Authorization: Bearer <jwt>` (attivabile con
    `app.security.oauth.enabled`).
 
 ```mermaid
@@ -31,6 +31,17 @@ flowchart TD
     ANON -- no --> U401
     CTX --> OK
     CTX2 --> OK
+
+    classDef input fill:#dbeeff,stroke:#2f6fbb,color:#0b2e4f
+    classDef decision fill:#fff1d6,stroke:#b9842a,color:#4a3203
+    classDef app fill:#eef1f5,stroke:#5b6b7c,color:#1f2733
+    classDef success fill:#e1f5e9,stroke:#2f8a4e,color:#0d3a1d
+    classDef failure fill:#fde2e1,stroke:#b8413a,color:#4a0f0c
+    class R input
+    class AK,O,ANON decision
+    class V,J app
+    class CTX,CTX2,OK success
+    class U401 failure
 ```
 
 ### Endpoint pubblici (senza autenticazione)
@@ -44,14 +55,23 @@ i dettagli per-componente (conteggi TSL, coda job, DB, disco) sono visibili solo
 a un chiamante autenticato **PRIVILEGED** (`show-details: when-authorized`).
 
 Tutto il resto richiede autenticazione (`anyRequest().authenticated()`).
-Un fallimento produce **401** con corpo `application/problem+json`.
+Un fallimento produce **401** con corpo `application/problem+json`. Una
+`X-API-Key` non valida è rifiutata direttamente dal filtro (senza
+`detail`/`instance`):
+
+```json
+{ "type": "urn:signverify:error:auth.invalid-token", "title": "Unauthorized", "status": 401 }
+```
+
+Un `Authorization: Bearer` assente/non valido (percorso OAuth) passa invece
+dal gestore generico, che aggiunge `detail` e `instance`:
 
 ```json
 {
-  "type": "about:blank",
+  "type": "urn:signverify:error:auth.invalid-token",
   "title": "Unauthorized",
   "status": 401,
-  "detail": "Invalid or missing API key",
+  "detail": "invalid credentials",
   "instance": "/api/v1/verifications"
 }
 ```
@@ -75,10 +95,10 @@ Tipi di `Principal` (`PrincipalType`): `API_KEY`, `OAUTH_USER`, `SYSTEM`.
 
 ```json
 {
-  "type": "about:blank",
+  "type": "urn:signverify:error:authz.forbidden",
   "title": "Forbidden",
   "status": 403,
-  "detail": "Access denied: PRIVILEGED role required",
+  "detail": "insufficient role",
   "instance": "/api/v1/tsl/refresh"
 }
 ```
@@ -122,10 +142,10 @@ Il controllo usa un lock pessimistico per evitare race condition (TOCTOU).
 
 ```json
 {
-  "type": "about:blank",
+  "type": "urn:signverify:error:resource.conflict",
   "title": "Conflict",
   "status": 409,
-  "detail": "Cannot remove the last enabled privileged API key",
+  "detail": "cannot remove last enabled privileged api key",
   "instance": "/api/v1/api-keys/..."
 }
 ```
@@ -136,7 +156,7 @@ Tutti gli endpoint sotto `/api/v1/api-keys` richiedono ruolo `PRIVILEGED`.
 
 | Metodo | Path | Operazione |
 |--------|------|-----------|
-| `GET` | `/api/v1/api-keys?page=&size=` | Elenco (paginato) |
+| `GET` | `/api/v1/api-keys?page=&size=` | Elenco (paginato, vedi [Convenzioni](README.md#paginazione)) |
 | `POST` | `/api/v1/api-keys` | Crea una chiave |
 | `PATCH` | `/api/v1/api-keys/{id}` | Abilita/disabilita (`{"enabled": false}`) |
 | `DELETE` | `/api/v1/api-keys/{id}` | Elimina |
@@ -150,8 +170,7 @@ curl -sS -X POST http://localhost:8080/api/v1/api-keys \
   -d '{"name":"ci-pipeline","role":"STANDARD","expiresAt":"2027-01-01T00:00:00Z"}'
 ```
 
-Risposta `201` — il valore in chiaro `plaintextKey` è restituito **una sola
-volta**:
+Risposta `201`: il valore in chiaro `plaintextKey` è restituito una sola volta.
 
 ```json
 {
@@ -162,7 +181,7 @@ volta**:
 }
 ```
 
-Campi di `ApiKeyCreateRequest`: `name` (1–120 char, univoco), `role`
+Campi di `ApiKeyCreateRequest`: `name` (1-120 char, univoco), `role`
 (`PRIVILEGED`/`STANDARD`), `expiresAt` (opzionale).
 
 ### Uso di una chiave in una richiesta
@@ -179,7 +198,7 @@ corrispondente.
 
 ## 2.3 Configurazione e uso di OAuth
 
-> ✅ OAuth2 (resource server JWT) è **implementato**. È controllato dal flag
+> OAuth2 (resource server JWT) è implementato. È controllato dal flag
 > `app.security.oauth.enabled` (default `true` nel profilo di produzione,
 > `false` nei profili `dev`/`docker`).
 
@@ -190,15 +209,20 @@ in ingresso contro l'**issuer** configurato e ne deriva il `Principal`.
 
 ```mermaid
 sequenceDiagram
+    autonumber
+    box rgb(219,238,255) Esterno
     participant C as Client
     participant IdP as Identity Provider
+    end
+    box rgb(238,241,245) sign-verify
     participant S as sign-verify
+    end
     C->>IdP: ottiene access token (JWT)
     IdP-->>C: JWT firmato
-    C->>S: GET /api/v1/... \n Authorization: Bearer <JWT>
+    C->>S: GET /api/v1/...<br/>Authorization: Bearer <JWT>
     S->>IdP: scarica JWKS (issuer-uri/.well-known)
     S->>S: valida firma, scadenza, issuer
-    S->>S: OAuthPrincipalConverter\nestrae sub + ruoli dal claim
+    S->>S: OAuthPrincipalConverter<br/>estrae sub + ruoli dal claim
     S-->>C: 200 / 401 / 403
 ```
 
@@ -222,14 +246,16 @@ APP_SECURITY_OAUTH_PRIVILEGED_VALUES=admin,sign-admin
 
 ### Mappatura del Principal dal JWT
 
-`OAuthPrincipalConverter`:
+`OAuthPrincipalConverter` mappa:
 
-- **id** del principal = `sub` del token.
-- **displayName** = claim `preferred_username` (fallback su `sub`).
-- **ruolo** = `PRIVILEGED` se il claim `role-claim` contiene almeno uno dei
-  `privileged-values`, altrimenti `STANDARD`.
-- Il claim dei ruoli può essere una **lista** (es. `["admin","user"]`) oppure
-  una **stringa** separata da spazi/virgole (es. `"admin user"`).
+| Campo del principal | Origine |
+|----------------------|---------|
+| `id` | `sub` del token |
+| `displayName` | claim `preferred_username` (fallback su `sub`) |
+| `ruolo` | `PRIVILEGED` se il claim `role-claim` contiene almeno uno dei `privileged-values`, altrimenti `STANDARD` |
+
+Il claim dei ruoli può essere una lista (es. `["admin","user"]`) oppure una
+stringa separata da spazi/virgole (es. `"admin user"`).
 
 ### Uso
 
