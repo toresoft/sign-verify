@@ -1,4 +1,4 @@
-stages: [validate, test, package, security]
+stages: [validate, test, package, security, release]
 
 # --------------------------------------------------------------------------- #
 # workflow:rules — pipeline solo su tag o avvio manuale                       #
@@ -171,32 +171,75 @@ security:image-scan:
     name: aquasec/trivy:latest
     entrypoint: [""]
   needs: ["package:docker"]
+  # Cache key is shared with the GitHub Actions trivy job's intent: a stable, periodically
+  # refreshed key so the vulnerability DB is reused across pipelines instead of re-pulled
+  # from ghcr.io every run (hundreds of MB, subject to anonymous pull rate limits).
+  cache:
+    key: trivy-db-data
+    paths:
+      - .trivy-cache/
   variables:
     TRIVY_USERNAME: "$DOCKERHUB_USERNAME"
     TRIVY_PASSWORD: "$DOCKERHUB_TOKEN"
+    TRIVY_CACHE_DIR: "$CI_PROJECT_DIR/.trivy-cache"
   script:
     # --exit-code 1 makes the job fail when HIGH/CRITICAL CVEs are found; allow_failure keeps it
     # non-blocking but surfaces it as a visible "allowed failure" instead of a silent pass.
-    - trivy image --no-progress --severity HIGH,CRITICAL --exit-code 1 "$IMAGE_NAME:$CI_COMMIT_SHORT_SHA"
+    - trivy image --no-progress --severity HIGH,CRITICAL --exit-code 1
+      --output trivy-report.txt "$IMAGE_NAME:$CI_COMMIT_SHORT_SHA"
+  after_script:
+    - cat trivy-report.txt 2>/dev/null || true
+  artifacts:
+    when: always
+    paths:
+      - trivy-report.txt
+    expire_in: 1 week
   allow_failure: true
 
 security:dependency-scan:
   stage: security
+  # Only needs source + pom.xml, not the built jar — needs test:verify's artifacts only via
+  # `needs`, not its stage order, so it already runs in parallel with package:docker.
   needs: ["test:verify"]
-  # Persist the OWASP NVD datastore between runs. Without it the job re-downloads
-  # ~356k CVEs every time; a throttled/aborted download corrupts the H2 store
-  # (odc.mv.db) and the analysis fails ("The database has been closed").
+  # Two caches (array): a job-level cache: overrides the global Maven cache entirely, so
+  # without re-declaring it here dependency-check would re-resolve every Maven dependency and
+  # the plugin itself on each run. policy: pull — test:verify owns/writes the Maven cache.
   cache:
-    key: dependency-check-nvd-data
-    paths:
-      - .dependency-check-data/
+    - key:
+        files:
+          - pom.xml
+        prefix: maven-v3
+      paths:
+        - .m2/repository
+      policy: pull
+    # Persist the OWASP NVD datastore between runs. Without it the job re-downloads
+    # ~356k CVEs every time; a throttled/aborted download corrupts the H2 store
+    # (odc.mv.db) and the analysis fails ("The database has been closed").
+    - key: dependency-check-nvd-data
+      paths:
+        - .dependency-check-data/
   variables:
     # An NVD API key (CI/CD variable, masked) avoids HTTP 429 rate limiting.
     # Get one free: https://nvd.nist.gov/developers/request-an-api-key
+    # The non-JVM analyzers (Node, Python, Ruby, Cocoapods, Swift, Go, .NET assembly) are
+    # disabled: this is a pure-Java/Maven project, and each one adds its own network calls
+    # (npm audit, retire.js feed, OSS Index) and scan time for zero coverage benefit.
     DC_OPTS: >-
       -DdataDirectory=.dependency-check-data
       -DnvdApiKey=$NVD_API_KEY
       -DnvdApiDelay=6000
+      -DassemblyAnalyzerEnabled=false
+      -DnodeAnalyzerEnabled=false
+      -DnodeAuditAnalyzerEnabled=false
+      -DretireJsAnalyzerEnabled=false
+      -DossindexAnalyzerEnabled=false
+      -DpyDistributionAnalyzerEnabled=false
+      -DpyPackageAnalyzerEnabled=false
+      -DrubygemsAnalyzerEnabled=false
+      -DcocoapodsAnalyzerEnabled=false
+      -DswiftPackageManagerAnalyzerEnabled=false
+      -DgolangDepEnabled=false
+      -DgolangModEnabled=false
   script:
     - mvn $MAVEN_CLI_OPTS -DskipTests $DC_OPTS org.owasp:dependency-check-maven:check
   artifacts:
@@ -205,3 +248,47 @@ security:dependency-scan:
       - target/dependency-check-report.html
     expire_in: 1 week
   allow_failure: true
+
+# --------------------------------------------------------------------------- #
+# release  → GitLab Release with jar + vulnerability reports attached          #
+#   Job artifacts expire (1 week); release links must stay valid longer, so   #
+#   the jar and reports are pushed to the project's generic package registry  #
+#   first (permanent) and the release links point there instead of at the     #
+#   job-artifact URLs.                                                        #
+# --------------------------------------------------------------------------- #
+release:upload:
+  stage: release
+  image: alpine:3
+  needs: ["test:verify", "security:dependency-scan", "security:image-scan"]
+  rules:
+    - if: '$CI_COMMIT_TAG'
+  script:
+    - apk add --no-cache curl >/dev/null
+    - |
+      PKG_URL="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/sign-verify-2/${CI_COMMIT_TAG}"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file target/sign-verify-2.jar \
+        "${PKG_URL}/sign-verify-2.jar"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file target/dependency-check-report.html \
+        "${PKG_URL}/dependency-check-report.html"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file trivy-report.txt \
+        "${PKG_URL}/trivy-report.txt"
+
+release:create:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  needs: ["release:upload"]
+  rules:
+    - if: '$CI_COMMIT_TAG'
+  script:
+    - echo "Creating GitLab release $CI_COMMIT_TAG"
+  release:
+    tag_name: '$CI_COMMIT_TAG'
+    description: 'Release $CI_COMMIT_TAG'
+    assets:
+      links:
+        - name: 'sign-verify-2.jar'
+          url: '${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/sign-verify-2/${CI_COMMIT_TAG}/sign-verify-2.jar'
+        - name: 'dependency-check-report.html'
+          url: '${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/sign-verify-2/${CI_COMMIT_TAG}/dependency-check-report.html'
+        - name: 'trivy-report.txt'
+          url: '${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/sign-verify-2/${CI_COMMIT_TAG}/trivy-report.txt'

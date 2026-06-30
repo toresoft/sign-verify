@@ -1,5 +1,6 @@
 # Activity Log
 
+## 2026-06-30 ll | "GitLab/GitHub CI release + vuln-scan pipeline hardening" → raw/notes/2026-06-30-ll-ci-release-pipeline-hardening.md (5 lessons, 0 articles updated)
 ## 2026-06-28 ingest | Quadro normativo firma digitale: eIDAS, CAD, DPCM 2013, ETSI, IETF (raw/notes/2026-06-28-quadro-normativo-firma-digitale-eidas.md)
 ## 2026-06-28 research | "European regulatory references for digital signatures" → 5 sources ingested, 4 articles compiled/updated
 ## 2026-06-30 lint --fix | 18 checks, 0 critical, 0 warnings remaining, 0 candidates, auto-fixed: 8 orphan articles registered, 6 broken slug links repaired, 78 volatility:warm added
@@ -13,3 +14,4 @@
 ## 2026-06-29 compile | 3 sources → 3 new articles (sources/openapi-spec-sign-verify-2, concepts/italian-digital-signature-law, sources/ll-tsd-jackson-toolchain); 3 updated (entities/sign-verify-2, entities/eidas-regulation, concepts/rfc5544-tsd)
 ## 2026-06-29 ingest | sign-verify-2 OpenAPI spec (openapi.yaml) (raw/notes/2026-06-29-openapi-spec-sign-verify-2.md)
 ## 2026-06-29 query | "è possibile sapere usando le api di verifica firma che si abbia una firma invece che un sigillo?" → answered from 4 articles (standard)
+## 2026-06-30 ll | "running DSS validation tests offline (717s->40s)" -> raw/notes/2026-06-30-ll-dss-offline-test-verifier.md (5 lessons, 1 article updated: entities/certificateverifier)
