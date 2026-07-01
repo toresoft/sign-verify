@@ -2,6 +2,7 @@ package org.toresoft.signverify.adapter.dss;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowableOfType;
 
 import java.util.List;
 import org.bouncycastle.asn1.ASN1EncodableVector;
@@ -151,8 +152,12 @@ class RecursiveExtractionAdapterTest {
     var adapter = new RecursiveExtractionAdapter(new StubDelegate(null));
     byte[] finalDeeplyNested = deeplyNested;
 
-    assertThatThrownBy(() -> adapter.extract(finalDeeplyNested, "deep.tsd"))
-        .isInstanceOf(AppException.class)
-        .hasMessageContaining("max depth");
+    // AppException.getMessage() returns the RFC 9457 title ("Bad Request"); the descriptive
+    // text lives in getDetail(), so assert on the thrown instance's detail.
+    AppException thrown =
+        catchThrowableOfType(
+            () -> adapter.extract(finalDeeplyNested, "deep.tsd"), AppException.class);
+    assertThat(thrown).isNotNull();
+    assertThat(thrown.getDetail()).contains("max depth");
   }
 }
