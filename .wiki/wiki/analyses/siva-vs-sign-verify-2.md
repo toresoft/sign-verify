@@ -61,6 +61,8 @@ Ordinati per valore/sforzo. Dettaglio operativo in [[../outputs/improvement-poin
 - **Trust estone hardcoded** per DDOC: non neutrale eIDAS; non replicabile né desiderabile in contesto PA IT.
 
 ## Related
+- [[analyses/extraction-siva-vs-sign-verify-2]] — confronto focalizzato sull'**estrazione del file originale** (SiVa `/getDataFiles` DDOC-only vs `/api/v1/extractions` ricorsivo)
+- [[analyses/verification-siva-vs-sign-verify-2]] — confronto focalizzato sulla **verifica firma** (fork DSS / sync-only / POLv3-v4 / hashcode / report firmato vs upstream / async / preset+override / TSD)
 - [[entities/siva]] · [[entities/sign-verify-2]] · [[entities/dss]]
 - [[analyses/tsd-dto-mapping]] · [[analyses/verifica-file-tsd]] · [[concepts/reports]]
 - [[concepts/etsi-en-319-102-1-validation]] · [[concepts/validation-profiles]] · [[concepts/trusted-lists]]

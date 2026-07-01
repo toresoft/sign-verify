@@ -15,3 +15,9 @@
 ## 2026-06-29 ingest | sign-verify-2 OpenAPI spec (openapi.yaml) (raw/notes/2026-06-29-openapi-spec-sign-verify-2.md)
 ## 2026-06-29 query | "è possibile sapere usando le api di verifica firma che si abbia una firma invece che un sigillo?" → answered from 4 articles (standard)
 ## 2026-06-30 ll | "running DSS validation tests offline (717s->40s)" -> raw/notes/2026-06-30-ll-dss-offline-test-verifier.md (5 lessons, 1 article updated: entities/certificateverifier)
+## 2026-07-01 ll | "recursive container unwrap + optional filename in /extractions" -> raw/notes/2026-07-01-ll-extraction-recursive-unwrap.md (4 lessons, 2 articles updated: concepts/circuit-breaker, concepts/file-extraction)
+## 2026-07-01 research | "differenze estrazione file originale sign-verify-2 vs SiVa" -> 1 analysis compiled (analyses/extraction-siva-vs-sign-verify-2), 2 web sources confirmed, 1 article cross-linked (analyses/siva-vs-sign-verify-2)
+## 2026-07-01 research | "differenze verifica firma sign-verify-2 vs SiVa" -> 1 analysis compiled (analyses/verification-siva-vs-sign-verify-2), 2 web sources confirmed (POLv3/v4, hashcode+signed report), cross-linked
+## 2026-07-01 research | "differenze architettura/pattern verifica firma sign-verify-2 vs SiVa" -> 1 analysis compiled (analyses/architecture-siva-vs-sign-verify-2), 2 web sources confirmed (component model, deployment), cross-linked
+## 2026-07-01 correction | architecture-siva-vs-sign-verify-2: TSD RFC5544 e GIA un formato fuori DSS -> integrato via Decorator+try-fallback (BouncyCastle in-process), non proxy/selector; corretta la sezione "cosa imparare"
+## 2026-07-01 compile | 1 source (ll-extraction-recursive-unwrap) -> 1 new article (entities/recursiveextractionadapter), 4 updated (entities/tsdawareextractionadapter[renamed-pointer], entities/dssextractionadapter, concepts/problemjson, concepts/rfc5544-tsd)
