@@ -4,7 +4,7 @@
 [![pipeline (GitLab)](https://gitlab.com/toresoft/sign-verify/badges/main/pipeline.svg)](https://gitlab.com/toresoft/sign-verify/-/pipelines)
 [![coverage (GitLab)](https://gitlab.com/toresoft/sign-verify/badges/main/coverage.svg)](https://gitlab.com/toresoft/sign-verify/-/commits/main)
 [![docker](https://img.shields.io/docker/v/toresoft/sign-verify?sort=semver&label=docker)](https://hub.docker.com/r/toresoft/sign-verify)
-[![license](https://img.shields.io/badge/license-Apache--2.0-blue)](https://www.apache.org/licenses/LICENSE-2.0)
+[![license](https://img.shields.io/badge/license-LGPL--3.0-blue)](LICENSE)
 
 > 🇬🇧 **English** · 🇮🇹 [Leggi in italiano](README.it.md)
 
@@ -286,3 +286,12 @@ Italian (`docs/it/`), with Mermaid diagrams. Indexes:
 
 - API: OpenAPI contract in `src/main/resources/openapi/openapi.yaml`.
   Swagger UI at `/swagger-ui/index.html`
+
+## 9. License
+
+`sign-verify-2` is licensed under the **GNU Lesser General Public License v3.0 (LGPL-3.0)** —
+see [`LICENSE`](LICENSE).
+
+It depends on the EU **DSS** library (`eu.europa.ec.joinup.sd-dss`, LGPL-2.1) and bundles
+third-party test fixtures under separate licenses (LGPL-2.1, EUPL-1.1, GPL/Artistic). Full
+attribution: [`NOTICE.md`](NOTICE.md).
