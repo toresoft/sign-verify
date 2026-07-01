@@ -211,18 +211,30 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v4
-      # Human-readable table report (release asset). Redirect host-side (not --output inside the
-      # container) to avoid write-permission issues on the mounted volume under the image's
-      # non-root user. `|| true` keeps this advisory job green; the report still captures findings.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      # Resolve the full transitive dependency set into a CycloneDX SBOM (concrete versions), then
+      # point OSV at the SBOM. Scanning the raw pom.xml instead makes OSV do live Maven-registry
+      # transitive resolution, which is rate-limited (HTTP 429) and chokes on Spring Boot
+      # BOM-managed (version-less) deps — silently yielding a false "0 vulnerabilities". The SBOM
+      # has concrete versions, needs no live lookups, and is deterministic.
+      - name: Generate CycloneDX SBOM
+        run: mvn -B -ntp -DskipTests org.cyclonedx:cyclonedx-maven-plugin:makeAggregateBom
+      # Redirect stdout host-side (not --output inside the container) to sidestep write-permission
+      # issues on the mounted volume under the image's non-root user. `|| true` keeps this advisory
+      # job green; the report still captures findings.
       - name: OSV-Scanner (dependency SCA)
         run: |
           docker run --rm -v "$PWD:/src" -w /src ghcr.io/google/osv-scanner:latest \
-            scan source -r --format table ./ > osv-report.txt || true
+            scan source --format table ./target/bom.json > osv-report.txt || true
           cat osv-report.txt
       - name: OSV-Scanner SARIF (code scanning)
         run: |
           docker run --rm -v "$PWD:/src" -w /src ghcr.io/google/osv-scanner:latest \
-            scan source -r --format sarif ./ > osv-results.sarif || true
+            scan source --format sarif ./target/bom.json > osv-results.sarif || true
           # upload-sarif rejects an empty file; drop it when the scan produced no SARIF.
           [ -s osv-results.sarif ] || rm -f osv-results.sarif
       - name: Upload SARIF to code scanning

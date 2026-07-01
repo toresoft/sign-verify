@@ -234,11 +234,15 @@ security:fs-scan:
 #   (~356k CVEs into a local H2 store); a throttled/aborted sync corrupted        #
 #   odc.mv.db and the job failed ("The database has been closed") even with an   #
 #   NVD API key. OSV-Scanner queries the OSV.dev service instead: no NVD sync,    #
-#   no key. Run via the official distroless image with `docker run` (the image    #
-#   is shell-less, so it cannot be a GitLab job image directly) — same           #
-#   invocation as the GitHub `osv-scan` job. Redirect stdout host-side and        #
-#   capture the real exit code (0 clean / 1 vulns / 128 no packages) without a    #
-#   pipe so busybox sh reports it; allow_failure keeps it advisory.               #
+#   no key. First resolve concrete transitive versions into a CycloneDX SBOM     #
+#   (Maven), then have OSV scan the SBOM: scanning the raw pom.xml makes OSV do    #
+#   live Maven-registry transitive resolution, which is rate-limited (HTTP 429)   #
+#   and mis-parses Spring Boot BOM-managed (version-less) deps — silently         #
+#   yielding a false "0 vulnerabilities". Both tools run via `docker run` inside   #
+#   dind (the OSV image is shell-less, so it cannot be a GitLab job image         #
+#   directly) — same SBOM-based flow as the GitHub `osv-scan` job. Capture the     #
+#   real exit code (0 clean / 1 vulns) without a pipe so busybox sh reports it;    #
+#   allow_failure keeps it advisory.                                              #
 # --------------------------------------------------------------------------- #
 security:dependency-scan:
   stage: security
@@ -248,10 +252,22 @@ security:dependency-scan:
   variables:
     DOCKER_TLS_CERTDIR: ""
   needs: []
+  # Pull the Maven cache (test:verify owns writing it) so the SBOM resolve reuses it.
+  cache:
+    - key:
+        files:
+          - pom.xml
+        prefix: maven-v3
+      paths:
+        - .m2/repository
+      policy: pull
   script:
     - |
+      docker run --rm -v "$CI_PROJECT_DIR:/src" -w /src maven:3.9-eclipse-temurin-21 \
+        mvn -B -ntp -DskipTests -Dmaven.repo.local=/src/.m2/repository \
+        org.cyclonedx:cyclonedx-maven-plugin:makeAggregateBom
       docker run --rm -v "$CI_PROJECT_DIR:/src" -w /src ghcr.io/google/osv-scanner:latest \
-        scan source -r --format table ./ > osv-report.txt
+        scan source --format table ./target/bom.json > osv-report.txt
       status=$?
       cat osv-report.txt
       exit $status
