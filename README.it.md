@@ -251,8 +251,8 @@ o come *repository secrets* su GitHub (Settings → Secrets and variables → Ac
 | `DOCKERHUB_USERNAME` | account/namespace Docker Hub |
 | `DOCKERHUB_TOKEN` | access token Docker Hub (Account → Security) |
 
-Lo stage **security** esegue lo scan dell'immagine con Trivy (HIGH/CRITICAL) e l'OWASP
-dependency-check.
+Lo stage **security** esegue lo scan di immagine e filesystem con Trivy (HIGH/CRITICAL) e uno
+scan delle dipendenze (SCA) con OSV-Scanner sul database OSV.dev.
 
 ### Build & push manuale
 
