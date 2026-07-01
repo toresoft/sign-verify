@@ -50,3 +50,5 @@ docs/superpowers
 .firecrawl/
 docs/debug.txt
 .omo/
+.claude/
+.claude-flow/
