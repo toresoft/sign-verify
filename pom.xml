@@ -44,6 +44,14 @@
              X.509 CN parsing in SubjectDnX509PrincipalExtractor can read the wrong username
              (user impersonation). Fixed in 6.5.11. -->
         <spring-security.version>6.5.11</spring-security.version>
+        <!-- Override transitive TEST-scope deps flagged by Dependabot (test-only, never shipped):
+             commons-compress (via Testcontainers) — CVE-2024-25710 (DUMP infinite-loop DoS) and
+             CVE-2024-26308 (Pack200 OOM), both fixed in 1.26.0. rhino (via
+             swagger-request-validator -> json-schema-validator) — CVE-2025-66453 (toFixed DoS),
+             fixed in 1.7.15.1. Pinned via explicit dependencyManagement below so they win over the
+             imported BOMs. -->
+        <commons-compress.version>1.27.1</commons-compress.version>
+        <rhino.version>1.7.15.1</rhino.version>
         <dss.version>6.4</dss.version>
         <resilience4j.version>2.2.0</resilience4j.version>
         <shedlock.version>5.16.0</shedlock.version>
@@ -79,6 +87,17 @@
                 <version>${sentry.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <!-- Security overrides for vulnerable transitive test deps (see properties above). -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-compress</artifactId>
+                <version>${commons-compress.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mozilla</groupId>
+                <artifactId>rhino</artifactId>
+                <version>${rhino.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

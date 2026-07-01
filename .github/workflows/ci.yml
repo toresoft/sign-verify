@@ -221,8 +221,10 @@ jobs:
       # transitive resolution, which is rate-limited (HTTP 429) and chokes on Spring Boot
       # BOM-managed (version-less) deps — silently yielding a false "0 vulnerabilities". The SBOM
       # has concrete versions, needs no live lookups, and is deterministic.
+      # includeTestScope=true so the SBOM (and thus OSV) also covers test-only transitive deps —
+      # Dependabot flags those too, and makeAggregateBom omits test scope by default.
       - name: Generate CycloneDX SBOM
-        run: mvn -B -ntp -DskipTests org.cyclonedx:cyclonedx-maven-plugin:makeAggregateBom
+        run: mvn -B -ntp -DskipTests -DincludeTestScope=true org.cyclonedx:cyclonedx-maven-plugin:makeAggregateBom
       # Redirect stdout host-side (not --output inside the container) to sidestep write-permission
       # issues on the mounted volume under the image's non-root user. `|| true` keeps this advisory
       # job green; the report still captures findings.
