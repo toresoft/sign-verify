@@ -21,7 +21,11 @@ public class DssExtractionAdapter implements ExtractionPort {
 
   @Override
   public ExtractionResult extract(byte[] bytes, String filename) {
-    DSSDocument doc = new InMemoryDocument(bytes, filename);
+    String effectiveName =
+        (filename == null || filename.isBlank())
+            ? ContentTypeDetector.syntheticName("document", bytes)
+            : filename;
+    DSSDocument doc = new InMemoryDocument(bytes, effectiveName);
     SignedDocumentValidator validator;
     try {
       validator = SignedDocumentValidator.fromDocument(doc);
@@ -34,7 +38,8 @@ public class DssExtractionAdapter implements ExtractionPort {
     if (signatures.isEmpty()) {
       throw AppException.signatureParseError("no signatures found");
     }
-    String firstSigId = signatures.get(0).getId();
+    var firstSignature = signatures.get(0);
+    String firstSigId = firstSignature.getId();
 
     List<DSSDocument> originals;
     try {
@@ -46,18 +51,27 @@ public class DssExtractionAdapter implements ExtractionPort {
     List<ExtractedFile> out = new ArrayList<>();
     for (DSSDocument o : originals) {
       try {
-        out.add(
-            new ExtractedFile(
-                o.getName(),
-                o.getMimeType() == null
-                    ? "application/octet-stream"
-                    : o.getMimeType().getMimeTypeString(),
-                o.openStream().readAllBytes()));
+        byte[] content = o.openStream().readAllBytes();
+        String name =
+            (o.getName() == null || o.getName().isBlank())
+                ? ContentTypeDetector.syntheticName("document", content)
+                : o.getName();
+        String mime =
+            o.getMimeType() == null
+                ? ContentTypeDetector.detect(content).mimeType()
+                : o.getMimeType().getMimeTypeString();
+        out.add(new ExtractedFile(name, mime, content));
       } catch (Exception e) {
         throw new IllegalStateException("cannot read extracted document", e);
       }
     }
-    String format = "UNKNOWN";
+
+    String format;
+    try {
+      format = firstSignature.getSignatureForm().name();
+    } catch (Exception e) {
+      format = "UNKNOWN";
+    }
     return new ExtractionResult(format, out);
   }
 }

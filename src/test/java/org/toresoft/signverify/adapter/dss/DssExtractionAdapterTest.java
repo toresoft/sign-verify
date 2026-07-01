@@ -35,4 +35,21 @@ class DssExtractionAdapterTest {
     assertThatThrownBy(() -> extractor.extract(unsignedPdf, "unsigned.pdf"))
         .isInstanceOf(RuntimeException.class);
   }
+
+  @Test
+  void pades_reports_real_signature_format_not_unknown() throws IOException {
+    byte[] pdf =
+        Files.readAllBytes(Path.of("src/test/resources/assets/pades/sample-pades-valid.pdf"));
+    var result = extractor.extract(pdf, "sample.pdf");
+    assertThat(result.signatureFormat()).isEqualTo("PAdES");
+  }
+
+  @Test
+  void extract_works_when_filename_is_null() throws IOException {
+    byte[] pdf =
+        Files.readAllBytes(Path.of("src/test/resources/assets/pades/sample-pades-valid.pdf"));
+    // Passing null filename must not throw; DSS still detects the PAdES form from content.
+    var result = extractor.extract(pdf, null);
+    assertThat(result.signatureFormat()).isEqualTo("PAdES");
+  }
 }
