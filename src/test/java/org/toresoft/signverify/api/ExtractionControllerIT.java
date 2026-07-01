@@ -32,6 +32,7 @@ class ExtractionControllerIT {
 
   @BeforeEach
   void setup() {
+    keys.deleteAll();
     apiKey = "sv_ext01ab_abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKL";
     ApiKey k = new ApiKey();
     k.setId(UUID.randomUUID());
@@ -76,8 +77,7 @@ class ExtractionControllerIT {
 
   @Test
   void extract_tsd_returns_200_and_reports_tsd_format() throws Exception {
-    byte[] tsd =
-        Files.readAllBytes(Path.of("src/test/resources/assets/tsd/sample-rfc5544.tsd"));
+    byte[] tsd = Files.readAllBytes(Path.of("src/test/resources/assets/tsd/sample-rfc5544.tsd"));
     var filePart = new MockMultipartFile("file", "sample.tsd", "application/octet-stream", tsd);
 
     mvc.perform(multipart("/api/v1/extractions").file(filePart).header("X-API-Key", apiKey))
