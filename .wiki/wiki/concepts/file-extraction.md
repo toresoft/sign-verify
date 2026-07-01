@@ -21,6 +21,11 @@ RFC 5544 TimeStampedData (`.tsd`) support is provided by [[entities/tsdawareextr
 - **Multiple originals** (typical of [[concepts/ades-signature-formats|ASiC-E]]) → packed into a ZIP (`application/zip`, `originals.zip`).
 - Headers always present: `X-Signature-Format` (e.g. `CAdES`, `ASiC-E`), `X-Document-Count`.
 
+## Lessons (2026-07-01 recursive-unwrap update)
+- **`TsdAwareExtractionAdapter` was renamed `RecursiveExtractionAdapter`** and generalised from TSD-only to a recursive driver that unwraps ANY nested signed container (TSD → p7m/CAdES → … → leaf). Article [[entities/tsdawareextractionadapter]] is stale pending recompile.
+- **Termination pattern:** recursion in a private helper (keeps `@CircuitBreaker` on the public entry only); a parse failure at `depth==0` propagates (400), at `depth>0` becomes a raw content-sniffed leaf; hard `MAX_DEPTH=10` bound. `X-Signature-Format` reports the OUTERMOST container. See [[2026-07-01-ll-extraction-recursive-unwrap]] L4.
+- **Filename is now optional:** when the multipart filename is absent, a magic-byte `ContentTypeDetector` deduces a `document<ext>` name (the `file` part itself stays required — no OpenAPI change).
+
 ## Related
 - [[entities/sign-verify-2]] · [[entities/dss]] · [[concepts/ades-signature-formats]]
 - [[entities/tsdawareextractionadapter]] · [[concepts/rfc5544-tsd]]

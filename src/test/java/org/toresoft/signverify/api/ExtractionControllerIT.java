@@ -1,3 +1,20 @@
+/**
+ * sign-verify Copyright (C) 2026 toresoft
+ *
+ * <p>This file is part of the "sign-verify" project.
+ *
+ * <p>This library is free software; you can redistribute it and/or modify it under the terms of the
+ * GNU Lesser General Public License as published by the Free Software Foundation; either version 3
+ * of the License, or (at your option) any later version.
+ *
+ * <p>This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * <p>You should have received a copy of the GNU Lesser General Public License along with this
+ * library; if not, write to the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ * Boston, MA 02110-1301 USA
+ */
 package org.toresoft.signverify.api;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -32,6 +49,7 @@ class ExtractionControllerIT {
 
   @BeforeEach
   void setup() {
+    keys.deleteAll();
     apiKey = "sv_ext01ab_abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKL";
     ApiKey k = new ApiKey();
     k.setId(UUID.randomUUID());
@@ -60,5 +78,28 @@ class ExtractionControllerIT {
         .andExpect(status().isOk())
         .andExpect(header().exists("X-Signature-Format"))
         .andExpect(header().exists("X-Document-Count"));
+  }
+
+  @Test
+  void extract_without_multipart_filename_still_returns_200() throws Exception {
+    byte[] pdf =
+        Files.readAllBytes(Path.of("src/test/resources/assets/pades/sample-pades-valid.pdf"));
+    // null original filename -> app must deduce it.
+    var filePart = new MockMultipartFile("file", null, "application/pdf", pdf);
+
+    mvc.perform(multipart("/api/v1/extractions").file(filePart).header("X-API-Key", apiKey))
+        .andExpect(status().isOk())
+        .andExpect(header().string("X-Signature-Format", "PAdES"));
+  }
+
+  @Test
+  void extract_tsd_returns_200_and_reports_tsd_format() throws Exception {
+    byte[] tsd = Files.readAllBytes(Path.of("src/test/resources/assets/tsd/sample-rfc5544.tsd"));
+    var filePart = new MockMultipartFile("file", "sample.tsd", "application/octet-stream", tsd);
+
+    mvc.perform(multipart("/api/v1/extractions").file(filePart).header("X-API-Key", apiKey))
+        .andExpect(status().isOk())
+        .andExpect(header().string("X-Signature-Format", "RFC5544_TSD"))
+        .andExpect(header().string("X-Document-Count", "1"));
   }
 }

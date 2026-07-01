@@ -2,50 +2,36 @@
 type: entity
 category: project
 created: 2026-06-28
-updated: 2026-06-28
+updated: 2026-07-01
+verified: 2026-07-01
 sources:
+  - raw/notes/2026-07-01-ll-extraction-recursive-unwrap
   - concepts/file-extraction
 volatility: warm
+confidence: high
+aliases: [RecursiveExtractionAdapter]
 ---
 
-# TsdAwareExtractionAdapter
+# TsdAwareExtractionAdapter → RecursiveExtractionAdapter (rinominato)
 
-Decorator di `DssExtractionAdapter` ([[entities/dssextractionadapter]]) che aggiunge supporto per estrarre contenuto da file **RFC 5544 TimeStampedData** (`.tsd`).
+> **Rinominato.** Dalla feature `feat/extraction-recursive-unwrap` (2026-07-01) questa classe si chiama
+> **`RecursiveExtractionAdapter`** ed è stata generalizzata da decorator solo-TSD a driver di
+> sbustamento ricorsivo per qualsiasi container firmato annidato.
+> **Voce canonica:** [[entities/recursiveextractionadapter]].
 
-## Perché serve
+## Cosa è cambiato
 
-DSS 6.4 non ha factory per `id-aa-timeStampedData`: `SignedDocumentValidator.fromDocument()`
-lancia `IllegalInputException` su file TSD. L'adapter prova l'unwrap via Bouncy Castle
-**prima di** delegare a DSS, così il circuit breaker non vede mai i fallimenti di parse TSD.
+- **Nome:** `TsdAwareExtractionAdapter` → `RecursiveExtractionAdapter`.
+- **Ruolo:** prima sbustava un solo livello TSD; ora ricorre (TSD → p7m/CAdES → … → leaf) con
+  `MAX_DEPTH=10` e distinzione leaf (depth>0) vs errore (depth==0).
+- **Filename:** ora opzionale (dedotto via `ContentTypeDetector`).
+- Resta `@Primary`, `@CircuitBreaker("dssExtraction")` sulla sola entry pubblica; l'unwrap TSD via
+  BouncyCastle resta il primo passo prima di delegare a [[entities/dssextractionadapter]].
 
-## Flusso
-
-```
-POST /api/v1/extractions (file .tsd)
-  → TsdAwareExtractionAdapter (@Primary, @CircuitBreaker("dssExtraction"))
-    → tryUnwrapTsd() → CMSTimeStampedData (Bouncy Castle)
-    → inner content → ExtractionResult(RFC5544_TSD, [ExtractedFile])
-    → se non è TSD → delegate.extract() (DssExtractionAdapter, DSS nativo)
-```
-
-## Differenze vs TsdAwareValidatorAdapter
-
-| | TsdAwareValidatorAdapter | TsdAwareExtractionAdapter |
-|---|---|---|
-| Endpoint | `POST /verifications` | `POST /extractions` |
-| Porta | `SignatureValidatorPort` | `ExtractionPort` |
-| Delegate | `DssValidatorAdapter` | `DssExtractionAdapter` |
-| Circuit breaker | Sul delegate (`dssValidator`) | Sul decorator (`dssExtraction`) |
-| TSD unwrap | Dopo fallimento delegate | Prima di chiamare delegate |
-| Output | `ValidationResult` (indication, reports, timestamps) | `ExtractionResult` (inner content bytes) |
-
-## Test
-
-- `TsdExtractionSmokeTest` — API-level: POST `/extractions` con `.tsd` → 200 OK, inner content restituito
-- `DssExtractionAdapterTest` — 2 test (PAdES extraction, unsigned PDF error)
+Dettagli completi nella voce canonica [[entities/recursiveextractionadapter]].
 
 ## Related
 
-- [[entities/tsdawarevalidatoradapter]] · [[entities/dssextractionadapter]] · [[entities/dss]]
+- [[entities/recursiveextractionadapter]] · [[entities/tsdawarevalidatoradapter]] · [[entities/dssextractionadapter]]
 - [[concepts/file-extraction]] · [[concepts/rfc5544-tsd]]
-- [[analyses/verifica-file-tsd]]
+- [[2026-07-01-ll-extraction-recursive-unwrap]]

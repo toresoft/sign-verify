@@ -1,7 +1,25 @@
+/**
+ * sign-verify Copyright (C) 2026 toresoft
+ *
+ * <p>This file is part of the "sign-verify" project.
+ *
+ * <p>This library is free software; you can redistribute it and/or modify it under the terms of the
+ * GNU Lesser General Public License as published by the Free Software Foundation; either version 3
+ * of the License, or (at your option) any later version.
+ *
+ * <p>This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * <p>You should have received a copy of the GNU Lesser General Public License along with this
+ * library; if not, write to the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ * Boston, MA 02110-1301 USA
+ */
 package org.toresoft.signverify.adapter.dss;
 
 import eu.europa.esig.dss.model.DSSDocument;
 import eu.europa.esig.dss.model.InMemoryDocument;
+import eu.europa.esig.dss.spi.signature.AdvancedSignature;
 import eu.europa.esig.dss.spi.validation.CertificateVerifier;
 import eu.europa.esig.dss.validation.SignedDocumentValidator;
 import java.util.ArrayList;
@@ -21,7 +39,11 @@ public class DssExtractionAdapter implements ExtractionPort {
 
   @Override
   public ExtractionResult extract(byte[] bytes, String filename) {
-    DSSDocument doc = new InMemoryDocument(bytes, filename);
+    String effectiveName =
+        (filename == null || filename.isBlank())
+            ? ContentTypeDetector.syntheticName("document", bytes)
+            : filename;
+    DSSDocument doc = new InMemoryDocument(bytes, effectiveName);
     SignedDocumentValidator validator;
     try {
       validator = SignedDocumentValidator.fromDocument(doc);
@@ -30,11 +52,12 @@ public class DssExtractionAdapter implements ExtractionPort {
     }
     validator.setCertificateVerifier(certificateVerifier);
 
-    var signatures = validator.getSignatures();
+    var signatures = getSignaturesOrThrow(validator);
     if (signatures.isEmpty()) {
       throw AppException.signatureParseError("no signatures found");
     }
-    String firstSigId = signatures.get(0).getId();
+    var firstSignature = signatures.get(0);
+    String firstSigId = firstSignature.getId();
 
     List<DSSDocument> originals;
     try {
@@ -46,18 +69,42 @@ public class DssExtractionAdapter implements ExtractionPort {
     List<ExtractedFile> out = new ArrayList<>();
     for (DSSDocument o : originals) {
       try {
-        out.add(
-            new ExtractedFile(
-                o.getName(),
-                o.getMimeType() == null
-                    ? "application/octet-stream"
-                    : o.getMimeType().getMimeTypeString(),
-                o.openStream().readAllBytes()));
+        byte[] content = o.openStream().readAllBytes();
+        String name =
+            (o.getName() == null || o.getName().isBlank())
+                ? ContentTypeDetector.syntheticName("document", content)
+                : o.getName();
+        String mime =
+            o.getMimeType() == null
+                ? ContentTypeDetector.detect(content).mimeType()
+                : o.getMimeType().getMimeTypeString();
+        out.add(new ExtractedFile(name, mime, content));
       } catch (Exception e) {
-        throw new IllegalStateException("cannot read extracted document", e);
+        throw AppException.badRequest("cannot read extracted document: " + e.getMessage());
       }
     }
-    String format = "UNKNOWN";
+
+    String format;
+    try {
+      format = firstSignature.getSignatureForm().name();
+    } catch (Exception e) {
+      format = "UNKNOWN";
+    }
     return new ExtractionResult(format, out);
+  }
+
+  /**
+   * {@code validator.getSignatures()} can itself throw a raw DSS/format exception (e.g. a malformed
+   * PDF byte-range slice recursed back in as a fresh document) rather than merely returning an
+   * empty list. Callers of this adapter (notably {@link RecursiveExtractionAdapter}) rely on every
+   * parse failure surfacing as {@link AppException} so it can be told apart from a genuine
+   * leaf/service failure — so any exception here is translated too.
+   */
+  private List<AdvancedSignature> getSignaturesOrThrow(SignedDocumentValidator validator) {
+    try {
+      return validator.getSignatures();
+    } catch (Exception e) {
+      throw AppException.signatureParseError("cannot parse signed document: " + e.getMessage());
+    }
   }
 }

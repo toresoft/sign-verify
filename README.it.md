@@ -4,7 +4,7 @@
 [![pipeline (GitLab)](https://gitlab.com/toresoft/sign-verify/badges/main/pipeline.svg)](https://gitlab.com/toresoft/sign-verify/-/pipelines)
 [![coverage (GitLab)](https://gitlab.com/toresoft/sign-verify/badges/main/coverage.svg)](https://gitlab.com/toresoft/sign-verify/-/commits/main)
 [![docker](https://img.shields.io/docker/v/toresoft/sign-verify?sort=semver&label=docker)](https://hub.docker.com/r/toresoft/sign-verify)
-[![license](https://img.shields.io/badge/license-Apache--2.0-blue)](https://www.apache.org/licenses/LICENSE-2.0)
+[![license](https://img.shields.io/badge/license-LGPL--3.0-blue)](LICENSE)
 
 > 🇮🇹 **Questo documento è in italiano.** · 🇬🇧 [Read this in English](README.md)
 
@@ -251,8 +251,8 @@ o come *repository secrets* su GitHub (Settings → Secrets and variables → Ac
 | `DOCKERHUB_USERNAME` | account/namespace Docker Hub |
 | `DOCKERHUB_TOKEN` | access token Docker Hub (Account → Security) |
 
-Lo stage **security** esegue lo scan dell'immagine con Trivy (HIGH/CRITICAL) e l'OWASP
-dependency-check.
+Lo stage **security** esegue lo scan di immagine e filesystem con Trivy (HIGH/CRITICAL) e uno
+scan delle dipendenze (SCA) con OSV-Scanner sul database OSV.dev.
 
 ### Build & push manuale
 
@@ -284,3 +284,12 @@ La documentazione d'uso approfondita si trova sotto `docs/`, in italiano
 
 - API: contratto OpenAPI in `src/main/resources/openapi/openapi.yaml`.
   Swagger UI su `/swagger-ui/index.html`
+
+## 9. Licenza
+
+`sign-verify-2` è distribuito con licenza **GNU Lesser General Public License v3.0
+(LGPL-3.0)** — vedi [`LICENSE`](LICENSE).
+
+Dipende dalla libreria UE **DSS** (`eu.europa.ec.joinup.sd-dss`, LGPL-2.1) e include fixture
+di test di terze parti con licenze proprie (LGPL-2.1, EUPL-1.1, GPL/Artistic). Attribuzioni
+complete: [`NOTICE.md`](NOTICE.md).

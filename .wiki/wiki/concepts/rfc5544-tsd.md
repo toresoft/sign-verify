@@ -2,10 +2,13 @@
 type: concept
 domain: standards
 created: 2026-06-27
-updated: 2026-06-27
+updated: 2026-07-01
+verified: 2026-07-01
+confidence: high
 sources:
   - sources/rfc5544-tsd-standard
   - sources/etsi-en-319-102-1-timestamp
+  - raw/notes/2026-07-01-ll-extraction-recursive-unwrap
 volatility: warm
 ---
 
@@ -96,8 +99,19 @@ SignedDocumentValidator.fromDocument(tsdDoc) → throws:
 | Adozione EU | Solo Italia (de-facto) | Obbligatorio in alcuni contesti (Dec. CE 2015/1506) |
 | Anno | 2010 | 2011/2016 |
 
+## Gotcha di test: BouncyCastle richiede `temporalEvidence`
+Una fixture TSD costruita a mano con solo `[version, content]` (omettendo il campo obbligatorio
+`temporalEvidence`) fa lanciare a `TimeStampedData`/`CMSTimeStampedData` un
+`ArrayIndexOutOfBoundsException` — swallowed da `catch (Exception)`, così l'unwrap fallisce
+silenziosamente. Un test **solo-routing** (che non costruisce mai `CMSTimeStampedData`) può ometterlo;
+un test che **sbuccia davvero** deve encodare un `temporalEvidence` sintatticamente valido
+(`[0] IMPLICIT TimeStampTokenEvidence` → `TimeStampAndCRL` → `ContentInfo` minimale, senza token RFC
+3161 reale). Vedi L2 in [[2026-07-01-ll-extraction-recursive-unwrap]].
+
 ## Related
 
+- [[entities/recursiveextractionadapter]] — driver di sbustamento ricorsivo TSD + container
+- [[2026-07-01-ll-extraction-recursive-unwrap]] — L2 temporalEvidence, L4 terminazione ricorsione
 - [[analyses/verifica-file-tsd]] — analisi DSS routing per .tsd
 - [[concepts/timestamping]] — marca temporale RFC 3161
 - [[entities/detachedtimestampvalidator]] — validator per timestamp puri

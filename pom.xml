@@ -9,6 +9,14 @@
     <version>1.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
+    <licenses>
+        <license>
+            <name>GNU Lesser General Public License v3.0</name>
+            <url>https://www.gnu.org/licenses/lgpl-3.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -25,10 +33,25 @@
         <tomcat.version>10.1.55</tomcat.version>
         <!-- Override Spring Boot's managed PostgreSQL driver (42.7.10) for CVE-2026-42198. -->
         <postgresql.version>42.7.11</postgresql.version>
-        <!-- Override Spring Boot's managed Jackson (2.21.2) for CVE-2026-23183, CVE-2026-54512,
-             CVE-2026-54513 and CVE-2026-54515. 2.21.5 is not on Maven Central; 2.22.0 is the first
-             released version clearing all four. -->
+        <!-- Override Spring Boot's managed Jackson (2.21.2) for CVE-2026-23183, CVE-2026-54512
+             and CVE-2026-54513: 2.22.0 (the latest published 2.x) clears these three.
+             CVE-2026-54515 is fixed only in 2.21.5 / 2.22.1, neither of which is on Maven Central
+             yet, so it is currently unpatchable via a version bump — tracked, bump to 2.22.1 once
+             released. Real exposure is low: it requires case-insensitive deserialization of
+             untrusted JSON combined with property-level @JsonIgnoreProperties. -->
         <jackson-bom.version>2.22.0</jackson-bom.version>
+        <!-- Override Spring Boot's managed Spring Security (6.5.10) for CVE-2026-47838: malformed
+             X.509 CN parsing in SubjectDnX509PrincipalExtractor can read the wrong username
+             (user impersonation). Fixed in 6.5.11. -->
+        <spring-security.version>6.5.11</spring-security.version>
+        <!-- Override transitive TEST-scope deps flagged by Dependabot (test-only, never shipped):
+             commons-compress (via Testcontainers) — CVE-2024-25710 (DUMP infinite-loop DoS) and
+             CVE-2024-26308 (Pack200 OOM), both fixed in 1.26.0. rhino (via
+             swagger-request-validator -> json-schema-validator) — CVE-2025-66453 (toFixed DoS),
+             fixed in 1.7.15.1. Pinned via explicit dependencyManagement below so they win over the
+             imported BOMs. -->
+        <commons-compress.version>1.27.1</commons-compress.version>
+        <rhino.version>1.7.15.1</rhino.version>
         <dss.version>6.4</dss.version>
         <resilience4j.version>2.2.0</resilience4j.version>
         <shedlock.version>5.16.0</shedlock.version>
@@ -64,6 +87,17 @@
                 <version>${sentry.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <!-- Security overrides for vulnerable transitive test deps (see properties above). -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-compress</artifactId>
+                <version>${commons-compress.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mozilla</groupId>
+                <artifactId>rhino</artifactId>
+                <version>${rhino.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

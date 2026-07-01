@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "last_updated": "2026-06-30T00:30:00.000Z",
+  "last_updated": "2026-07-01T12:00:00.000Z",
   "pages": {
     "concepts/italian-digital-signature-law": {
       "type": "concept",
@@ -937,6 +937,43 @@
       "created": "2026-06-28",
       "updated": "2026-06-28",
       "category": "project"
+    },
+    "entities/recursiveextractionadapter": {
+      "type": "entity",
+      "title": "RecursiveExtractionAdapter — driver di sbustamento ricorsivo (TSD + container DSS)",
+      "created": "2026-07-01",
+      "updated": "2026-07-01",
+      "sources": [
+        "raw/notes/2026-07-01-ll-extraction-recursive-unwrap",
+        "concepts/file-extraction"
+      ]
+    },
+    "analyses/extraction-siva-vs-sign-verify-2": {
+      "type": "analysis",
+      "title": "Estrazione file originale: SiVa /getDataFiles (DDOC-only) vs /extractions (ricorsivo)",
+      "created": "2026-07-01",
+      "updated": "2026-07-01",
+      "sources": [
+        "sources/SRC-2026-06-28-001"
+      ]
+    },
+    "analyses/verification-siva-vs-sign-verify-2": {
+      "type": "analysis",
+      "title": "Verifica firma: SiVa (fork DSS, sync, POLv3/v4, hashcode) vs sign-verify-2 (upstream, async, preset+override, TSD)",
+      "created": "2026-07-01",
+      "updated": "2026-07-01",
+      "sources": [
+        "sources/SRC-2026-06-28-001"
+      ]
+    },
+    "analyses/architecture-siva-vs-sign-verify-2": {
+      "type": "analysis",
+      "title": "Architettura/pattern: SiVa proxy-selector multi-webapp vs sign-verify-2 esagonale + decorator two-engine",
+      "created": "2026-07-01",
+      "updated": "2026-07-01",
+      "sources": [
+        "sources/SRC-2026-06-28-001"
+      ]
     }
   }
 }
