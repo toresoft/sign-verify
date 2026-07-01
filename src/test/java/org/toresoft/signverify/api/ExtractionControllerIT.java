@@ -61,4 +61,28 @@ class ExtractionControllerIT {
         .andExpect(header().exists("X-Signature-Format"))
         .andExpect(header().exists("X-Document-Count"));
   }
+
+  @Test
+  void extract_without_multipart_filename_still_returns_200() throws Exception {
+    byte[] pdf =
+        Files.readAllBytes(Path.of("src/test/resources/assets/pades/sample-pades-valid.pdf"));
+    // null original filename -> app must deduce it.
+    var filePart = new MockMultipartFile("file", null, "application/pdf", pdf);
+
+    mvc.perform(multipart("/api/v1/extractions").file(filePart).header("X-API-Key", apiKey))
+        .andExpect(status().isOk())
+        .andExpect(header().string("X-Signature-Format", "PAdES"));
+  }
+
+  @Test
+  void extract_tsd_returns_200_and_reports_tsd_format() throws Exception {
+    byte[] tsd =
+        Files.readAllBytes(Path.of("src/test/resources/assets/tsd/sample-rfc5544.tsd"));
+    var filePart = new MockMultipartFile("file", "sample.tsd", "application/octet-stream", tsd);
+
+    mvc.perform(multipart("/api/v1/extractions").file(filePart).header("X-API-Key", apiKey))
+        .andExpect(status().isOk())
+        .andExpect(header().string("X-Signature-Format", "RFC5544_TSD"))
+        .andExpect(header().string("X-Document-Count", "1"));
+  }
 }

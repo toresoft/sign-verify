@@ -141,4 +141,18 @@ class RecursiveExtractionAdapterTest {
 
     assertThatThrownBy(() -> adapter.extract(plain, "plain.txt")).isInstanceOf(AppException.class);
   }
+
+  @Test
+  void nesting_beyond_max_depth_throws_app_exception() throws Exception {
+    byte[] deeplyNested = "%PDF-leaf".getBytes();
+    for (int i = 0; i < 12; i++) {
+      deeplyNested = tsd(deeplyNested);
+    }
+    var adapter = new RecursiveExtractionAdapter(new StubDelegate(null));
+    byte[] finalDeeplyNested = deeplyNested;
+
+    assertThatThrownBy(() -> adapter.extract(finalDeeplyNested, "deep.tsd"))
+        .isInstanceOf(AppException.class)
+        .hasMessageContaining("max depth");
+  }
 }
