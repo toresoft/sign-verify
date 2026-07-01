@@ -2,6 +2,7 @@ package org.toresoft.signverify.adapter.dss;
 
 import eu.europa.esig.dss.model.DSSDocument;
 import eu.europa.esig.dss.model.InMemoryDocument;
+import eu.europa.esig.dss.spi.signature.AdvancedSignature;
 import eu.europa.esig.dss.spi.validation.CertificateVerifier;
 import eu.europa.esig.dss.validation.SignedDocumentValidator;
 import java.util.ArrayList;
@@ -34,7 +35,7 @@ public class DssExtractionAdapter implements ExtractionPort {
     }
     validator.setCertificateVerifier(certificateVerifier);
 
-    var signatures = validator.getSignatures();
+    var signatures = getSignaturesOrThrow(validator);
     if (signatures.isEmpty()) {
       throw AppException.signatureParseError("no signatures found");
     }
@@ -73,5 +74,20 @@ public class DssExtractionAdapter implements ExtractionPort {
       format = "UNKNOWN";
     }
     return new ExtractionResult(format, out);
+  }
+
+  /**
+   * {@code validator.getSignatures()} can itself throw a raw DSS/format exception (e.g. a malformed
+   * PDF byte-range slice recursed back in as a fresh document) rather than merely returning an
+   * empty list. Callers of this adapter (notably {@link RecursiveExtractionAdapter}) rely on every
+   * parse failure surfacing as {@link AppException} so it can be told apart from a genuine
+   * leaf/service failure — so any exception here is translated too.
+   */
+  private List<AdvancedSignature> getSignaturesOrThrow(SignedDocumentValidator validator) {
+    try {
+      return validator.getSignatures();
+    } catch (Exception e) {
+      throw AppException.signatureParseError("cannot parse signed document: " + e.getMessage());
+    }
   }
 }

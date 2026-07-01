@@ -81,7 +81,7 @@ class TsdExtractionSmokeTest {
     System.out.println("[TsdExtractionSmokeTest] body=" + response.getBody());
 
     assertThat(response.getStatusCode())
-        .as("TSD extraction via TsdAwareExtractionAdapter")
+        .as("TSD extraction via RecursiveExtractionAdapter")
         .isEqualTo(HttpStatus.OK);
 
     assertThat(response.getBody()).isNotNull().isNotEmpty();
