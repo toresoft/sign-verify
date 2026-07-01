@@ -63,7 +63,7 @@ public class DssExtractionAdapter implements ExtractionPort {
                 : o.getMimeType().getMimeTypeString();
         out.add(new ExtractedFile(name, mime, content));
       } catch (Exception e) {
-        throw new IllegalStateException("cannot read extracted document", e);
+        throw AppException.badRequest("cannot read extracted document: " + e.getMessage());
       }
     }
 
