@@ -107,5 +107,5 @@ ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]
 
 LABEL org.opencontainers.image.title="sign-verify" \
       org.opencontainers.image.description="eIDAS digital signature verification service (DSS 6.4)" \
-      org.opencontainers.image.source="https://hub.docker.com/r/toresoft/sign-verify" \
-      org.opencontainers.image.licenses="Apache-2.0"
+      org.opencontainers.image.source="https://github.com/toresoft/sign-verify" \
+      org.opencontainers.image.licenses="LGPL-3.0"

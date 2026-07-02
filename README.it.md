@@ -8,7 +8,7 @@
 
 > 🇮🇹 **Questo documento è in italiano.** · 🇬🇧 [Read this in English](README.md)
 
-> Servizio REST per la **verifica di firme elettroniche eIDAS** (PAdES, CAdES, XAdES, JAdES, ASiC), basato su Spring Boot 3.4 e sulla libreria europea **DSS 6.4**, con gestione delle Trusted List UE (LOTL/TSL).
+> Servizio REST per la **verifica di firme elettroniche eIDAS** (PAdES, CAdES, XAdES, JAdES, ASiC), basato su Spring Boot 3.5 e sulla libreria europea **DSS 6.4**, con gestione delle Trusted List UE (LOTL/TSL).
 
 ---
 
@@ -144,7 +144,7 @@ limiti di risorse e healthcheck di readiness. Richiede un PostgreSQL gestito est
 ## 4. Prima prova (quick start)
 
 Esempio end-to-end con lo stack Docker di sviluppo e il PDF firmato di esempio incluso
-nel repository (`src/test/resources/signatures/sample-pades-valid.pdf`).
+nel repository (`src/test/resources/assets/pades/sample-pades-valid.pdf`).
 
 **1. Avvia lo stack**
 
@@ -174,7 +174,7 @@ Senza `metadata` viene usato il profilo di default e i report `simple` + `etsi`.
 ```bash
 curl -s -X POST http://localhost:8080/api/v1/verifications \
   -H "X-API-Key: $KEY" \
-  -F "file=@src/test/resources/signatures/sample-pades-valid.pdf" | jq
+  -F "file=@src/test/resources/assets/pades/sample-pades-valid.pdf" | jq
 ```
 
 Risposta (estratto):
@@ -204,7 +204,7 @@ curl -s http://localhost:8080/api/v1/profiles -H "X-API-Key: $KEY" | jq '.[].id,
 
 curl -s -X POST http://localhost:8080/api/v1/verifications \
   -H "X-API-Key: $KEY" \
-  -F "file=@src/test/resources/signatures/sample-pades-valid.pdf" \
+  -F "file=@src/test/resources/assets/pades/sample-pades-valid.pdf" \
   -F 'metadata={"profileId":"<UUID>","reports":["simple","detailed"]};type=application/json' | jq
 ```
 

@@ -1,17 +1,17 @@
 # sign-verify
 
 REST service for **eIDAS electronic-signature verification** (PAdES, CAdES,
-XAdES, JAdES, ASiC) built on Spring Boot and the EU **DSS 6.4** library, with EU
-Trusted List (LOTL/TSL) management.
+XAdES, JAdES, ASiC) built on Spring Boot 3.5 and the EU **DSS 6.4** library,
+with EU Trusted List (LOTL/TSL) management.
 
-- 📦 **Source repository:** https://gitlab.com/toresoft/sign-verify
-- 📖 **Full documentation:** https://gitlab.com/toresoft/sign-verify/-/tree/main/docs
-  ([English](https://gitlab.com/toresoft/sign-verify/-/blob/main/docs/en/README.md) ·
-  [Italiano](https://gitlab.com/toresoft/sign-verify/-/blob/main/docs/it/README.md))
-- 🐞 **Issues:** https://gitlab.com/toresoft/sign-verify/-/issues
+- 📦 **Source repository:** https://github.com/toresoft/sign-verify
+- 📖 **Full documentation:** https://github.com/toresoft/sign-verify/tree/main/docs
+  ([English](https://github.com/toresoft/sign-verify/blob/main/docs/en/README.md) ·
+  [Italiano](https://github.com/toresoft/sign-verify/blob/main/docs/it/README.md))
+- 🐞 **Issues:** https://github.com/toresoft/sign-verify/issues
 
 > This page is a quick reference for running the published image. The complete,
-> diagram-rich usage guide lives in the [source repository](https://gitlab.com/toresoft/sign-verify).
+> diagram-rich usage guide lives in the [source repository](https://github.com/toresoft/sign-verify).
 
 ---
 
@@ -35,7 +35,8 @@ ASiC-S/ASiC-E.
 ## Image
 
 - **Registry:** `toresoft/sign-verify`
-- **Base:** `eclipse-temurin:21-jre-alpine`, runs as non-root (`uid:gid 10001`)
+- **Base:** `alpine:3.21` with a minimal custom **jlink** runtime (Java 21), runs
+  as non-root (`uid:gid 10001`)
 - **Exposed port:** `8080`
 - **Writable data path:** `/var/lib/sign-verify` (mount a volume here)
 
@@ -75,7 +76,7 @@ docker exec sign-verify cat /var/lib/sign-verify/bootstrap-api-key.txt
 
 A hardened, production-oriented `docker-compose.prod.yml` (read-only root FS,
 dropped capabilities, resource limits) is provided in the
-[repository](https://gitlab.com/toresoft/sign-verify/-/blob/main/docker-compose.prod.yml).
+[repository](https://github.com/toresoft/sign-verify/blob/main/docker-compose.prod.yml).
 
 ## Main environment variables
 
@@ -90,7 +91,7 @@ dropped capabilities, resource limits) is provided in the
 | `SERVER_PORT` | HTTP port | `8080` |
 
 See the full list and details in the
-[configuration guide](https://gitlab.com/toresoft/sign-verify/-/blob/main/docs/en/01-build-configuration.md).
+[configuration guide](https://github.com/toresoft/sign-verify/blob/main/docs/en/01-build-configuration.md).
 
 ## Health
 
@@ -103,10 +104,11 @@ See the full list and details in the
 
 OpenAPI contract is served at `/v3/api-docs`, Swagger UI at
 `/swagger-ui/index.html`. Endpoint reference:
-[signature verification](https://gitlab.com/toresoft/sign-verify/-/blob/main/docs/en/05-signature-verification.md) ·
-[authentication](https://gitlab.com/toresoft/sign-verify/-/blob/main/docs/en/03-authentication.md) ·
-[trusted certificates](https://gitlab.com/toresoft/sign-verify/-/blob/main/docs/en/04-trusted-certificates.md).
+[signature verification](https://github.com/toresoft/sign-verify/blob/main/docs/en/05-signature-verification.md) ·
+[authentication](https://github.com/toresoft/sign-verify/blob/main/docs/en/03-authentication.md) ·
+[trusted certificates](https://github.com/toresoft/sign-verify/blob/main/docs/en/04-trusted-certificates.md).
 
 ## License
 
-Apache-2.0.
+LGPL-3.0. See [NOTICE](https://github.com/toresoft/sign-verify/blob/main/NOTICE.md)
+for third-party attributions.

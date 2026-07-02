@@ -8,7 +8,7 @@
 
 > 🇬🇧 **English** · 🇮🇹 [Leggi in italiano](README.it.md)
 
-> REST service for **eIDAS electronic-signature verification** (PAdES, CAdES, XAdES, JAdES, ASiC), built on Spring Boot 3.4 and the EU **DSS 6.4** library, with EU Trusted List (LOTL/TSL) management.
+> REST service for **eIDAS electronic-signature verification** (PAdES, CAdES, XAdES, JAdES, ASiC), built on Spring Boot 3.5 and the EU **DSS 6.4** library, with EU Trusted List (LOTL/TSL) management.
 
 ---
 
@@ -146,7 +146,7 @@ limits and a readiness healthcheck. It expects an external, managed PostgreSQL.
 ## 4. First try (quick start)
 
 End-to-end example using the Docker development stack and the sample signed PDF bundled in
-the repository (`src/test/resources/signatures/sample-pades-valid.pdf`).
+the repository (`src/test/resources/assets/pades/sample-pades-valid.pdf`).
 
 **1. Start the stack**
 
@@ -206,7 +206,7 @@ curl -s http://localhost:8080/api/v1/profiles -H "X-API-Key: $KEY" | jq '.[].id,
 
 curl -s -X POST http://localhost:8080/api/v1/verifications \
   -H "X-API-Key: $KEY" \
-  -F "file=@src/test/resources/signatures/sample-pades-valid.pdf" \
+  -F "file=@src/test/resources/assets/pades/sample-pades-valid.pdf" \
   -F 'metadata={"profileId":"<UUID>","reports":["simple","detailed"]};type=application/json' | jq
 ```
 
