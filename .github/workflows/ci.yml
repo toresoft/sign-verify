@@ -262,9 +262,13 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Only the release assets — not every artifact. Skips the flaky `.dockerbuild`
+      # build-record blob that build-push-action auto-uploads (its download 500s and
+      # fails the job after 5 retries).
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
+          pattern: "{jar,osv-report,trivy-report}"
           merge-multiple: true
       - name: Create GitHub release
         env:
