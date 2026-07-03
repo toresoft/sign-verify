@@ -60,9 +60,94 @@ class ValidationJobRepositoryTest {
     repo.saveAll(List.of(j1, j2));
     em.flush();
 
-    var picked = repo.findPickablePending(10, 10);
+    var picked = repo.findPickablePending(10, Instant.now(), 10);
     assertThat(picked).hasSize(2);
     assertThat(picked.get(0).getId()).isEqualTo(j1.getId());
+  }
+
+  @Test
+  void expireOverdue_failsOnlyExpiredPendingAndRunning() {
+    Instant past = Instant.now().minusSeconds(60);
+    ValidationJob pendingExpired = newJob(JobStatus.PENDING, "alice");
+    pendingExpired.setExpiresAt(past);
+    pendingExpired.setCallbackUrl("https://callback.example/hook");
+    ValidationJob runningExpired = newJob(JobStatus.RUNNING, "alice");
+    runningExpired.setExpiresAt(past);
+    ValidationJob completedExpired = newJob(JobStatus.COMPLETED, "alice");
+    completedExpired.setExpiresAt(past);
+    completedExpired.setResultPath("some/result.json");
+    ValidationJob pendingFresh = newJob(JobStatus.PENDING, "alice");
+    repo.saveAll(List.of(pendingExpired, runningExpired, completedExpired, pendingFresh));
+    em.flush();
+
+    int n = repo.expireOverdue(Instant.now());
+
+    assertThat(n).isEqualTo(2);
+    ValidationJob p = repo.findById(pendingExpired.getId()).orElseThrow();
+    assertThat(p.getStatus()).isEqualTo(JobStatus.FAILED);
+    assertThat(p.getErrorMessage()).isEqualTo("job_expired");
+    assertThat(p.getCompletedAt()).isNotNull();
+    assertThat(p.getNextCallbackAt()).isNotNull(); // has callbackUrl
+    ValidationJob r = repo.findById(runningExpired.getId()).orElseThrow();
+    assertThat(r.getStatus()).isEqualTo(JobStatus.FAILED);
+    assertThat(r.getNextCallbackAt()).isNull(); // no callbackUrl
+    // Terminal and fresh jobs are untouched: the update is conditional on status+expiry.
+    assertThat(repo.findById(completedExpired.getId()).orElseThrow().getStatus())
+        .isEqualTo(JobStatus.COMPLETED);
+    assertThat(repo.findById(pendingFresh.getId()).orElseThrow().getStatus())
+        .isEqualTo(JobStatus.PENDING);
+  }
+
+  @Test
+  void resetStaleRunning_requeuesOnlyStaleRunningJobs() {
+    Instant now = Instant.now();
+    ValidationJob stale = newJob(JobStatus.RUNNING, "alice");
+    stale.setStartedAt(now.minusSeconds(3600));
+    stale.setPickupAttempts(1);
+    ValidationJob fresh = newJob(JobStatus.RUNNING, "alice");
+    fresh.setStartedAt(now.minusSeconds(10));
+    ValidationJob pending = newJob(JobStatus.PENDING, "alice");
+    repo.saveAll(List.of(stale, fresh, pending));
+    em.flush();
+
+    int n = repo.resetStaleRunning(now.minusSeconds(1800));
+
+    assertThat(n).isEqualTo(1);
+    ValidationJob s = repo.findById(stale.getId()).orElseThrow();
+    assertThat(s.getStatus()).isEqualTo(JobStatus.PENDING);
+    assertThat(s.getStartedAt()).isNull();
+    // The pickup counter is NOT reset: crash-looping jobs stay bounded by max-pickup-attempts.
+    assertThat(s.getPickupAttempts()).isEqualTo(1);
+    assertThat(repo.findById(fresh.getId()).orElseThrow().getStatus()).isEqualTo(JobStatus.RUNNING);
+    assertThat(repo.findById(pending.getId()).orElseThrow().getStatus())
+        .isEqualTo(JobStatus.PENDING);
+  }
+
+  @Test
+  void findPickablePending_skipsExpiredJobs() {
+    ValidationJob expired = newJob(JobStatus.PENDING, "alice");
+    expired.setExpiresAt(Instant.now().minusSeconds(60));
+    ValidationJob fresh = newJob(JobStatus.PENDING, "alice");
+    repo.saveAll(List.of(expired, fresh));
+    em.flush();
+
+    var picked = repo.findPickablePending(10, Instant.now(), 10);
+
+    assertThat(picked).extracting(ValidationJob::getId).containsExactly(fresh.getId());
+  }
+
+  @Test
+  void countByStatus_countsOnlyMatchingJobs() {
+    repo.saveAll(
+        List.of(
+            newJob(JobStatus.PENDING, "alice"),
+            newJob(JobStatus.PENDING, "bob"),
+            newJob(JobStatus.RUNNING, "alice")));
+    em.flush();
+
+    assertThat(repo.countByStatus(JobStatus.PENDING)).isEqualTo(2);
+    assertThat(repo.countByStatus(JobStatus.RUNNING)).isEqualTo(1);
+    assertThat(repo.countByStatus(JobStatus.COMPLETED)).isZero();
   }
 
   private ValidationJob newJob(JobStatus status, String principalId) {

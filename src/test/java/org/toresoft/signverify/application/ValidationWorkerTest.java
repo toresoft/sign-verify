@@ -81,7 +81,15 @@ class ValidationWorkerTest {
   void setUp() {
     worker =
         new ValidationWorker(
-            repo, storage, profileService, applier, validator, om, registry, MAX_PICKUP_ATTEMPTS);
+            repo,
+            storage,
+            profileService,
+            applier,
+            validator,
+            om,
+            registry,
+            MAX_PICKUP_ATTEMPTS,
+            java.time.Duration.ofMinutes(30));
     lenient().when(registry.circuitBreaker("dssValidator")).thenReturn(circuit);
     // By default the worker wins the atomic claim; tests that exercise the lost-race / not-pending
     // path override this with 0.
@@ -262,6 +270,27 @@ class ValidationWorkerTest {
   }
 
   @Test
+  void process_dssUnavailable_givesBackThePickupAttempt() {
+    ValidationJob job = newPendingJob();
+    // Post-claim state: the claim incremented the counter from 0 to 1.
+    job.setPickupAttempts(1);
+    job.setStartedAt(java.time.Instant.now());
+    when(repo.findById(job.getId())).thenReturn(Optional.of(job));
+    when(storage.read(anyString())).thenReturn(new byte[] {0});
+    when(profileService.getOrDefault(PROFILE_ID)).thenReturn(profile());
+    when(validator.validate(any(ValidationRequest.class)))
+        .thenThrow(AppException.dssUnavailable("dss down"));
+
+    worker.process(job.getId());
+
+    // Transient DSS unavailability must not consume the poison-job pickup budget: the requeue
+    // compensates the claim's increment. Retries stay bounded by the job TTL + circuit breaker.
+    ValidationJob last = captureLastSave();
+    assertThat(last.getStatus()).isEqualTo(JobStatus.PENDING);
+    assertThat(last.getPickupAttempts()).isZero();
+  }
+
+  @Test
   void process_dssUnavailableMaxAttempts_marksFailed() {
     ValidationJob job = newPendingJob();
     // Post-claim state: the claim brought the counter up to the cap, so no further retry.
@@ -327,12 +356,23 @@ class ValidationWorkerTest {
   // ---------------------------------------------------------------------
 
   @Test
+  void poll_requeuesStaleRunningJobs_beforePicking() {
+    when(circuit.getState()).thenReturn(CircuitBreaker.State.CLOSED);
+
+    worker.poll();
+
+    // Jobs stranded in RUNNING by a crashed instance are recovered on every poll, not only when
+    // they expire days later.
+    verify(repo, times(1)).resetStaleRunning(any(java.time.Instant.class));
+  }
+
+  @Test
   void poll_skipsWhenCircuitOpen() {
     when(circuit.getState()).thenReturn(CircuitBreaker.State.OPEN);
 
     worker.poll();
 
-    verify(repo, never()).findPickablePending(anyInt(), any());
+    verify(repo, never()).findPickablePending(anyInt(), any(), any());
     verify(validator, never()).validate(any());
   }
 
@@ -341,7 +381,8 @@ class ValidationWorkerTest {
     when(circuit.getState()).thenReturn(CircuitBreaker.State.CLOSED);
     ValidationJob j1 = newPendingJob();
     ValidationJob j2 = newPendingJob();
-    when(repo.findPickablePending(eq(MAX_PICKUP_ATTEMPTS), any())).thenReturn(List.of(j1, j2));
+    when(repo.findPickablePending(eq(MAX_PICKUP_ATTEMPTS), any(), any()))
+        .thenReturn(List.of(j1, j2));
     // Both jobs will be loaded again by process() through findById
     when(repo.findById(j1.getId())).thenReturn(Optional.of(j1));
     when(repo.findById(j2.getId())).thenReturn(Optional.of(j2));
@@ -349,7 +390,7 @@ class ValidationWorkerTest {
 
     worker.poll();
 
-    verify(repo).findPickablePending(eq(MAX_PICKUP_ATTEMPTS), any());
+    verify(repo).findPickablePending(eq(MAX_PICKUP_ATTEMPTS), any(), any());
     verify(repo).findById(j1.getId());
     verify(repo).findById(j2.getId());
     verify(validator, times(2)).validate(any(ValidationRequest.class));

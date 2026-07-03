@@ -55,11 +55,14 @@ app:
       cron: "0 0 3 * * *"
     worker:
       poll-interval: PT60S
+      stale-running-timeout: PT30M
   callback:
     timeout: PT5S
     allow-http: true
     block-private-networks: false
     max-attempts: 3
+    hmac-default-algorithm: HmacSHA256
+    allowed-algorithms: HmacSHA256,HmacSHA512
     backoff: PT5S,PT30S,PT2M
     success-statuses: 200,202
     non-retryable-statuses: 400,401,403,404,410

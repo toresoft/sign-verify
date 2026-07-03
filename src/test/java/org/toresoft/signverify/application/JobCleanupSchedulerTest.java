@@ -22,7 +22,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -46,10 +45,9 @@ import org.toresoft.signverify.domain.port.DocumentStoragePort;
 import org.toresoft.signverify.persistence.ValidationJobRepository;
 
 /**
- * Unit tests for {@link JobCleanupScheduler}.
- *
- * <p>All tests are pure Mockito unit tests; no Spring context is started. These tests are expected
- * to FAIL until the {@code JobCleanupScheduler} class is implemented (FASE 10, Task 10.1).
+ * Unit tests for {@link JobCleanupScheduler}: delegation to the filtered repository queries and
+ * per-phase side effects. End-to-end behavior against the real schema is covered by {@link
+ * JobCleanupSchedulerDbTest}.
  */
 @ExtendWith(MockitoExtension.class)
 class JobCleanupSchedulerTest {
@@ -59,7 +57,6 @@ class JobCleanupSchedulerTest {
   private static final Duration TOMBSTONE_RETENTION = Duration.ofDays(90);
   private static final String DOC_PATH = "storage/input/abc.pdf";
   private static final String RESULT_PATH = "storage/result/abc.json";
-  private static final String CALLBACK_URL = "https://callback.example/hook";
 
   @Mock private ValidationJobRepository repo;
   @Mock private DocumentStoragePort storage;
@@ -69,302 +66,126 @@ class JobCleanupSchedulerTest {
 
   @BeforeEach
   void setUp() {
-    org.mockito.Mockito.reset(repo, storage, audit);
     scheduler =
         new JobCleanupScheduler(
             repo, storage, audit, INPUT_RETENTION, RESULT_RETENTION, TOMBSTONE_RETENTION);
   }
 
-  // ---------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------
-
-  private ValidationJob newJob(JobStatus status) {
-    return newJob(status, null, null, null, null);
-  }
-
-  private ValidationJob newJob(
-      JobStatus status,
-      Instant completedAt,
-      Instant expiresAt,
-      Instant deletedAt,
-      String callbackUrl) {
+  private ValidationJob terminalJob(JobStatus status) {
     ValidationJob job = new ValidationJob();
     job.setId(UUID.randomUUID());
     job.setStatus(status);
     job.setDocumentPath(DOC_PATH);
     job.setResultPath(RESULT_PATH);
-    job.setCompletedAt(completedAt);
-    job.setExpiresAt(expiresAt);
-    job.setDeletedAt(deletedAt);
-    job.setCallbackUrl(callbackUrl);
+    job.setCompletedAt(Instant.now().minus(Duration.ofDays(60)));
     return job;
   }
 
-  /** Captures the most recent entity passed to {@code repo.save(...)} and returns it. */
-  private ValidationJob captureLastSave() {
-    ArgumentCaptor<ValidationJob> captor = ArgumentCaptor.forClass(ValidationJob.class);
-    verify(repo, atLeastOnce()).save(captor.capture());
-    List<ValidationJob> all = captor.getAllValues();
-    return all.get(all.size() - 1);
+  @SuppressWarnings("unchecked")
+  private List<ValidationJob> captureLastSaveAll() {
+    ArgumentCaptor<List<ValidationJob>> captor = ArgumentCaptor.forClass(List.class);
+    verify(repo, org.mockito.Mockito.atLeastOnce()).saveAll(captor.capture());
+    return captor.getValue();
   }
 
-  private static org.mockito.verification.VerificationMode atLeastOnce() {
-    return org.mockito.Mockito.atLeastOnce();
-  }
-
-  // ---------------------------------------------------------------------
-  // Phase 4: EXPIRED — PENDING/RUNNING + expiresAt < now → FAILED
-  // ---------------------------------------------------------------------
+  // --- EXPIRED phase: delegated to the conditional bulk update -------------
 
   @Test
-  void cleanup_expiredPendingJob_marksFailed() {
-    ValidationJob job = newJob(JobStatus.PENDING, null, Instant.now().minusSeconds(60), null, null);
-    when(repo.findAll()).thenReturn(List.of(job));
+  void cleanup_expiresOverdueJobs_viaConditionalUpdate() {
+    when(repo.expireOverdue(any())).thenReturn(3);
 
     scheduler.cleanup();
 
-    ValidationJob saved = captureLastSave();
-    assertThat(saved.getStatus()).isEqualTo(JobStatus.FAILED);
-    assertThat(saved.getErrorMessage()).isEqualTo("job_expired");
-    assertThat(saved.getCompletedAt()).isNotNull();
+    verify(repo, times(1)).expireOverdue(any(Instant.class));
+    // Expiry must never load entities and re-save them: the conditional UPDATE is the whole phase.
+    verify(repo, never()).findAll();
   }
 
-  @Test
-  void cleanup_expiredRunningJob_marksFailed() {
-    ValidationJob job = newJob(JobStatus.RUNNING, null, Instant.now().minusSeconds(60), null, null);
-    when(repo.findAll()).thenReturn(List.of(job));
-
-    scheduler.cleanup();
-
-    ValidationJob saved = captureLastSave();
-    assertThat(saved.getStatus()).isEqualTo(JobStatus.FAILED);
-    assertThat(saved.getErrorMessage()).isEqualTo("job_expired");
-    assertThat(saved.getCompletedAt()).isNotNull();
-  }
+  // --- INPUT phase ----------------------------------------------------------
 
   @Test
-  void cleanup_nonExpiredJob_isUntouched() {
-    ValidationJob job =
-        newJob(JobStatus.PENDING, null, Instant.now().plus(Duration.ofMinutes(5)), null, null);
-    when(repo.findAll()).thenReturn(List.of(job));
-
-    scheduler.cleanup();
-
-    verify(repo, never()).save(any());
-  }
-
-  @Test
-  void cleanup_expiredJobWithCallback_setsNextCallbackAt() {
-    ValidationJob job =
-        newJob(JobStatus.PENDING, null, Instant.now().minusSeconds(60), null, CALLBACK_URL);
-    when(repo.findAll()).thenReturn(List.of(job));
-
-    Instant before = Instant.now();
-    scheduler.cleanup();
-    Instant after = Instant.now();
-
-    ValidationJob saved = captureLastSave();
-    assertThat(saved.getStatus()).isEqualTo(JobStatus.FAILED);
-    assertThat(saved.getNextCallbackAt()).isNotNull();
-    Instant minExpected = before;
-    Instant maxExpected = after;
-    assertThat(saved.getNextCallbackAt()).isBetween(minExpected, maxExpected);
-  }
-
-  // ---------------------------------------------------------------------
-  // Phase 1: INPUT — terminal + completedAt < now - inputRetention
-  // ---------------------------------------------------------------------
-
-  @Test
-  void cleanup_terminalJobOldEnough_deletesInputFile() {
-    ValidationJob job =
-        newJob(
-            JobStatus.COMPLETED,
-            Instant.now().minus(INPUT_RETENTION).minusSeconds(60),
-            null,
-            null,
-            null);
-    when(repo.findAll()).thenReturn(List.of(job));
+  void cleanup_purgesInputFiles_ofTerminalJobsPastRetention() {
+    ValidationJob job = terminalJob(JobStatus.COMPLETED);
+    when(repo.findWithPurgeableInput(any(), any(), any()))
+        .thenReturn(List.of(job))
+        .thenReturn(List.of());
 
     scheduler.cleanup();
 
     verify(storage, times(1)).delete(DOC_PATH);
-    ValidationJob saved = captureLastSave();
-    assertThat(saved.getDocumentPath()).isNull();
+    List<ValidationJob> saved = captureLastSaveAll();
+    assertThat(saved).hasSize(1);
+    assertThat(saved.get(0).getDocumentPath()).isNull();
   }
 
   @Test
-  void cleanup_terminalJobRecent_keepsInputFile() {
-    ValidationJob job =
-        newJob(
-            JobStatus.COMPLETED,
-            Instant.now().minus(INPUT_RETENTION).plusSeconds(60),
-            null,
-            null,
-            null);
-    when(repo.findAll()).thenReturn(List.of(job));
-
+  void cleanup_inputPhase_usesInputRetentionCutoff() {
+    Instant before = Instant.now().minus(INPUT_RETENTION);
     scheduler.cleanup();
+    Instant after = Instant.now().minus(INPUT_RETENTION);
 
-    verify(storage, never()).delete(DOC_PATH);
-    verify(repo, never()).save(any());
+    ArgumentCaptor<Instant> cutoff = ArgumentCaptor.forClass(Instant.class);
+    verify(repo).findWithPurgeableInput(any(), cutoff.capture(), any());
+    assertThat(cutoff.getValue()).isBetween(before, after);
   }
 
-  // ---------------------------------------------------------------------
-  // Phase 2: TOMBSTONE — terminal (not DELETED) + completedAt < now - resultRetention
-  // ---------------------------------------------------------------------
+  // --- TOMBSTONE phase --------------------------------------------------------
 
   @Test
-  void cleanup_terminalJobOldEnough_marksDeleted() {
-    ValidationJob job =
-        newJob(
-            JobStatus.COMPLETED,
-            Instant.now().minus(RESULT_RETENTION).minusSeconds(60),
-            null,
-            null,
-            CALLBACK_URL);
+  void cleanup_tombstonesTerminalJobsPastResultRetention_scrubbingSensitiveFields() {
+    ValidationJob job = terminalJob(JobStatus.COMPLETED);
+    job.setCallbackUrl("https://callback.example/hook");
     job.setCallbackSecretCipher("enc:v1:ciphertext");
     job.setProfileOverrides("{\"checkRevocation\":false}");
     job.setErrorMessage("old error");
     job.setLastCallbackError("old cb error");
-    job.setOriginalStatus(null);
-    when(repo.findAll()).thenReturn(List.of(job));
+    when(repo.findTombstoneable(any(), any(), any()))
+        .thenReturn(List.of(job))
+        .thenReturn(List.of());
 
     scheduler.cleanup();
 
     verify(storage, times(1)).delete(RESULT_PATH);
-    ValidationJob saved = captureLastSave();
-    assertThat(saved.getStatus()).isEqualTo(JobStatus.DELETED);
-    assertThat(saved.getOriginalStatus()).isEqualTo(JobStatus.COMPLETED);
-    assertThat(saved.getDeletedAt()).isNotNull();
-    assertThat(saved.getResultPath()).isNull();
-    assertThat(saved.getCallbackUrl()).isNull();
-    assertThat(saved.getCallbackSecretCipher()).isNull();
-    assertThat(saved.getProfileOverrides()).isNull();
-    assertThat(saved.getErrorMessage()).isNull();
-    assertThat(saved.getLastCallbackError()).isNull();
+    List<ValidationJob> saved = captureLastSaveAll();
+    ValidationJob s = saved.get(0);
+    assertThat(s.getStatus()).isEqualTo(JobStatus.DELETED);
+    assertThat(s.getOriginalStatus()).isEqualTo(JobStatus.COMPLETED);
+    assertThat(s.getDeletedAt()).isNotNull();
+    assertThat(s.getResultPath()).isNull();
+    assertThat(s.getCallbackUrl()).isNull();
+    assertThat(s.getCallbackSecretCipher()).isNull();
+    assertThat(s.getProfileOverrides()).isNull();
+    assertThat(s.getErrorMessage()).isNull();
+    assertThat(s.getLastCallbackError()).isNull();
   }
 
-  // ---------------------------------------------------------------------
-  // Phase 3: DELETE — DELETED + deletedAt < now - tombstoneRetention
-  // ---------------------------------------------------------------------
+  // --- DELETE phase -------------------------------------------------------------
 
   @Test
-  void cleanup_alreadyDeletedJobOldEnough_deletesRow() {
-    ValidationJob job =
-        newJob(
-            JobStatus.DELETED,
-            null,
-            null,
-            Instant.now().minus(TOMBSTONE_RETENTION).minusSeconds(60),
-            null);
-    when(repo.findAll()).thenReturn(List.of(job));
+  void cleanup_deletesExpiredTombstones_viaBulkDelete() {
+    when(repo.deleteExpiredTombstones(any())).thenReturn(2);
 
     scheduler.cleanup();
 
-    verify(repo, times(1)).deleteById(job.getId());
-    verify(repo, never()).save(any());
-  }
-
-  @Test
-  void cleanup_alreadyDeletedJobRecent_keepsRow() {
-    ValidationJob job =
-        newJob(
-            JobStatus.DELETED,
-            null,
-            null,
-            Instant.now().minus(TOMBSTONE_RETENTION).plusSeconds(60),
-            null);
-    lenient().when(repo.findAll()).thenReturn(List.of(job));
-
-    scheduler.cleanup();
-
+    ArgumentCaptor<Instant> cutoff = ArgumentCaptor.forClass(Instant.class);
+    verify(repo, times(1)).deleteExpiredTombstones(cutoff.capture());
+    assertThat(cutoff.getValue()).isBeforeOrEqualTo(Instant.now().minus(TOMBSTONE_RETENTION));
     verify(repo, never()).deleteById(any());
   }
 
-  // ---------------------------------------------------------------------
-  // Phase ordering — expired job that also matches tombstone runs Phase 4 first
-  // ---------------------------------------------------------------------
-
-  @Test
-  void cleanup_phasesRunInOrder() {
-    // Job is PENDING but expiresAt is past → Phase 4 marks it FAILED.
-    // On a single pass, Phase 2 (tombstone) only runs on jobs whose completedAt
-    // is older than resultRetention. Just-expiring jobs are not eligible.
-    // We verify the FIRST pass only moves status PENDING → FAILED.
-    ValidationJob job = newJob(JobStatus.PENDING, null, Instant.now().minusSeconds(60), null, null);
-    when(repo.findAll()).thenReturn(List.of(job));
-
-    scheduler.cleanup();
-
-    ValidationJob saved = captureLastSave();
-    assertThat(saved.getStatus()).isEqualTo(JobStatus.FAILED);
-    assertThat(saved.getErrorMessage()).isEqualTo("job_expired");
-    assertThat(saved.getStatus()).isNotEqualTo(JobStatus.DELETED);
-  }
-
-  @Test
-  void cleanup_phasesRunInOrder_secondPass_marksDeleted() {
-    // After the first cleanup pass the job is FAILED with completedAt = "just now".
-    // A second pass observes it as terminal, completedAt is recent, so Phase 1
-    // and Phase 2 are not triggered yet. To prove ordering we craft a job that is
-    // ALREADY terminal AND already past the result retention window — the only
-    // way this state is reachable from a PENDING job is via a prior cleanup
-    // pass (Phase 4 → FAILED) followed by elapsed time → now Phase 2 deletes it.
-    ValidationJob job =
-        newJob(
-            JobStatus.FAILED,
-            Instant.now().minus(RESULT_RETENTION).minusSeconds(60),
-            null,
-            null,
-            null);
-    when(repo.findAll()).thenReturn(List.of(job));
-
-    scheduler.cleanup();
-
-    verify(storage, times(1)).delete(RESULT_PATH);
-    ValidationJob saved = captureLastSave();
-    assertThat(saved.getStatus()).isEqualTo(JobStatus.DELETED);
-    assertThat(saved.getOriginalStatus()).isEqualTo(JobStatus.FAILED);
-  }
-
-  // ---------------------------------------------------------------------
-  // Audit summary
-  // ---------------------------------------------------------------------
+  // --- Audit summary ----------------------------------------------------------------
 
   @Test
   @SuppressWarnings("unchecked")
   void cleanup_auditsSummaryWithPhaseCounts() {
-    // One job per phase to make the counters deterministic.
-    ValidationJob expired =
-        newJob(JobStatus.PENDING, null, Instant.now().minusSeconds(60), null, null);
-    ValidationJob inputAged =
-        newJob(
-            JobStatus.COMPLETED,
-            Instant.now().minus(INPUT_RETENTION).minusSeconds(60),
-            null,
-            null,
-            null);
-    ValidationJob tombstoneAged =
-        newJob(
-            JobStatus.COMPLETED,
-            Instant.now().minus(RESULT_RETENTION).minusSeconds(60),
-            null,
-            null,
-            CALLBACK_URL);
-    tombstoneAged.setCallbackSecretCipher("enc:cipher");
-    tombstoneAged.setProfileOverrides("{}");
-    tombstoneAged.setErrorMessage("e");
-    tombstoneAged.setLastCallbackError("cb");
-    ValidationJob deletedAged =
-        newJob(
-            JobStatus.DELETED,
-            null,
-            null,
-            Instant.now().minus(TOMBSTONE_RETENTION).minusSeconds(60),
-            null);
-    when(repo.findAll()).thenReturn(List.of(expired, inputAged, tombstoneAged, deletedAged));
+    when(repo.expireOverdue(any())).thenReturn(1);
+    when(repo.findWithPurgeableInput(any(), any(), any()))
+        .thenReturn(List.of(terminalJob(JobStatus.COMPLETED)))
+        .thenReturn(List.of());
+    when(repo.findTombstoneable(any(), any(), any()))
+        .thenReturn(List.of(terminalJob(JobStatus.FAILED)))
+        .thenReturn(List.of());
+    when(repo.deleteExpiredTombstones(any())).thenReturn(4);
 
     scheduler.cleanup();
 
@@ -379,14 +200,10 @@ class JobCleanupSchedulerTest {
             eq(true),
             details.capture());
     Map<String, Object> d = details.getValue();
-    // Note: the "input retention" phase matches both `inputAged` and `tombstoneAged` (both are
-    // terminal with completedAt older than input retention); the tombstone phase runs over the
-    // same data set in the next loop. The point of this test is that the cleanup pass records
-    // a single summary event with the right per-phase counters — exact values are derived from
-    // the scheduler's phase logic and are covered by the dedicated per-phase tests above.
-    assertThat(d).containsEntry("expired", 1);
-    assertThat(d.get("inputDeleted")).isNotNull();
-    assertThat((int) d.get("inputDeleted")).isGreaterThanOrEqualTo(1);
-    assertThat(d).containsEntry("tombstoned", 1).containsEntry("rowsDeleted", 1);
+    assertThat(d)
+        .containsEntry("expired", 1)
+        .containsEntry("inputDeleted", 1)
+        .containsEntry("tombstoned", 1)
+        .containsEntry("rowsDeleted", 4);
   }
 }

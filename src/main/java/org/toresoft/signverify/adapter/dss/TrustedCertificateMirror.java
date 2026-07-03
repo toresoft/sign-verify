@@ -22,17 +22,29 @@ import eu.europa.esig.dss.model.tsl.TrustService;
 import eu.europa.esig.dss.model.tsl.TrustServiceProvider;
 import eu.europa.esig.dss.model.tsl.TrustServiceStatusAndInformationExtensions;
 import eu.europa.esig.dss.model.x509.CertificateToken;
+import eu.europa.esig.dss.model.x509.X500PrincipalHelper;
+import eu.europa.esig.dss.model.x509.extension.SubjectKeyIdentifier;
+import eu.europa.esig.dss.spi.CertificateExtensionsUtils;
 import eu.europa.esig.dss.spi.tsl.TrustedListsCertificateSource;
+import jakarta.persistence.EntityManager;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.*;
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.ASN1String;
+import org.bouncycastle.asn1.x500.AttributeTypeAndValue;
+import org.bouncycastle.asn1.x500.RDN;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x500.style.BCStyle;
+import org.bouncycastle.asn1.x500.style.IETFUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.toresoft.signverify.domain.model.TrustedCertificate;
+import org.toresoft.signverify.domain.port.TrustedListMirrorPort;
 import org.toresoft.signverify.persistence.TrustedCertificateRepository;
 
 @Component
-public class TrustedCertificateMirror {
+public class TrustedCertificateMirror implements TrustedListMirrorPort {
 
   // Maximum lengths of the bounded VARCHAR columns of trusted_certificate (see the
   // Flyway schema / TrustedCertificate entity). Scalar values extracted from a
@@ -48,50 +60,80 @@ public class TrustedCertificateMirror {
   private static final int LEN_TSP_TYPE = 255;
   private static final int LEN_TSP_STATUS = 80;
 
-  public record Diff(int added, int removed, int unchanged) {}
+  // A full EU TSL sync handles a few thousand certificates; new entities are persisted in
+  // chunks with flush/clear so the persistence context never holds the whole set, and
+  // already-known rows are touched via bulk updates without loading them at all.
+  private static final int CHUNK_SIZE = 500;
 
   private final TrustedCertificateRepository repo;
+  private final EntityManager em;
+  private final TrustedListsCertificateSource src;
 
-  public TrustedCertificateMirror(TrustedCertificateRepository repo) {
+  public TrustedCertificateMirror(
+      TrustedCertificateRepository repo, EntityManager em, TrustedListsCertificateSource src) {
     this.repo = repo;
+    this.em = em;
+    this.src = src;
   }
 
+  @Override
   @Transactional
-  public Diff sync(TrustedListsCertificateSource src) {
-    Map<String, TrustedCertificate> dbByFp = new HashMap<>();
-    repo.findAll().stream()
-        .filter(c -> c.getRemovedAt() == null)
-        .forEach(c -> dbByFp.put(c.getFingerprintSha256(), c));
+  public Diff sync() {
+    Set<String> dbFps = new HashSet<>(repo.findActiveFingerprints());
 
-    Set<String> currentFp = new HashSet<>();
+    Set<String> currentFps = new HashSet<>();
+    List<String> toTouch = new ArrayList<>();
+    List<TrustedCertificate> insertBuffer = new ArrayList<>(CHUNK_SIZE);
     int added = 0;
-    int unchanged = 0;
     Instant now = Instant.now();
 
     for (CertificateToken token : src.getCertificates()) {
       String fp = fingerprint(token);
-      currentFp.add(fp);
-      TrustedCertificate existing = dbByFp.get(fp);
-      if (existing != null) {
-        existing.setLastSeenAt(now);
-        repo.save(existing);
-        unchanged++;
-      } else {
-        TrustedCertificate tc = newEntity(token, src, fp, now);
-        repo.save(tc);
-        added++;
+      if (!currentFps.add(fp)) {
+        continue; // same certificate listed by more than one trust service
       }
+      if (dbFps.contains(fp)) {
+        toTouch.add(fp);
+      } else {
+        insertBuffer.add(newEntity(token, src, fp, now));
+        if (insertBuffer.size() >= CHUNK_SIZE) {
+          added += persistChunk(insertBuffer);
+        }
+      }
+    }
+    added += persistChunk(insertBuffer);
+
+    for (List<String> chunk : chunks(toTouch)) {
+      repo.touchLastSeen(now, chunk);
     }
 
+    List<String> toRemove = dbFps.stream().filter(fp -> !currentFps.contains(fp)).toList();
     int removed = 0;
-    for (var e : dbByFp.entrySet()) {
-      if (!currentFp.contains(e.getKey())) {
-        e.getValue().setRemovedAt(now);
-        repo.save(e.getValue());
-        removed++;
-      }
+    for (List<String> chunk : chunks(toRemove)) {
+      removed += repo.markRemoved(now, chunk);
     }
-    return new Diff(added, removed, unchanged);
+    return new Diff(added, removed, toTouch.size());
+  }
+
+  /** Persists and clears the buffer, detaching the chunk from the persistence context. */
+  private int persistChunk(List<TrustedCertificate> buffer) {
+    if (buffer.isEmpty()) {
+      return 0;
+    }
+    int n = buffer.size();
+    repo.saveAll(buffer);
+    repo.flush();
+    em.clear();
+    buffer.clear();
+    return n;
+  }
+
+  private static List<List<String>> chunks(List<String> list) {
+    List<List<String>> out = new ArrayList<>();
+    for (int i = 0; i < list.size(); i += CHUNK_SIZE) {
+      out.add(list.subList(i, Math.min(i + CHUNK_SIZE, list.size())));
+    }
+    return out;
   }
 
   private TrustedCertificate newEntity(
@@ -101,11 +143,11 @@ public class TrustedCertificateMirror {
     c.setFingerprintSha256(fp);
     c.setSki(trunc(extractSki(t), LEN_SKI));
     c.setSubjectDn(t.getSubject().getRFC2253()); // TEXT column, no limit
-    c.setSubjectCn(trunc(extractCn(t.getSubject().getRFC2253()), LEN_CN));
+    c.setSubjectCn(trunc(firstRdnValue(t.getSubject(), BCStyle.CN), LEN_CN));
     c.setIssuerDn(t.getIssuer().getRFC2253()); // TEXT column, no limit
-    c.setIssuerCn(trunc(extractCn(t.getIssuer().getRFC2253()), LEN_CN));
+    c.setIssuerCn(trunc(firstRdnValue(t.getIssuer(), BCStyle.CN), LEN_CN));
     c.setSerialNumber(trunc(t.getSerialNumber().toString(16), LEN_SERIAL));
-    c.setCountry(trunc(extractCountry(t.getSubject().getRFC2253()), LEN_COUNTRY));
+    c.setCountry(trunc(firstRdnValue(t.getSubject(), BCStyle.C), LEN_COUNTRY));
     c.setValidFrom(t.getNotBefore().toInstant());
     c.setValidTo(t.getNotAfter().toInstant());
     c.setCertificateDerB64(Base64.getEncoder().encodeToString(t.getEncoded()));
@@ -137,16 +179,8 @@ public class TrustedCertificateMirror {
   }
 
   private String extractSki(CertificateToken t) {
-    // Subject Key Identifier OID: 2.5.29.14
-    byte[] ext = t.getCertificate().getExtensionValue("2.5.29.14");
-    if (ext == null) return null;
-    // Extension value is wrapped in ASN.1 OCTET STRING — skip wrapper bytes
-    if (ext.length < 4) return toHex(ext);
-    int len = ext[3] & 0xFF;
-    if (ext.length < 4 + len) return toHex(ext);
-    byte[] ski = new byte[len];
-    System.arraycopy(ext, 4, ski, 0, len);
-    return toHex(ski);
+    SubjectKeyIdentifier ski = CertificateExtensionsUtils.getSubjectKeyIdentifier(t);
+    return ski == null ? null : toHex(ski.getSki());
   }
 
   private String fingerprint(CertificateToken t) {
@@ -165,18 +199,21 @@ public class TrustedCertificateMirror {
     return sb.toString();
   }
 
-  private String extractCn(String dn) {
-    for (String part : dn.split(",")) {
-      String t = part.trim();
-      if (t.toUpperCase(Locale.ROOT).startsWith("CN=")) return t.substring(3);
-    }
-    return null;
-  }
-
-  private String extractCountry(String dn) {
-    for (String part : dn.split(",")) {
-      String t = part.trim();
-      if (t.toUpperCase(Locale.ROOT).startsWith("C=")) return t.substring(2);
+  /**
+   * Extracts the first value of the given attribute (e.g. CN, C) from a DN, parsing the DER
+   * encoding with BouncyCastle instead of splitting the RFC2253 string, which would break on
+   * escaped commas and multi-valued RDNs.
+   */
+  private String firstRdnValue(X500PrincipalHelper principal, ASN1ObjectIdentifier oid) {
+    X500Name name = X500Name.getInstance(principal.getEncoded());
+    for (RDN rdn : name.getRDNs(oid)) {
+      for (AttributeTypeAndValue atv : rdn.getTypesAndValues()) {
+        if (oid.equals(atv.getType())) {
+          return atv.getValue() instanceof ASN1String s
+              ? s.getString()
+              : IETFUtils.valueToString(atv.getValue());
+        }
+      }
     }
     return null;
   }

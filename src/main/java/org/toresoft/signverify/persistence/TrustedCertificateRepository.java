@@ -17,14 +17,35 @@
  */
 package org.toresoft.signverify.persistence;
 
+import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.toresoft.signverify.domain.model.TrustedCertificate;
 
 public interface TrustedCertificateRepository
     extends JpaRepository<TrustedCertificate, UUID>, JpaSpecificationExecutor<TrustedCertificate> {
 
   Optional<TrustedCertificate> findByFingerprintSha256(String fp);
+
+  @Query("select c.fingerprintSha256 from TrustedCertificate c where c.removedAt is null")
+  List<String> findActiveFingerprints();
+
+  @Modifying
+  @Query(
+      "update TrustedCertificate c set c.lastSeenAt = :now"
+          + " where c.removedAt is null and c.fingerprintSha256 in :fps")
+  int touchLastSeen(@Param("now") Instant now, @Param("fps") Collection<String> fps);
+
+  @Modifying
+  @Query(
+      "update TrustedCertificate c set c.removedAt = :now"
+          + " where c.removedAt is null and c.fingerprintSha256 in :fps")
+  int markRemoved(@Param("now") Instant now, @Param("fps") Collection<String> fps);
 }

@@ -30,6 +30,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,7 +64,17 @@ class AsyncJobServiceTest {
 
   @BeforeEach
   void setUp() {
-    service = new AsyncJobService(repo, storage, cipher, audit, 5, 10, Duration.ofHours(1));
+    service =
+        new AsyncJobService(
+            repo,
+            storage,
+            cipher,
+            audit,
+            5,
+            10,
+            Duration.ofHours(1),
+            "HmacSHA256",
+            List.of("HmacSHA256", "HmacSHA512"));
     lenient().when(repo.countActiveGlobal()).thenReturn(0L);
     lenient()
         .when(repo.countActiveByPrincipal(any(PrincipalType.class), anyString()))
@@ -106,6 +117,48 @@ class AsyncJobServiceTest {
     assertThat(saved.getCallbackAlgorithm()).isEqualTo("HmacSHA256");
     assertThat(saved.getRequestedByPrincipalType()).isEqualTo(PrincipalType.API_KEY);
     assertThat(saved.getRequestedByPrincipalId()).isEqualTo("k1");
+  }
+
+  @Test
+  void submit_rejectsCallbackAlgorithmOutsideAllowlist() {
+    var req =
+        new AsyncJobService.SubmitRequest(
+            new byte[] {1},
+            "doc.pdf",
+            null,
+            null,
+            Set.of(ReportType.SIMPLE),
+            "https://callback.example/hook",
+            "secret-123",
+            "HmacMD5");
+
+    AppException ex =
+        org.assertj.core.api.Assertions.catchThrowableOfType(
+            AppException.class, () -> service.submit(req, actor));
+    assertThat(ex.getStatus()).isEqualTo(400);
+    assertThat(ex.getDetail()).contains("callbackAlgorithm");
+    verify(repo, never()).save(any());
+  }
+
+  @Test
+  void submit_acceptsAllowedAlgorithm_caseInsensitively() {
+    var req =
+        new AsyncJobService.SubmitRequest(
+            new byte[] {1},
+            "doc.pdf",
+            null,
+            null,
+            Set.of(ReportType.SIMPLE),
+            "https://callback.example/hook",
+            "secret-123",
+            "hmacsha512");
+    when(storage.storeInput(anyString(), anyString(), any())).thenReturn("p");
+
+    service.submit(req, actor);
+
+    ArgumentCaptor<ValidationJob> captor = ArgumentCaptor.forClass(ValidationJob.class);
+    verify(repo).save(captor.capture());
+    assertThat(captor.getValue().getCallbackAlgorithm()).isEqualTo("hmacsha512");
   }
 
   @Test

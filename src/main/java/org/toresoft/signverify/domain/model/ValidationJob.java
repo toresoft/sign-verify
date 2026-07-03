@@ -74,6 +74,12 @@ public class ValidationJob {
   @Column(name = "pickup_attempts", nullable = false)
   private int pickupAttempts;
 
+  // Optimistic lock: detects lost updates between the workers and the cleanup scheduler, which
+  // mutate the same rows concurrently. Bulk expiry updates bump it explicitly.
+  @Version
+  @Column(name = "version", nullable = false)
+  private long version;
+
   @Column(name = "created_at", nullable = false)
   private Instant createdAt;
 

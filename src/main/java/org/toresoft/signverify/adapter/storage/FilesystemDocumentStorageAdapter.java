@@ -47,7 +47,7 @@ public class FilesystemDocumentStorageAdapter implements DocumentStoragePort {
 
   public FilesystemDocumentStorageAdapter(@Value("${app.storage.jobs-dir}") String dir)
       throws IOException {
-    this.baseDir = Path.of(dir);
+    this.baseDir = Path.of(dir).toAbsolutePath().normalize();
     Files.createDirectories(baseDir);
   }
 
@@ -65,7 +65,7 @@ public class FilesystemDocumentStorageAdapter implements DocumentStoragePort {
   @Override
   public byte[] read(String path) {
     try {
-      return Files.readAllBytes(Path.of(path));
+      return Files.readAllBytes(confined(path));
     } catch (IOException e) {
       throw new IllegalStateException("read fail: " + path, e);
     }
@@ -77,10 +77,23 @@ public class FilesystemDocumentStorageAdapter implements DocumentStoragePort {
       return;
     }
     try {
-      Files.deleteIfExists(Path.of(path));
+      Files.deleteIfExists(confined(path));
     } catch (IOException ignored) {
       // best-effort delete; nothing actionable for the caller
     }
+  }
+
+  /**
+   * Defense in depth: paths are only ever produced by {@link #write} and stored in the DB, but
+   * refuse anything that resolves outside {@code baseDir} in case a tampered value ever reaches
+   * this adapter.
+   */
+  private Path confined(String path) {
+    Path p = Path.of(path).toAbsolutePath().normalize();
+    if (!p.startsWith(baseDir)) {
+      throw new IllegalArgumentException("path outside storage dir: " + path);
+    }
+    return p;
   }
 
   private String write(String jobId, String name, byte[] content) {

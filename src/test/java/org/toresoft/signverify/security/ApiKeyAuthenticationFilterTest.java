@@ -69,6 +69,52 @@ class ApiKeyAuthenticationFilterTest {
   }
 
   @Test
+  void valid_key_touchesLastUsedAt_whenNeverUsed() throws Exception {
+    String plaintext = "sv_alphabe1_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+    ApiKey key = enabledKey("alphabe1", "hash");
+    when(repo.findByKeyPrefix("alphabe1")).thenReturn(Optional.of(key));
+    when(hasher.matches(plaintext, "hash")).thenReturn(true);
+
+    MockHttpServletRequest req = new MockHttpServletRequest();
+    req.addHeader("X-API-Key", plaintext);
+    filter.doFilter(req, new MockHttpServletResponse(), mock(FilterChain.class));
+
+    verify(repo).touchLastUsed(eq(key.getId()), any(Instant.class));
+  }
+
+  @Test
+  void valid_key_skipsTouch_whenRecentlyUsed() throws Exception {
+    String plaintext = "sv_alphabe1_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+    ApiKey key = enabledKey("alphabe1", "hash");
+    key.setLastUsedAt(Instant.now().minusSeconds(30));
+    when(repo.findByKeyPrefix("alphabe1")).thenReturn(Optional.of(key));
+    when(hasher.matches(plaintext, "hash")).thenReturn(true);
+
+    MockHttpServletRequest req = new MockHttpServletRequest();
+    req.addHeader("X-API-Key", plaintext);
+    filter.doFilter(req, new MockHttpServletResponse(), mock(FilterChain.class));
+
+    verify(repo, never()).touchLastUsed(any(), any());
+  }
+
+  @Test
+  void touchFailure_doesNotBreakAuthentication() throws Exception {
+    String plaintext = "sv_alphabe1_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+    ApiKey key = enabledKey("alphabe1", "hash");
+    when(repo.findByKeyPrefix("alphabe1")).thenReturn(Optional.of(key));
+    when(hasher.matches(plaintext, "hash")).thenReturn(true);
+    doThrow(new RuntimeException("db down")).when(repo).touchLastUsed(any(), any());
+
+    MockHttpServletRequest req = new MockHttpServletRequest();
+    req.addHeader("X-API-Key", plaintext);
+    FilterChain chain = mock(FilterChain.class);
+    filter.doFilter(req, new MockHttpServletResponse(), chain);
+
+    verify(chain).doFilter(any(), any());
+    assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
+  }
+
+  @Test
   void invalid_key_returns_401() throws Exception {
     when(repo.findByKeyPrefix(any())).thenReturn(Optional.empty());
 

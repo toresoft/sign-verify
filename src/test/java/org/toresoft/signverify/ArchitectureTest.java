@@ -57,6 +57,15 @@ class ArchitectureTest {
           .resideInAnyPackage("eu.europa.esig..");
 
   @ArchTest
+  static final ArchRule application_does_not_depend_on_adapters =
+      noClasses()
+          .that()
+          .resideInAPackage("..application..")
+          .should()
+          .dependOnClassesThat()
+          .resideInAPackage("..adapter..");
+
+  @ArchTest
   static final ArchRule controllers_do_not_use_repositories =
       noClasses()
           .that()

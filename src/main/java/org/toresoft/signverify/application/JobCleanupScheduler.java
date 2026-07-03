@@ -19,17 +19,22 @@ package org.toresoft.signverify.application;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.toresoft.signverify.domain.model.JobStatus;
 import org.toresoft.signverify.domain.model.PrincipalType;
+import org.toresoft.signverify.domain.model.ValidationJob;
 import org.toresoft.signverify.domain.port.DocumentStoragePort;
 import org.toresoft.signverify.persistence.ValidationJobRepository;
 
@@ -60,48 +65,51 @@ public class JobCleanupScheduler {
     this.tombstoneRetention = tombstoneRetention;
   }
 
+  // Page size for the phases that must load entities (side effects on storage). The processed
+  // rows leave the query filter (documentPath nulled / status flipped), so each phase re-fetches
+  // page 0 until it comes back empty and never holds more than one page in memory.
+  private static final int PAGE_SIZE = 200;
+
+  private static final Set<JobStatus> TERMINAL =
+      EnumSet.of(
+          JobStatus.COMPLETED,
+          JobStatus.FAILED,
+          JobStatus.DELIVERED,
+          JobStatus.DELIVERY_FAILED,
+          JobStatus.DELETED);
+  private static final Set<JobStatus> TOMBSTONEABLE =
+      EnumSet.of(
+          JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.DELIVERED, JobStatus.DELIVERY_FAILED);
+
+  // Deliberately not @Transactional: each phase commits on its own (bulk statements and per-page
+  // saves), so a large backlog never turns into one long-held transaction.
   @Scheduled(cron = "${app.async.cleanup.cron}")
   @SchedulerLock(name = "jobCleanup", lockAtMostFor = "PT30M")
-  @Transactional
   public void cleanup() {
     Instant now = Instant.now();
-    int expired = 0;
+
+    // EXPIRED: PENDING/RUNNING past expires_at → FAILED, via a single conditional UPDATE that can
+    // never touch terminal jobs (no race with a worker completing the job concurrently).
+    int expired = repo.expireOverdue(now);
+
+    // INPUT: terminal + completed_at < now-inputRetention → delete input file
     int inputDeleted = 0;
-    int tombstoned = 0;
-    int rowsDeleted = 0;
-
-    // Fase 4 EXPIRED: PENDING/RUNNING + expires_at < now → FAILED
-    for (var j : repo.findAll()) {
-      if ((j.getStatus() == JobStatus.PENDING || j.getStatus() == JobStatus.RUNNING)
-          && j.getExpiresAt().isBefore(now)) {
-        j.setStatus(JobStatus.FAILED);
-        j.setErrorMessage("job_expired");
-        j.setCompletedAt(now);
-        if (j.getCallbackUrl() != null) j.setNextCallbackAt(now);
-        repo.save(j);
-        expired++;
-      }
-    }
-
-    // Fase 1 INPUT: terminal + completed_at < now-inputRetention → delete input file
-    for (var j : repo.findAll()) {
-      if (j.getStatus().isTerminal()
-          && j.getDocumentPath() != null
-          && j.getCompletedAt() != null
-          && j.getCompletedAt().isBefore(now.minus(inputRetention))) {
+    List<ValidationJob> page;
+    while (!(page = repo.findWithPurgeableInput(TERMINAL, now.minus(inputRetention), firstPage()))
+        .isEmpty()) {
+      for (ValidationJob j : page) {
         storage.delete(j.getDocumentPath());
         j.setDocumentPath(null);
-        repo.save(j);
-        inputDeleted++;
       }
+      repo.saveAll(page);
+      inputDeleted += page.size();
     }
 
-    // Fase 2 TOMBSTONE: terminal (not DELETED) + completed_at < now-resultRetention
-    for (var j : repo.findAll()) {
-      if (j.getStatus().isTerminal()
-          && j.getStatus() != JobStatus.DELETED
-          && j.getCompletedAt() != null
-          && j.getCompletedAt().isBefore(now.minus(resultRetention))) {
+    // TOMBSTONE: terminal (not DELETED) + completed_at < now-resultRetention
+    int tombstoned = 0;
+    while (!(page = repo.findTombstoneable(TOMBSTONEABLE, now.minus(resultRetention), firstPage()))
+        .isEmpty()) {
+      for (ValidationJob j : page) {
         storage.delete(j.getResultPath());
         j.setOriginalStatus(j.getStatus());
         j.setStatus(JobStatus.DELETED);
@@ -112,20 +120,13 @@ public class JobCleanupScheduler {
         j.setProfileOverrides(null);
         j.setErrorMessage(null);
         j.setLastCallbackError(null);
-        repo.save(j);
-        tombstoned++;
       }
+      repo.saveAll(page);
+      tombstoned += page.size();
     }
 
-    // Fase 3 DELETE: DELETED + deleted_at < now-tombstoneRetention → DELETE row
-    for (var j : repo.findAll()) {
-      if (j.getStatus() == JobStatus.DELETED
-          && j.getDeletedAt() != null
-          && j.getDeletedAt().isBefore(now.minus(tombstoneRetention))) {
-        repo.deleteById(j.getId());
-        rowsDeleted++;
-      }
-    }
+    // DELETE: DELETED + deleted_at < now-tombstoneRetention → bulk DELETE
+    int rowsDeleted = repo.deleteExpiredTombstones(now.minus(tombstoneRetention));
 
     log.info(
         "Cleanup pass complete at {} (expired={}, inputDeleted={}, tombstoned={}, rowsDeleted={})",
@@ -150,5 +151,9 @@ public class JobCleanupScheduler {
         null,
         true,
         details);
+  }
+
+  private static Pageable firstPage() {
+    return PageRequest.of(0, PAGE_SIZE);
   }
 }

@@ -21,6 +21,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -47,7 +48,6 @@ import org.toresoft.signverify.security.Principal;
 @Service
 public class AsyncJobService {
 
-  private static final String DEFAULT_ALGORITHM = "HmacSHA256";
   private static final String DEFAULT_REPORTS = "simple,etsi";
 
   public record SubmitRequest(
@@ -67,6 +67,8 @@ public class AsyncJobService {
   private final int maxPerPrincipal;
   private final int maxGlobal;
   private final Duration jobTtl;
+  private final String defaultAlgorithm;
+  private final List<String> allowedAlgorithms;
 
   public AsyncJobService(
       ValidationJobRepository repo,
@@ -75,7 +77,9 @@ public class AsyncJobService {
       AuditService audit,
       @Value("${app.async.max-pending-per-principal}") int maxPerPrincipal,
       @Value("${app.async.max-pending-global}") int maxGlobal,
-      @Value("${app.async.job-ttl}") Duration jobTtl) {
+      @Value("${app.async.job-ttl}") Duration jobTtl,
+      @Value("${app.callback.hmac-default-algorithm}") String defaultAlgorithm,
+      @Value("${app.callback.allowed-algorithms}") List<String> allowedAlgorithms) {
     this.repo = repo;
     this.storage = storage;
     this.cipher = cipher;
@@ -83,11 +87,19 @@ public class AsyncJobService {
     this.maxPerPrincipal = maxPerPrincipal;
     this.maxGlobal = maxGlobal;
     this.jobTtl = jobTtl;
+    this.defaultAlgorithm = defaultAlgorithm;
+    this.allowedAlgorithms = allowedAlgorithms;
   }
 
   /**
    * Submits a new async validation job. Enforces backpressure limits, stores the input, and
    * persists the job record.
+   *
+   * <p>The backpressure limits are <em>soft</em>: the count check and the insert are not atomic, so
+   * concurrent submissions may briefly exceed {@code maxGlobal} / {@code maxPerPrincipal} by up to
+   * the number of in-flight transactions. This is a deliberate trade-off — the limits protect
+   * against sustained overload, not exact quota enforcement, and atomic enforcement would require
+   * serializing submissions.
    *
    * @param req submission payload
    * @param actor principal performing the submission
@@ -119,6 +131,13 @@ public class AsyncJobService {
         throw AppException.badRequest("callbackSecret is required when callbackUrl is provided");
       }
     }
+    // Enforce the HMAC algorithm allowlist at submit time: HmacSigner passes this value straight
+    // to Mac.getInstance, so an unvetted value would either weaken the callback signature (e.g.
+    // HmacMD5) or blow up only at dispatch time, after the validation work is done.
+    if (req.callbackAlgorithm() != null
+        && allowedAlgorithms.stream().noneMatch(a -> a.equalsIgnoreCase(req.callbackAlgorithm()))) {
+      throw AppException.badRequest("callbackAlgorithm must be one of " + allowedAlgorithms);
+    }
 
     UUID jobId = UUID.randomUUID();
     String docPath = storage.storeInput(jobId.toString(), req.filename(), req.file());
@@ -136,7 +155,7 @@ public class AsyncJobService {
       j.setCallbackSecretCipher(cipher.encrypt(req.callbackSecret()));
     }
     j.setCallbackAlgorithm(
-        req.callbackAlgorithm() == null ? DEFAULT_ALGORITHM : req.callbackAlgorithm());
+        req.callbackAlgorithm() == null ? defaultAlgorithm : req.callbackAlgorithm());
 
     Instant now = Instant.now();
     j.setCreatedAt(now);

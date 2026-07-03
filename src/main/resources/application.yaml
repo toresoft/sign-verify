@@ -88,6 +88,9 @@ app:
     workers: 4
     worker:
       poll-interval: 5s
+      # RUNNING jobs whose claim is older than this are assumed stranded by a crashed instance
+      # and requeued. Must exceed the longest legitimate validation by a wide margin.
+      stale-running-timeout: 30m
     max-pending-per-principal: 50
     max-pending-global: 500
     max-pickup-attempts: 10

@@ -5,8 +5,10 @@ app:
   security:
     oauth:
       enabled: false
-    # Dev-only master key (base64-encoded 32 bytes). DO NOT use in production.
-    master-key: ${APP_SECRET_MASTER_KEY:jmXybkAUJpitU/086qz5mmCmT7DoMqibeEfZ6XwMF9I=}
+    # No default on purpose: the container must receive APP_SECRET_MASTER_KEY
+    # (base64-encoded 32 bytes) or fail at startup instead of silently
+    # encrypting with a key committed to source control.
+    master-key: ${APP_SECRET_MASTER_KEY}
   tsl:
     refresh:
       # Skip the (network-bound) EU LOTL/TSL load for offline local development.

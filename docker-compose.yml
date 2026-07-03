@@ -1,5 +1,6 @@
 # Local development stack: the service (built from source) + PostgreSQL.
 # Usage:
+#   cp .env.example .env   # then set APP_SECRET_MASTER_KEY=$(openssl rand -base64 32)
 #   docker compose up --build
 #   # first boot writes the bootstrap API key inside the svdata volume:
 #   docker compose exec app cat /var/lib/sign-verify/bootstrap-api-key.txt
@@ -34,6 +35,9 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/signverify
       SPRING_DATASOURCE_USERNAME: signverify
       SPRING_DATASOURCE_PASSWORD: signverify
+      # Required; no committed default. Set it in .env (see .env.example):
+      #   openssl rand -base64 32
+      APP_SECRET_MASTER_KEY: ${APP_SECRET_MASTER_KEY:?Set APP_SECRET_MASTER_KEY in .env (openssl rand -base64 32)}
     ports:
       - "8080:8080"
     volumes:

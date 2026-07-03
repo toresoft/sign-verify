@@ -17,7 +17,9 @@
  */
 package org.toresoft.signverify.application;
 
-import eu.europa.esig.dss.spi.tsl.TrustedListsCertificateSource;
+import eu.europa.esig.dss.model.tsl.LOTLInfo;
+import eu.europa.esig.dss.model.tsl.TLInfo;
+import eu.europa.esig.dss.model.tsl.TLValidationJobSummary;
 import eu.europa.esig.dss.tsl.job.TLValidationJob;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -30,8 +32,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
-import org.toresoft.signverify.adapter.dss.TrustedCertificateMirror;
 import org.toresoft.signverify.domain.model.*;
+import org.toresoft.signverify.domain.port.TrustedListMirrorPort;
 import org.toresoft.signverify.persistence.TrustedCertificateRepository;
 import org.toresoft.signverify.persistence.TslRefreshRepository;
 import org.toresoft.signverify.security.Principal;
@@ -42,20 +44,17 @@ public class TslService {
   private static final Logger log = LoggerFactory.getLogger(TslService.class);
 
   private final TLValidationJob job;
-  private final TrustedListsCertificateSource tslSource;
-  private final TrustedCertificateMirror mirror;
+  private final TrustedListMirrorPort mirror;
   private final TrustedCertificateRepository certRepo;
   private final TslRefreshRepository refreshRepo;
   private final AtomicBoolean ready = new AtomicBoolean(false);
 
   public TslService(
       TLValidationJob job,
-      TrustedListsCertificateSource tslSource,
-      TrustedCertificateMirror mirror,
+      TrustedListMirrorPort mirror,
       TrustedCertificateRepository certRepo,
       TslRefreshRepository refreshRepo) {
     this.job = job;
-    this.tslSource = tslSource;
     this.mirror = mirror;
     this.certRepo = certRepo;
     this.refreshRepo = refreshRepo;
@@ -79,12 +78,17 @@ public class TslService {
 
     try {
       job.onlineRefresh();
-      var diff = mirror.sync(tslSource);
-      r.setStatus(RefreshStatus.SUCCESS);
+      var diff = mirror.sync();
+      SourceStats stats = sourceStats(job.getSummary());
+      r.setSourcesTotal(stats.total());
+      r.setSourcesFailed(stats.failed());
+      r.setStatus(stats.failed() > 0 ? RefreshStatus.PARTIAL : RefreshStatus.SUCCESS);
       r.setCertificatesAdded(diff.added());
       r.setCertificatesRemoved(diff.removed());
       r.setCertificatesUnchanged(diff.unchanged());
-      ready.set(true);
+      // Ready as long as at least some sources loaded: a single unreachable member-state TL must
+      // not keep the whole service NOT_READY.
+      ready.set(stats.total() == 0 || stats.failed() < stats.total());
     } catch (Exception e) {
       log.error("TSL refresh failed", e);
       r.setStatus(RefreshStatus.FAILED);
@@ -94,6 +98,33 @@ public class TslService {
       refreshRepo.save(r);
     }
     return r;
+  }
+
+  private record SourceStats(int total, int failed) {}
+
+  /**
+   * Counts refresh sources (each LOTL, its member-state TLs, and standalone TLs) and how many of
+   * them ended in error, from the DSS validation-job summary. {@code onlineRefresh()} does not
+   * throw on a per-TL failure, so this is the only place those partial failures surface.
+   */
+  private SourceStats sourceStats(TLValidationJobSummary summary) {
+    if (summary == null) {
+      return new SourceStats(0, 0);
+    }
+    List<TLInfo> all = new ArrayList<>();
+    for (LOTLInfo lotl : summary.getLOTLInfos()) {
+      all.add(lotl);
+      all.addAll(lotl.getTLInfos());
+    }
+    all.addAll(summary.getOtherTLInfos());
+    int failed = (int) all.stream().filter(TslService::isFailed).count();
+    return new SourceStats(all.size(), failed);
+  }
+
+  private static boolean isFailed(TLInfo tl) {
+    return (tl.getDownloadCacheInfo() != null && tl.getDownloadCacheInfo().isError())
+        || (tl.getParsingCacheInfo() != null && tl.getParsingCacheInfo().isError())
+        || (tl.getValidationCacheInfo() != null && tl.getValidationCacheInfo().isError());
   }
 
   public Optional<TslRefresh> getLastRefresh() {

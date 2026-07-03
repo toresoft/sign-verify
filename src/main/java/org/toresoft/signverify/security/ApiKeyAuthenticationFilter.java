@@ -22,8 +22,11 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.toresoft.signverify.domain.model.ApiKey;
@@ -35,6 +38,12 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 
   public static final String HEADER = "X-API-Key";
   public static final int PREFIX_LENGTH = 8;
+
+  // Refresh last_used_at at most this often per key: coarse enough to keep the auth path cheap,
+  // fine enough for dormancy/compromise auditing.
+  private static final Duration LAST_USED_THROTTLE = Duration.ofMinutes(5);
+
+  private static final Logger log = LoggerFactory.getLogger(ApiKeyAuthenticationFilter.class);
 
   private final ApiKeyRepository repo;
   private final PasswordHasherPort hasher;
@@ -71,6 +80,7 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
     }
 
     ApiKey key = opt.get();
+    touchLastUsed(key);
     Principal p =
         new Principal(
             org.toresoft.signverify.domain.model.PrincipalType.API_KEY,
@@ -79,6 +89,23 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
             key.getName());
     SecurityContextHolder.getContext().setAuthentication(new ApiKeyAuthentication(p));
     chain.doFilter(req, res);
+  }
+
+  /**
+   * Records key usage for compromise/dormancy detection. Throttled so the hot auth path does not
+   * issue a write per request, and best-effort: a failed stamp must never fail authentication.
+   */
+  private void touchLastUsed(ApiKey key) {
+    Instant now = Instant.now();
+    Instant last = key.getLastUsedAt();
+    if (last != null && last.isAfter(now.minus(LAST_USED_THROTTLE))) {
+      return;
+    }
+    try {
+      repo.touchLastUsed(key.getId(), now);
+    } catch (RuntimeException e) {
+      log.warn("failed to stamp last_used_at for api key {}", key.getId(), e);
+    }
   }
 
   private String extractPrefix(String raw) {

@@ -28,7 +28,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.toresoft.signverify.domain.model.*;
 import org.toresoft.signverify.domain.port.CallbackDispatcherPort;
 import org.toresoft.signverify.domain.port.DocumentStoragePort;
@@ -84,7 +83,10 @@ public class CallbackWorker {
     }
   }
 
-  @Transactional
+  // Deliberately NOT @Transactional (and it would be dead anyway: poll() self-invokes, bypassing
+  // the Spring proxy). The method performs an outbound HTTP call; holding a DB transaction across
+  // it would pin a connection for the whole callback timeout. The single repo.save at the end
+  // commits on its own.
   public void dispatch(UUID id) {
     ValidationJob job = repo.findById(id).orElse(null);
     if (job == null || job.getCallbackUrl() == null) return;

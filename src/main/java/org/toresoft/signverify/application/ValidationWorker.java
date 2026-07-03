@@ -21,6 +21,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import org.slf4j.Logger;
@@ -29,7 +30,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.toresoft.signverify.domain.exception.AppException;
 import org.toresoft.signverify.domain.model.*;
 import org.toresoft.signverify.domain.port.*;
@@ -48,6 +48,7 @@ public class ValidationWorker {
   private final ObjectMapper om;
   private final CircuitBreakerRegistry circuitRegistry;
   private final int maxPickupAttempts;
+  private final Duration staleRunningTimeout;
 
   public ValidationWorker(
       ValidationJobRepository repo,
@@ -57,7 +58,8 @@ public class ValidationWorker {
       SignatureValidatorPort validator,
       ObjectMapper om,
       CircuitBreakerRegistry circuitRegistry,
-      @Value("${app.async.max-pickup-attempts}") int maxPickupAttempts) {
+      @Value("${app.async.max-pickup-attempts}") int maxPickupAttempts,
+      @Value("${app.async.worker.stale-running-timeout}") Duration staleRunningTimeout) {
     this.repo = repo;
     this.storage = storage;
     this.profileService = profileService;
@@ -66,13 +68,18 @@ public class ValidationWorker {
     this.om = om;
     this.circuitRegistry = circuitRegistry;
     this.maxPickupAttempts = maxPickupAttempts;
+    this.staleRunningTimeout = staleRunningTimeout;
   }
 
   @Scheduled(fixedDelayString = "${app.async.worker.poll-interval}")
   public void poll() {
     CircuitBreaker dssCircuit = circuitRegistry.circuitBreaker("dssValidator");
     if (dssCircuit.getState() == CircuitBreaker.State.OPEN) return;
-    var jobs = repo.findPickablePending(maxPickupAttempts, PageRequest.of(0, 4));
+    // Recover jobs stranded in RUNNING by a crashed instance: without this sweep they would sit
+    // invisible to the picker (which only selects PENDING) until their expiry, days later.
+    int requeued = repo.resetStaleRunning(Instant.now().minus(staleRunningTimeout));
+    if (requeued > 0) log.warn("requeued {} stale RUNNING job(s)", requeued);
+    var jobs = repo.findPickablePending(maxPickupAttempts, Instant.now(), PageRequest.of(0, 4));
     for (ValidationJob j : jobs) {
       try {
         process(j.getId());
@@ -82,7 +89,11 @@ public class ValidationWorker {
     }
   }
 
-  @Transactional
+  // Deliberately NOT @Transactional (and it would be dead anyway: poll() self-invokes, bypassing
+  // the Spring proxy). The atomic claim commits in its own transaction (see claimForProcessing),
+  // and the outcome writes below auto-commit individually; wrapping the whole method would hold a
+  // DB transaction open across a potentially minutes-long DSS validation. Crash recovery between
+  // claim and outcome is handled by the stale-RUNNING sweep in poll().
   public void process(UUID id) {
     // Atomic claim: only the worker whose conditional update affects a row proceeds. In a
     // multi-instance deployment this guarantees a single owner per job, avoiding duplicate
@@ -129,6 +140,9 @@ public class ValidationWorker {
         // running one by startedAt-based "in progress" queries / SLA metrics.
         job.setStartedAt(null);
         job.setStatus(JobStatus.PENDING);
+        // Give back the claim's increment: transient DSS unavailability must not consume the
+        // poison-job pickup budget. Retries stay bounded by the job TTL + the DSS circuit breaker.
+        job.setPickupAttempts(job.getPickupAttempts() - 1);
         repo.save(job);
         return;
       }

@@ -19,6 +19,7 @@ package org.toresoft.signverify.adapter.storage;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -121,6 +122,42 @@ class FilesystemDocumentStorageAdapterTest {
     DocumentStoragePort storage = newAdapter(baseDir);
 
     assertThatCode(() -> storage.delete(null)).doesNotThrowAnyException();
+  }
+
+  @Test
+  void read_pathOutsideBaseDir_isRejected(@TempDir Path baseDir, @TempDir Path other)
+      throws IOException {
+    DocumentStoragePort storage = newAdapter(baseDir);
+    Path outside = other.resolve("secret.txt");
+    Files.write(outside, "secret".getBytes());
+
+    assertThatThrownBy(() -> storage.read(outside.toString()))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("outside storage dir");
+    assertThat(Files.exists(outside)).isTrue();
+  }
+
+  @Test
+  void read_traversalOutsideBaseDir_isRejected(@TempDir Path baseDir) throws IOException {
+    DocumentStoragePort storage = newAdapter(baseDir);
+
+    // A path that starts under baseDir but escapes it via '..'.
+    assertThatThrownBy(() -> storage.read(baseDir + "/" + jobId + "/../../../etc/passwd"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("outside storage dir");
+  }
+
+  @Test
+  void delete_pathOutsideBaseDir_isRejected(@TempDir Path baseDir, @TempDir Path other)
+      throws IOException {
+    DocumentStoragePort storage = newAdapter(baseDir);
+    Path outside = other.resolve("victim.txt");
+    Files.write(outside, "keep me".getBytes());
+
+    assertThatThrownBy(() -> storage.delete(outside.toString()))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("outside storage dir");
+    assertThat(Files.exists(outside)).isTrue();
   }
 
   @Test
