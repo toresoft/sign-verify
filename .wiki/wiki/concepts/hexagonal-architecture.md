@@ -2,7 +2,7 @@
 type: concept
 domain: engineering
 created: 2026-06-27
-updated: 2026-06-27
+updated: 2026-07-03
 sources:
   - sources/SRC-2026-06-27-002
 volatility: warm
@@ -36,6 +36,11 @@ config       → beans, DSS beans, async pool, scheduler
 | `DocumentStoragePort` | `FilesystemDocumentStorageAdapter` |
 | `PasswordHasherPort` | `BcryptPasswordHasherAdapter` |
 | `SecretCipherPort` | `AesGcmSecretCipherAdapter` |
+| `TrustedListMirrorPort` | `TrustedCertificateMirror` (DB mirror of TSL certs) |
+
+## Lessons (2026-07-03)
+- **Port design with vendor types**: `TrustedListMirrorPort.sync()` takes **no arguments** — the DSS `TrustedListsCertificateSource` would be illegal in `domain/port`, so the adapter receives it by constructor injection instead. When an adapter method's argument is a vendor type, move the argument into the adapter, don't type it in the domain.
+- **ArchUnit gap fixed**: the original rules never forbade application→adapter; `TslService` imported `adapter.dss.TrustedCertificateMirror` undetected. Rule `application_does_not_depend_on_adapters` added (failed with 6 violations before the port refactor). Every architectural arrow you rely on needs its own explicit rule. (From [[raw/notes/2026-07-03-ll-code-review-fixes-hardening]].)
 
 ## Related
 - [[entities/sign-verify-2]] · [[entities/dss]] · [[concepts/async-verification-jobs]]
