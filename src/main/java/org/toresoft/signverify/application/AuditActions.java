@@ -40,6 +40,7 @@ public final class AuditActions {
 
   public static final String JOB_SUBMIT = "job.submit";
   public static final String JOB_CLEANUP = "job.cleanup";
+  public static final String EXTRACTION_TEMP_CLEANUP = "extraction.temp_cleanup";
 
   public static final String TSL_REFRESH = "tsl.refresh";
 
