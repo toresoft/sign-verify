@@ -74,7 +74,7 @@ RUN apk upgrade --no-cache \
  && apk add --no-cache fontconfig freetype ttf-dejavu \
  && addgroup -g 10001 app \
  && adduser -u 10001 -G app -s /sbin/nologin -D -H app \
- && mkdir -p /var/lib/sign-verify/dss-cache /var/lib/sign-verify/jobs \
+ && mkdir -p /var/lib/sign-verify/dss-cache /var/lib/sign-verify/jobs /var/lib/sign-verify/extract-tmp \
  && chown -R app:app /var/lib/sign-verify
 
 # Custom runtime.
