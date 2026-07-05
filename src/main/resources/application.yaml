@@ -136,8 +136,14 @@ app:
     allowed-algorithms: HmacSHA256,HmacSHA512
     allow-http: false
     block-private-networks: true
+    # Concurrency for outbound callback dispatch (offloaded off the scheduler thread).
+    workers: ${APP_CALLBACK_WORKERS:4}
     worker:
       poll-interval: 10s
+      # A claimed callback parks nextCallbackAt this far ahead while its async dispatch runs, so no
+      # other poll/instance re-picks it; a crash mid-dispatch retries only after this window. Keep
+      # >= the callback timeout and aligned with the @SchedulerLock lockAtMostFor.
+      claim-timeout: 5m
 
 resilience4j:
   circuitbreaker:

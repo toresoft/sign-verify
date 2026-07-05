@@ -84,7 +84,12 @@ class CallbackWorkerTest {
             MAX_ATTEMPTS,
             List.of(Duration.ofSeconds(1), Duration.ofSeconds(5), Duration.ofSeconds(30)),
             List.of(200, 202),
-            List.of(400, 410));
+            List.of(400, 410),
+            // Inline executor: run submitted dispatch synchronously so assertions can observe the
+            // outcome at once (production runs it on the dedicated callbackExecutor).
+            Runnable::run,
+            4,
+            Duration.ofMinutes(5));
   }
 
   // ---------------------------------------------------------------------
@@ -364,6 +369,8 @@ class CallbackWorkerTest {
     ValidationJob j1 = newCompletedJob();
     ValidationJob j2 = newCompletedJob();
     when(repo.findCallbacksDue(any(), eq(MAX_ATTEMPTS), any())).thenReturn(List.of(j1, j2));
+    // Both callbacks are claimed by this instance (atomic park wins the race).
+    when(repo.claimCallback(any(), any(), any(), eq(MAX_ATTEMPTS))).thenReturn(1);
     when(repo.findById(j1.getId())).thenReturn(java.util.Optional.of(j1));
     when(repo.findById(j2.getId())).thenReturn(java.util.Optional.of(j2));
     stubSecret();
@@ -378,6 +385,22 @@ class CallbackWorkerTest {
     verify(repo).findById(j1.getId());
     verify(repo).findById(j2.getId());
     verify(dispatcher, times(2))
+        .dispatch(anyString(), anyString(), anyString(), any(), anyString(), anyString(), anyInt());
+  }
+
+  @Test
+  void poll_skipsCallback_whenClaimLostToAnotherInstance() {
+    ValidationJob j1 = newCompletedJob();
+    when(repo.findCallbacksDue(any(), eq(MAX_ATTEMPTS), any())).thenReturn(List.of(j1));
+    // Another instance already claimed (parked) the callback: our conditional update affects 0
+    // rows.
+    when(repo.claimCallback(any(), any(), any(), eq(MAX_ATTEMPTS))).thenReturn(0);
+
+    worker.poll();
+
+    // No dispatch and no load: the lost claim short-circuits before any work.
+    verify(repo, never()).findById(any());
+    verify(dispatcher, never())
         .dispatch(anyString(), anyString(), anyString(), any(), anyString(), anyString(), anyInt());
   }
 }
