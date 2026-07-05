@@ -17,12 +17,35 @@
  */
 package org.toresoft.signverify.domain.port;
 
+import java.nio.file.Path;
 import java.util.List;
 
 public interface ExtractionPort {
   ExtractionResult extract(byte[] signedDocument, String filename);
 
-  record ExtractedFile(String filename, String mimeType, byte[] content) {}
+  /** A single extracted leaf, backed by a temp file rather than an in-heap byte array. */
+  record ExtractedFile(String filename, String mimeType, Path path, long size) {}
 
-  record ExtractionResult(String signatureFormat, List<ExtractedFile> originals) {}
+  /**
+   * Result of an extraction. Owns the scratch resources holding the leaf files; callers MUST {@code
+   * close()} it once the leaves have been consumed (streamed to the client).
+   */
+  record ExtractionResult(
+      String signatureFormat, List<ExtractedFile> originals, AutoCloseable cleanup)
+      implements AutoCloseable {
+
+    /** Convenience for tests / callers with nothing to clean up. */
+    public ExtractionResult(String signatureFormat, List<ExtractedFile> originals) {
+      this(signatureFormat, originals, () -> {});
+    }
+
+    @Override
+    public void close() {
+      try {
+        cleanup.close();
+      } catch (Exception e) {
+        throw new IllegalStateException("failed to release extraction resources", e);
+      }
+    }
+  }
 }

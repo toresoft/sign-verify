@@ -39,11 +39,11 @@ class DssExtractionAdapterTest {
   void extract_returns_result_from_pades() throws IOException {
     byte[] pdf =
         Files.readAllBytes(Path.of("src/test/resources/assets/pades/sample-pades-valid.pdf"));
-    var result = extractor.extract(pdf, "sample.pdf");
-
-    assertThat(result.signatureFormat()).isNotNull();
-    // PAdES may return 0 originals (signature is embedded in the PDF itself)
-    // The important thing is that extraction doesn't throw
+    try (var result = extractor.extract(pdf, "sample.pdf")) {
+      assertThat(result.signatureFormat()).isNotNull();
+      // PAdES may return 0 originals (signature is embedded in the PDF itself)
+      // The important thing is that extraction doesn't throw
+    }
   }
 
   @Test
@@ -57,8 +57,9 @@ class DssExtractionAdapterTest {
   void pades_reports_real_signature_format_not_unknown() throws IOException {
     byte[] pdf =
         Files.readAllBytes(Path.of("src/test/resources/assets/pades/sample-pades-valid.pdf"));
-    var result = extractor.extract(pdf, "sample.pdf");
-    assertThat(result.signatureFormat()).isEqualTo("PAdES");
+    try (var result = extractor.extract(pdf, "sample.pdf")) {
+      assertThat(result.signatureFormat()).isEqualTo("PAdES");
+    }
   }
 
   @Test
@@ -66,7 +67,8 @@ class DssExtractionAdapterTest {
     byte[] pdf =
         Files.readAllBytes(Path.of("src/test/resources/assets/pades/sample-pades-valid.pdf"));
     // Passing null filename must not throw; DSS still detects the PAdES form from content.
-    var result = extractor.extract(pdf, null);
-    assertThat(result.signatureFormat()).isEqualTo("PAdES");
+    try (var result = extractor.extract(pdf, null)) {
+      assertThat(result.signatureFormat()).isEqualTo("PAdES");
+    }
   }
 }

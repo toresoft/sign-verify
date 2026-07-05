@@ -18,18 +18,21 @@
 package org.toresoft.signverify.adapter.dss;
 
 import eu.europa.esig.dss.model.DSSDocument;
-import eu.europa.esig.dss.model.InMemoryDocument;
 import eu.europa.esig.dss.spi.signature.AdvancedSignature;
 import eu.europa.esig.dss.spi.validation.CertificateVerifier;
 import eu.europa.esig.dss.validation.SignedDocumentValidator;
-import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Component;
 import org.toresoft.signverify.domain.exception.AppException;
-import org.toresoft.signverify.domain.port.ExtractionPort;
 
+/**
+ * Single-level unwrap of a DSS-supported signed container. Returns the child documents as DSS
+ * {@link DSSDocument}s (lazily streamable) so the recursion driver can spill leaves to disk instead
+ * of reading them into heap. Every parse failure surfaces as {@link AppException} so the driver can
+ * tell a genuine leaf/service error apart from a non-container.
+ */
 @Component
-public class DssExtractionAdapter implements ExtractionPort {
+public class DssExtractionAdapter {
 
   private final CertificateVerifier certificateVerifier;
 
@@ -37,13 +40,10 @@ public class DssExtractionAdapter implements ExtractionPort {
     this.certificateVerifier = certificateVerifier;
   }
 
-  @Override
-  public ExtractionResult extract(byte[] bytes, String filename) {
-    String effectiveName =
-        (filename == null || filename.isBlank())
-            ? ContentTypeDetector.syntheticName("document", bytes)
-            : filename;
-    DSSDocument doc = new InMemoryDocument(bytes, effectiveName);
+  /** Result of a single unwrap: outer signature form plus its original documents. */
+  public record DssParse(String format, List<DSSDocument> originals) {}
+
+  public DssParse parse(DSSDocument doc) {
     SignedDocumentValidator validator;
     try {
       validator = SignedDocumentValidator.fromDocument(doc);
@@ -66,31 +66,13 @@ public class DssExtractionAdapter implements ExtractionPort {
       throw AppException.badRequest("cannot extract originals: " + e.getMessage());
     }
 
-    List<ExtractedFile> out = new ArrayList<>();
-    for (DSSDocument o : originals) {
-      try {
-        byte[] content = o.openStream().readAllBytes();
-        String name =
-            (o.getName() == null || o.getName().isBlank())
-                ? ContentTypeDetector.syntheticName("document", content)
-                : o.getName();
-        String mime =
-            o.getMimeType() == null
-                ? ContentTypeDetector.detect(content).mimeType()
-                : o.getMimeType().getMimeTypeString();
-        out.add(new ExtractedFile(name, mime, content));
-      } catch (Exception e) {
-        throw AppException.badRequest("cannot read extracted document: " + e.getMessage());
-      }
-    }
-
     String format;
     try {
       format = firstSignature.getSignatureForm().name();
     } catch (Exception e) {
       format = "UNKNOWN";
     }
-    return new ExtractionResult(format, out);
+    return new DssParse(format, originals);
   }
 
   /**
