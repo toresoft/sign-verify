@@ -20,11 +20,17 @@ package org.toresoft.signverify.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.ByteArrayInputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
@@ -32,6 +38,7 @@ import java.util.zip.ZipInputStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
@@ -45,6 +52,7 @@ import org.toresoft.signverify.domain.port.ExtractionPort.ExtractionResult;
 class ExtractionControllerTest {
 
   @Mock private ExtractionPort extractor;
+  @TempDir Path tmp;
   private MockMvc mvc;
 
   @BeforeEach
@@ -52,13 +60,19 @@ class ExtractionControllerTest {
     mvc = MockMvcBuilders.standaloneSetup(new ExtractionController(extractor)).build();
   }
 
+  private ExtractedFile leaf(String name, String mime, byte[] content) throws Exception {
+    Path p = Files.createTempFile(tmp, "leaf", ".bin");
+    Files.write(p, content);
+    return new ExtractedFile(name, mime, p, content.length);
+  }
+
   @Test
   void extract_singleOriginal_sanitizesContentDispositionFilename() throws Exception {
+    AutoCloseable cleanup = org.mockito.Mockito.mock(AutoCloseable.class);
     when(extractor.extract(any(), anyString()))
         .thenReturn(
             new ExtractionResult(
-                "PAdES",
-                List.of(new ExtractedFile("../../etc/passwd", "text/plain", new byte[] {1}))));
+                "PAdES", List.of(leaf("../../etc/passwd", "text/plain", new byte[] {1})), cleanup));
 
     var part = new MockMultipartFile("file", "in.pdf", "application/pdf", new byte[] {9});
 
@@ -72,6 +86,7 @@ class ExtractionControllerTest {
     // The traversal path is reduced to its basename; no separators leak into the header.
     assertThat(disposition).contains("passwd");
     assertThat(disposition).doesNotContain("/").doesNotContain("\\").doesNotContain("..");
+    verify(cleanup, times(1)).close();
   }
 
   @Test
@@ -80,7 +95,7 @@ class ExtractionControllerTest {
     when(extractor.extract(any(), anyString()))
         .thenReturn(
             new ExtractionResult(
-                "PAdES", List.of(new ExtractedFile(longName, "application/pdf", new byte[] {1}))));
+                "PAdES", List.of(leaf(longName, "application/pdf", new byte[] {1}))));
 
     var part = new MockMultipartFile("file", "in.pdf", "application/pdf", new byte[] {9});
 
@@ -103,23 +118,24 @@ class ExtractionControllerTest {
             new ExtractionResult(
                 "ASiC-E",
                 List.of(
-                    new ExtractedFile("../../etc/passwd", "text/plain", new byte[] {1}),
-                    new ExtractedFile("/abs/secret.txt", "text/plain", new byte[] {2}),
-                    new ExtractedFile("doc.pdf", "application/pdf", new byte[] {3}),
-                    new ExtractedFile("doc.pdf", "application/pdf", new byte[] {4}),
-                    new ExtractedFile("..", "text/plain", new byte[] {5}),
-                    new ExtractedFile("--verbose", "text/plain", new byte[] {6}))));
+                    leaf("../../etc/passwd", "text/plain", new byte[] {1}),
+                    leaf("/abs/secret.txt", "text/plain", new byte[] {2}),
+                    leaf("doc.pdf", "application/pdf", new byte[] {3}),
+                    leaf("doc.pdf", "application/pdf", new byte[] {4}),
+                    leaf("..", "text/plain", new byte[] {5}),
+                    leaf("--verbose", "text/plain", new byte[] {6}))));
 
     var part =
         new MockMultipartFile(
             "file", "container.asice", "application/vnd.etsi.asic-e+zip", new byte[] {9});
 
-    byte[] zip =
+    var mvcResult =
         mvc.perform(multipart("/api/v1/extractions").file(part))
             .andExpect(status().isOk())
-            .andReturn()
-            .getResponse()
-            .getContentAsByteArray();
+            .andExpect(request().asyncStarted())
+            .andReturn();
+    byte[] zip =
+        mvc.perform(asyncDispatch(mvcResult)).andReturn().getResponse().getContentAsByteArray();
 
     List<String> names = zipEntryNames(zip);
 

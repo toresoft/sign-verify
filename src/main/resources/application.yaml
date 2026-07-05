@@ -69,6 +69,13 @@ app:
   dss:
     cache-dir: ${APP_DSS_CACHE_DIR:/var/lib/sign-verify/dss-cache}
     online-mode: true
+  extraction:
+    max-leaves: 1000
+    max-total-bytes: 500MB
+    max-leaf-bytes: 200MB
+    cleanup:
+      cron: "0 */15 * * * *"
+      orphan-ttl: 1h
   tsl:
     sources:
       - id: eu-lotl

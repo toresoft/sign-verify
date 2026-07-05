@@ -17,7 +17,8 @@
  */
 package org.toresoft.signverify.api;
 
-import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.zip.ZipEntry;
@@ -30,7 +31,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.toresoft.signverify.domain.port.ExtractionPort;
+import org.toresoft.signverify.domain.port.ExtractionPort.ExtractedFile;
+import org.toresoft.signverify.domain.port.ExtractionPort.ExtractionResult;
 
 @RestController
 @RequestMapping("/api/v1/extractions")
@@ -46,35 +50,55 @@ public class ExtractionController {
   }
 
   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-  public ResponseEntity<byte[]> extract(@RequestPart("file") MultipartFile file) throws Exception {
-    var result = extractor.extract(file.getBytes(), file.getOriginalFilename());
+  public ResponseEntity<StreamingResponseBody> extract(@RequestPart("file") MultipartFile file)
+      throws Exception {
+    ExtractionResult result = extractor.extract(file.getBytes(), file.getOriginalFilename());
+    try {
+      HttpHeaders headers = new HttpHeaders();
+      headers.add("X-Signature-Format", result.signatureFormat());
+      headers.add("X-Document-Count", String.valueOf(result.originals().size()));
 
-    HttpHeaders headers = new HttpHeaders();
-    headers.add("X-Signature-Format", result.signatureFormat());
-    headers.add("X-Document-Count", String.valueOf(result.originals().size()));
+      if (result.originals().size() == 1) {
+        ExtractedFile f = result.originals().get(0);
+        headers.setContentType(MediaType.parseMediaType(f.mimeType()));
+        headers.setContentDispositionFormData("attachment", safeEntryName(f.filename(), 0));
+        headers.setContentLength(f.size());
+        StreamingResponseBody body =
+            out -> {
+              try {
+                Files.copy(f.path(), out);
+              } finally {
+                result.close();
+              }
+            };
+        return ResponseEntity.ok().headers(headers).body(body);
+      }
 
-    if (result.originals().size() == 1) {
-      var f = result.originals().get(0);
-      headers.setContentType(MediaType.parseMediaType(f.mimeType()));
-      headers.setContentDispositionFormData("attachment", safeEntryName(f.filename(), 0));
-      return ResponseEntity.ok().headers(headers).body(f.content());
+      headers.setContentType(MediaType.parseMediaType("application/zip"));
+      headers.setContentDispositionFormData("attachment", "originals.zip");
+      StreamingResponseBody body = out -> streamZip(result, out);
+      return ResponseEntity.ok().headers(headers).body(body);
+    } catch (RuntimeException e) {
+      result.close();
+      throw e;
     }
+  }
 
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+  private static void streamZip(ExtractionResult result, OutputStream out)
+      throws java.io.IOException {
+    try (ZipOutputStream zos = new ZipOutputStream(out)) {
       Set<String> usedNames = new HashSet<>();
       int index = 0;
-      for (var f : result.originals()) {
+      for (ExtractedFile f : result.originals()) {
         String entryName = uniqueName(safeEntryName(f.filename(), index), usedNames);
         zos.putNextEntry(new ZipEntry(entryName));
-        zos.write(f.content());
+        Files.copy(f.path(), zos);
         zos.closeEntry();
         index++;
       }
+    } finally {
+      result.close();
     }
-    headers.setContentType(MediaType.parseMediaType("application/zip"));
-    headers.setContentDispositionFormData("attachment", "originals.zip");
-    return ResponseEntity.ok().headers(headers).body(baos.toByteArray());
   }
 
   /**

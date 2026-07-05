@@ -21,6 +21,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 
+import eu.europa.esig.dss.model.DSSDocument;
+import eu.europa.esig.dss.model.InMemoryDocument;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1Integer;
@@ -30,8 +34,12 @@ import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERTaggedObject;
 import org.bouncycastle.asn1.cms.ContentInfo;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.springframework.util.unit.DataSize;
+import org.toresoft.signverify.config.ExtractionProperties;
 import org.toresoft.signverify.domain.exception.AppException;
-import org.toresoft.signverify.domain.port.ExtractionPort;
+import org.toresoft.signverify.domain.port.ExtractionPort.ExtractedFile;
+import org.toresoft.signverify.domain.port.ExtractionPort.ExtractionResult;
 
 class RecursiveExtractionAdapterTest {
 
@@ -43,6 +51,15 @@ class RecursiveExtractionAdapterTest {
   // that it is a real RFC 3161 token, so any OID works.
   private static final ASN1ObjectIdentifier DUMMY_TIMESTAMP_OID =
       new ASN1ObjectIdentifier("1.2.3.4.5");
+
+  private static ExtractionProperties props(Path base) {
+    var p = new ExtractionProperties();
+    p.setTempDir(base);
+    p.setMaxLeaves(1000);
+    p.setMaxLeafBytes(DataSize.ofMegabytes(10));
+    p.setMaxTotalBytes(DataSize.ofMegabytes(50));
+    return p;
+  }
 
   /**
    * Minimal RFC 5544 TSD wrapping arbitrary inner bytes (routing-only, no real TSA signature).
@@ -73,21 +90,21 @@ class RecursiveExtractionAdapterTest {
   }
 
   /**
-   * Stub single-level delegate: returns a preconfigured result on its first call, then throws a
+   * Stub single-level delegate: returns a preconfigured parse on its first call, then throws a
    * parse error on every subsequent call — simulating a container whose extracted originals are
    * themselves plain (non-container) leaves, without looping forever.
    */
   private static final class StubDelegate extends DssExtractionAdapter {
-    private final ExtractionResult result;
+    private final DssParse result;
     private boolean consumed;
 
-    StubDelegate(ExtractionResult result) {
+    StubDelegate(DssParse result) {
       super(null);
       this.result = result;
     }
 
     @Override
-    public ExtractionResult extract(byte[] bytes, String filename) {
+    public DssParse parse(DSSDocument doc) {
       if (result == null || consumed) {
         throw AppException.signatureParseError("no signatures found");
       }
@@ -97,76 +114,77 @@ class RecursiveExtractionAdapterTest {
   }
 
   @Test
-  void single_tsd_wrapping_a_leaf_returns_raw_inner_with_deduced_name() throws Exception {
+  void single_tsd_wrapping_a_leaf_returns_raw_inner_with_deduced_name(@TempDir Path base)
+      throws Exception {
     byte[] pdfLeaf = "%PDF-1.7 body".getBytes();
     byte[] outer = tsd(pdfLeaf);
-    var adapter = new RecursiveExtractionAdapter(new StubDelegate(null));
+    var adapter = new RecursiveExtractionAdapter(new StubDelegate(null), props(base));
 
-    var result = adapter.extract(outer, "sample.tsd");
-
-    assertThat(result.signatureFormat()).isEqualTo(RecursiveExtractionAdapter.TSD_FORMAT);
-    assertThat(result.originals()).hasSize(1);
-    ExtractionPort.ExtractedFile leaf = result.originals().get(0);
-    assertThat(leaf.content()).isEqualTo(pdfLeaf);
-    assertThat(leaf.mimeType()).isEqualTo("application/pdf");
-    assertThat(leaf.filename()).endsWith(".pdf");
+    try (ExtractionResult result = adapter.extract(outer, "sample.tsd")) {
+      assertThat(result.signatureFormat()).isEqualTo(RecursiveExtractionAdapter.TSD_FORMAT);
+      assertThat(result.originals()).hasSize(1);
+      ExtractedFile leaf = result.originals().get(0);
+      assertThat(Files.readAllBytes(leaf.path())).isEqualTo(pdfLeaf);
+      assertThat(leaf.mimeType()).isEqualTo("application/pdf");
+      assertThat(leaf.filename()).endsWith(".pdf");
+      assertThat(leaf.size()).isEqualTo(pdfLeaf.length);
+    }
   }
 
   @Test
-  void nested_tsd_in_tsd_unwraps_to_the_innermost_leaf() throws Exception {
+  void nested_tsd_in_tsd_unwraps_to_the_innermost_leaf(@TempDir Path base) throws Exception {
     byte[] leaf = "%PDF-inner".getBytes();
     byte[] nested = tsd(tsd(leaf));
-    var adapter = new RecursiveExtractionAdapter(new StubDelegate(null));
+    var adapter = new RecursiveExtractionAdapter(new StubDelegate(null), props(base));
 
-    var result = adapter.extract(nested, "x.tsd");
-
-    assertThat(result.originals()).hasSize(1);
-    assertThat(result.originals().get(0).content()).isEqualTo(leaf);
+    try (ExtractionResult result = adapter.extract(nested, "x.tsd")) {
+      assertThat(result.originals()).hasSize(1);
+      assertThat(Files.readAllBytes(result.originals().get(0).path())).isEqualTo(leaf);
+    }
   }
 
   @Test
-  void tsd_wrapping_a_dss_container_recurses_into_delegate_originals() throws Exception {
+  void tsd_wrapping_a_dss_container_recurses_into_delegate_originals(@TempDir Path base)
+      throws Exception {
     byte[] realLeaf = "%PDF-final".getBytes();
     // First delegate call (on the p7m inner) yields one original that is itself a plain leaf.
     var delegate =
         new StubDelegate(
-            new ExtractionPort.ExtractionResult(
-                "CAdES",
-                List.of(
-                    new ExtractionPort.ExtractedFile("payload.pdf", "application/pdf", realLeaf))));
+            new DssExtractionAdapter.DssParse(
+                "CAdES", List.of(new InMemoryDocument(realLeaf, "payload.pdf"))));
     // Inner of the TSD is a DER SEQUENCE so tryUnwrapTsd fails and the delegate is used.
     byte[] p7mLike = {0x30, (byte) 0x82, 0x01, 0x00};
     byte[] outer = tsd(p7mLike);
-    var adapter = new RecursiveExtractionAdapter(delegate);
+    var adapter = new RecursiveExtractionAdapter(delegate, props(base));
 
-    var result = adapter.extract(outer, "c.tsd");
-
-    // Outermost container is the TSD, even though the delegate's own format (CAdES) sits
-    // one level down.
-    assertThat(result.signatureFormat()).isEqualTo(RecursiveExtractionAdapter.TSD_FORMAT);
-    // realLeaf is returned as-is: the stub delegate's canned CAdES result is consumed once (for
-    // the p7m-like inner), then throws parse-error on the recursive call over its own original
-    // (realLeaf), which — at depth > 0 — becomes a raw leaf instead of propagating.
-    assertThat(result.originals()).hasSize(1);
-    assertThat(result.originals().get(0).content()).isEqualTo(realLeaf);
+    try (ExtractionResult result = adapter.extract(outer, "c.tsd")) {
+      // Outermost container is the TSD, even though the delegate's own format (CAdES) sits
+      // one level down.
+      assertThat(result.signatureFormat()).isEqualTo(RecursiveExtractionAdapter.TSD_FORMAT);
+      // realLeaf is returned as-is: the stub delegate's canned CAdES parse is consumed once (for
+      // the p7m-like inner), then throws parse-error on the recursive call over its own original
+      // (realLeaf), which — at depth > 0 — becomes a raw leaf instead of propagating.
+      assertThat(result.originals()).hasSize(1);
+      assertThat(Files.readAllBytes(result.originals().get(0).path())).isEqualTo(realLeaf);
+    }
   }
 
   @Test
-  void top_level_non_container_propagates_parse_error() {
+  void top_level_non_container_propagates_parse_error(@TempDir Path base) {
     // depth == 0, not a TSD, delegate throws -> error must propagate (bad user input).
     byte[] plain = "not a signed doc".getBytes();
-    var adapter = new RecursiveExtractionAdapter(new StubDelegate(null));
+    var adapter = new RecursiveExtractionAdapter(new StubDelegate(null), props(base));
 
     assertThatThrownBy(() -> adapter.extract(plain, "plain.txt")).isInstanceOf(AppException.class);
   }
 
   @Test
-  void nesting_beyond_max_depth_throws_app_exception() throws Exception {
+  void nesting_beyond_max_depth_throws_app_exception(@TempDir Path base) throws Exception {
     byte[] deeplyNested = "%PDF-leaf".getBytes();
     for (int i = 0; i < 12; i++) {
       deeplyNested = tsd(deeplyNested);
     }
-    var adapter = new RecursiveExtractionAdapter(new StubDelegate(null));
+    var adapter = new RecursiveExtractionAdapter(new StubDelegate(null), props(base));
     byte[] finalDeeplyNested = deeplyNested;
 
     // AppException.getMessage() returns the RFC 9457 title ("Bad Request"); the descriptive
@@ -176,5 +194,23 @@ class RecursiveExtractionAdapterTest {
             () -> adapter.extract(finalDeeplyNested, "deep.tsd"), AppException.class);
     assertThat(thrown).isNotNull();
     assertThat(thrown.getDetail()).contains("max depth");
+  }
+
+  @Test
+  void max_leaves_cap_is_enforced(@TempDir Path base) throws Exception {
+    byte[] leafA = "AAAA".getBytes();
+    byte[] leafB = "BBBB".getBytes();
+    var delegate =
+        new StubDelegate(
+            new DssExtractionAdapter.DssParse(
+                "ASiC-E",
+                List.of(
+                    new InMemoryDocument(leafA, "a.txt"), new InMemoryDocument(leafB, "b.txt"))));
+    byte[] container = {0x30, (byte) 0x82, 0x01, 0x00};
+    var p = props(base);
+    p.setMaxLeaves(1);
+    var adapter = new RecursiveExtractionAdapter(delegate, p);
+
+    assertThatThrownBy(() -> adapter.extract(container, "c.p7m")).isInstanceOf(AppException.class);
   }
 }

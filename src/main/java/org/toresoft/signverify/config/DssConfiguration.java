@@ -43,7 +43,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ResourceLoader;
 
 @Configuration
-@EnableConfigurationProperties(TslProperties.class)
+@EnableConfigurationProperties({TslProperties.class, ExtractionProperties.class})
 public class DssConfiguration {
 
   private static final org.slf4j.Logger log =

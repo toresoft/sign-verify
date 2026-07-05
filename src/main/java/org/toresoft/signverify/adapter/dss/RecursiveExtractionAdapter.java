@@ -17,17 +17,23 @@
  */
 package org.toresoft.signverify.adapter.dss;
 
+import eu.europa.esig.dss.model.DSSDocument;
+import eu.europa.esig.dss.model.InMemoryDocument;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.bouncycastle.tsp.cms.CMSTimeStampedData;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
+import org.toresoft.signverify.config.ExtractionProperties;
 import org.toresoft.signverify.domain.exception.AppException;
 import org.toresoft.signverify.domain.port.ExtractionPort;
 
 /**
- * Recursively unwraps signed containers down to their original non-signed content.
+ * Recursively unwraps signed containers down to their original non-signed content, spilling each
+ * leaf to a temp file via {@link ExtractionWorkspace} so heap stays O(1) copies regardless of the
+ * nesting fan-out.
  *
  * <p>Handles RFC 5544 TimeStampedData (TSD) — which DSS 6.4 cannot parse via {@code
  * SignedDocumentValidator.fromDocument()} — by unwrapping it with Bouncy Castle before delegating,
@@ -36,8 +42,8 @@ import org.toresoft.signverify.domain.port.ExtractionPort;
  *
  * <p>Depth is bounded by {@link #MAX_DEPTH} to defend against pathological nesting (e.g. long PAdES
  * revision chains or hand-crafted inputs). A non-container reached at {@code depth == 0} is a user
- * error and propagates; at {@code depth > 0} it is a legitimate leaf and is returned raw with a
- * content-sniffed name/mime.
+ * error and propagates; at {@code depth > 0} it is a legitimate leaf and is spilled raw with a
+ * content-sniffed name/mime. Leaf count and byte volume are bounded by the workspace caps.
  */
 @Component
 @Primary
@@ -47,17 +53,26 @@ public class RecursiveExtractionAdapter implements ExtractionPort {
   private static final int MAX_DEPTH = 10;
 
   private final DssExtractionAdapter delegate;
+  private final ExtractionProperties props;
 
-  public RecursiveExtractionAdapter(DssExtractionAdapter delegate) {
+  public RecursiveExtractionAdapter(DssExtractionAdapter delegate, ExtractionProperties props) {
     this.delegate = delegate;
+    this.props = props;
   }
 
   @Override
   @CircuitBreaker(name = "dssExtraction", fallbackMethod = "dssExtractionFallback")
   public ExtractionResult extract(byte[] bytes, String filename) {
-    Accumulator acc = new Accumulator();
-    extractRecursive(bytes, filename, 0, acc);
-    return new ExtractionResult(acc.outerFormat == null ? "UNKNOWN" : acc.outerFormat, acc.leaves);
+    ExtractionWorkspace ws = new ExtractionWorkspace(props);
+    Accumulator acc = new Accumulator(ws);
+    try {
+      extractRecursive(new InMemoryDocument(bytes, safeName(filename, bytes)), 0, acc);
+    } catch (RuntimeException e) {
+      ws.close();
+      throw e;
+    }
+    return new ExtractionResult(
+        acc.outerFormat == null ? "UNKNOWN" : acc.outerFormat, acc.leaves, ws);
   }
 
   public ExtractionResult dssExtractionFallback(byte[] bytes, String filename, Throwable t) {
@@ -65,42 +80,57 @@ public class RecursiveExtractionAdapter implements ExtractionPort {
     throw AppException.dssUnavailable("dss extraction circuit breaker open: " + t.getMessage());
   }
 
-  private void extractRecursive(byte[] bytes, String name, int depth, Accumulator acc) {
+  private void extractRecursive(DSSDocument node, int depth, Accumulator acc) {
     if (depth > MAX_DEPTH) {
       throw AppException.badRequest("extraction nesting exceeds max depth " + MAX_DEPTH);
     }
 
-    byte[] inner = tryUnwrapTsd(bytes);
+    byte[] nodeBytes = readNode(node);
+
+    byte[] inner = tryUnwrapTsd(nodeBytes);
     if (inner != null) {
       if (depth == 0) {
         acc.outerFormat = TSD_FORMAT;
       }
-      extractRecursive(inner, deriveInnerName(name, inner), depth + 1, acc);
+      extractRecursive(
+          new InMemoryDocument(inner, deriveInnerName(node.getName(), inner)), depth + 1, acc);
       return;
     }
 
-    ExtractionResult one;
+    DssExtractionAdapter.DssParse parsed;
     try {
-      one = delegate.extract(bytes, name);
+      parsed = delegate.parse(node);
     } catch (AppException parseError) {
       if (depth == 0) {
         throw parseError; // top-level input is not a signed container: real error
       }
-      // depth > 0: not a container -> raw leaf
-      var dt = ContentTypeDetector.detect(bytes);
-      String leafName =
-          (name == null || name.isBlank())
-              ? ContentTypeDetector.syntheticName("document", bytes)
-              : name;
-      acc.leaves.add(new ExtractedFile(leafName, dt.mimeType(), bytes));
+      spillLeaf(node, nodeBytes, acc); // depth > 0: not a container -> raw leaf
       return;
     }
 
     if (depth == 0) {
-      acc.outerFormat = one.signatureFormat();
+      acc.outerFormat = parsed.format();
     }
-    for (ExtractedFile f : one.originals()) {
-      extractRecursive(f.content(), f.filename(), depth + 1, acc);
+    for (DSSDocument child : parsed.originals()) {
+      extractRecursive(child, depth + 1, acc);
+    }
+  }
+
+  private void spillLeaf(DSSDocument node, byte[] nodeBytes, Accumulator acc) {
+    var dt = ContentTypeDetector.detect(nodeBytes);
+    String leafName =
+        (node.getName() == null || node.getName().isBlank())
+            ? ContentTypeDetector.syntheticName("document", nodeBytes)
+            : node.getName();
+    acc.leaves.add(
+        acc.ws.spill(leafName, dt.mimeType(), new java.io.ByteArrayInputStream(nodeBytes)));
+  }
+
+  private static byte[] readNode(DSSDocument node) {
+    try (var in = node.openStream()) {
+      return in.readAllBytes();
+    } catch (IOException e) {
+      throw AppException.badRequest("cannot read extracted document: " + e.getMessage());
     }
   }
 
@@ -118,6 +148,12 @@ public class RecursiveExtractionAdapter implements ExtractionPort {
     return null;
   }
 
+  private static String safeName(String filename, byte[] bytes) {
+    return (filename == null || filename.isBlank())
+        ? ContentTypeDetector.syntheticName("document", bytes)
+        : filename;
+  }
+
   private static String deriveInnerName(String outerName, byte[] innerBytes) {
     String ext = ContentTypeDetector.detect(innerBytes).extension();
     String base;
@@ -131,9 +167,14 @@ public class RecursiveExtractionAdapter implements ExtractionPort {
     return base + ext;
   }
 
-  /** Collects leaves plus the outermost container format across the recursion. */
+  /** Collects leaf handles plus the outermost container format across the recursion. */
   private static final class Accumulator {
-    private final List<ExtractedFile> leaves = new ArrayList<>();
+    private final ExtractionWorkspace ws;
+    private final List<ExtractionPort.ExtractedFile> leaves = new ArrayList<>();
     private String outerFormat;
+
+    Accumulator(ExtractionWorkspace ws) {
+      this.ws = ws;
+    }
   }
 }
