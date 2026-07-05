@@ -49,8 +49,12 @@ public class SecurityConfiguration {
             e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
         .authorizeHttpRequests(
             a ->
-                a.requestMatchers("/actuator/health/**", "/actuator/prometheus")
+                a.requestMatchers("/actuator/health/**")
                     .permitAll()
+                    // /actuator/prometheus is NOT public: it leaks per-route latency/traffic
+                    // (API fingerprint), async queue depth (times a DoS against max-pending-global)
+                    // and JVM/version details. It falls through to authenticated() below — the
+                    // scraper must present an API key / bearer token (or be network-isolated).
                     .requestMatchers("/v3/api-docs/**", "/swagger-ui/**")
                     .permitAll()
                     .anyRequest()
