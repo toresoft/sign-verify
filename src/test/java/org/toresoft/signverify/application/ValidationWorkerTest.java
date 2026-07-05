@@ -32,6 +32,7 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -77,6 +78,8 @@ class ValidationWorkerTest {
 
   private ValidationWorker worker;
 
+  private static final int WORKERS = 4;
+
   @BeforeEach
   void setUp() {
     worker =
@@ -89,7 +92,11 @@ class ValidationWorkerTest {
             om,
             registry,
             MAX_PICKUP_ATTEMPTS,
-            java.time.Duration.ofMinutes(30));
+            java.time.Duration.ofMinutes(30),
+            // Inline executor: run submitted work synchronously so poll() behaves like the pre-
+            // offload version under test (assertions can observe process() side effects at once).
+            Runnable::run,
+            WORKERS);
     lenient().when(registry.circuitBreaker("dssValidator")).thenReturn(circuit);
     // By default the worker wins the atomic claim; tests that exercise the lost-race / not-pending
     // path override this with 0.
@@ -394,5 +401,34 @@ class ValidationWorkerTest {
     verify(repo).findById(j1.getId());
     verify(repo).findById(j2.getId());
     verify(validator, times(2)).validate(any(ValidationRequest.class));
+  }
+
+  @Test
+  void poll_appliesBackpressure_whenAllWorkersBusy() {
+    // Executor that captures tasks but never runs them: the semaphore permits stay acquired,
+    // modelling workers busy on long validations. The next poll must not claim more work.
+    List<Runnable> captured = new ArrayList<>();
+    ValidationWorker busyWorker =
+        new ValidationWorker(
+            repo,
+            storage,
+            profileService,
+            applier,
+            validator,
+            om,
+            registry,
+            MAX_PICKUP_ATTEMPTS,
+            java.time.Duration.ofMinutes(30),
+            captured::add,
+            2);
+    when(circuit.getState()).thenReturn(CircuitBreaker.State.CLOSED);
+    when(repo.findPickablePending(eq(MAX_PICKUP_ATTEMPTS), any(), any()))
+        .thenReturn(List.of(newPendingJob(), newPendingJob()));
+
+    busyWorker.poll(); // claims 2 (all capacity), submits 2 tasks that never complete
+    busyWorker.poll(); // no free capacity -> must not query the DB for more work
+
+    assertThat(captured).hasSize(2);
+    verify(repo, times(1)).findPickablePending(eq(MAX_PICKUP_ATTEMPTS), any(), any());
   }
 }
