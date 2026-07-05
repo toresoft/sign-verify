@@ -150,6 +150,30 @@ class ValidationJobRepositoryTest {
     assertThat(repo.countByStatus(JobStatus.COMPLETED)).isZero();
   }
 
+  @Test
+  void claimCallback_claimsOnlyDueCallbacks_andParksThem() {
+    Instant now = Instant.now();
+    ValidationJob due = newJob(JobStatus.COMPLETED, "alice");
+    due.setCallbackUrl("https://cb.example/hook");
+    due.setNextCallbackAt(now.minusSeconds(5));
+    ValidationJob notYet = newJob(JobStatus.COMPLETED, "alice");
+    notYet.setCallbackUrl("https://cb.example/hook");
+    notYet.setNextCallbackAt(now.plusSeconds(300));
+    repo.saveAll(List.of(due, notYet));
+    em.flush();
+    em.clear();
+
+    Instant parkUntil = now.plus(java.time.Duration.ofMinutes(5));
+    assertThat(repo.claimCallback(due.getId(), now, parkUntil, 3)).isEqualTo(1);
+    // Re-claim of the same row now sees the parked (future) nextCallbackAt -> no longer due.
+    assertThat(repo.claimCallback(due.getId(), now, parkUntil, 3)).isZero();
+    // A callback whose next attempt is in the future is not claimable.
+    assertThat(repo.claimCallback(notYet.getId(), now, parkUntil, 3)).isZero();
+
+    assertThat(repo.findById(due.getId()).orElseThrow().getNextCallbackAt())
+        .isAfter(now.plus(java.time.Duration.ofMinutes(4)));
+  }
+
   private ValidationJob newJob(JobStatus status, String principalId) {
     ValidationJob j = new ValidationJob();
     j.setId(UUID.randomUUID());

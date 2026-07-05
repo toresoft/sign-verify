@@ -21,9 +21,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.Semaphore;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -48,6 +52,9 @@ public class CallbackWorker {
   private final List<Duration> backoff;
   private final Set<Integer> successCodes;
   private final Set<Integer> nonRetryableCodes;
+  private final Executor callbackExecutor;
+  private final Semaphore capacity;
+  private final Duration claimTimeout;
 
   public CallbackWorker(
       ValidationJobRepository repo,
@@ -58,7 +65,10 @@ public class CallbackWorker {
       @Value("${app.callback.max-attempts}") int maxAttempts,
       @Value("${app.callback.backoff}") List<Duration> backoff,
       @Value("${app.callback.success-statuses}") List<Integer> success,
-      @Value("${app.callback.non-retryable-statuses}") List<Integer> nonRetry) {
+      @Value("${app.callback.non-retryable-statuses}") List<Integer> nonRetry,
+      @Qualifier("callbackExecutor") Executor callbackExecutor,
+      @Value("${app.callback.workers}") int workers,
+      @Value("${app.callback.worker.claim-timeout}") Duration claimTimeout) {
     this.repo = repo;
     this.dispatcher = dispatcher;
     this.cipher = cipher;
@@ -68,30 +78,74 @@ public class CallbackWorker {
     this.backoff = backoff;
     this.successCodes = new HashSet<>(success);
     this.nonRetryableCodes = new HashSet<>(nonRetry);
+    this.callbackExecutor = callbackExecutor;
+    this.capacity = new Semaphore(workers);
+    this.claimTimeout = claimTimeout;
   }
 
   @Scheduled(fixedDelayString = "${app.callback.worker.poll-interval}")
   @SchedulerLock(name = "callbackDispatch", lockAtMostFor = "PT5M", lockAtLeastFor = "PT5S")
   public void poll() {
-    var due = repo.findCallbacksDue(Instant.now(), maxAttempts, PageRequest.of(0, 16));
+    // Backpressure: only claim as many callbacks as there is free dispatch capacity.
+    int free = capacity.availablePermits();
+    if (free == 0) return;
+    Instant now = Instant.now();
+    var due = repo.findCallbacksDue(now, maxAttempts, PageRequest.of(0, free));
+    Instant parkUntil = now.plus(claimTimeout);
     for (ValidationJob j : due) {
+      if (!capacity.tryAcquire()) break;
+      UUID id = j.getId();
+      // Atomic claim: park nextCallbackAt into the future so no concurrent poll/instance re-picks
+      // this callback while its (offloaded) HTTP dispatch is in flight. Only the winner dispatches.
+      if (repo.claimCallback(id, now, parkUntil, maxAttempts) == 0) {
+        capacity.release();
+        continue;
+      }
       try {
-        dispatch(j.getId());
-      } catch (Exception e) {
-        log.error("callback dispatch error on job {}", j.getId(), e);
+        // Offload the blocking outbound HTTP call so the shared @Scheduled thread returns at once.
+        callbackExecutor.execute(
+            () -> {
+              try {
+                deliverClaimed(id);
+              } catch (Exception e) {
+                log.error("callback dispatch error on job {}", id, e);
+              } finally {
+                capacity.release();
+              }
+            });
+      } catch (RejectedExecutionException rex) {
+        capacity.release();
+        log.warn("callback executor saturated; deferring job {} to next poll", id);
+        break;
       }
     }
   }
 
-  // Deliberately NOT @Transactional (and it would be dead anyway: poll() self-invokes, bypassing
-  // the Spring proxy). The method performs an outbound HTTP call; holding a DB transaction across
-  // it would pin a connection for the whole callback timeout. The single repo.save at the end
-  // commits on its own.
+  /**
+   * Dispatch entry point that revalidates the due-window guard itself (for direct/manual calls).
+   * The poll path uses {@link #deliverClaimed(UUID)} instead, because it has already claimed the
+   * row by parking {@code nextCallbackAt} forward — which would make this guard reject it.
+   */
   public void dispatch(UUID id) {
     ValidationJob job = repo.findById(id).orElse(null);
     if (job == null || job.getCallbackUrl() == null) return;
     if (job.getNextCallbackAt() == null || job.getNextCallbackAt().isAfter(Instant.now())) return;
+    deliver(job);
+  }
 
+  /**
+   * Loads a job already claimed by {@link #poll()} and delivers it, skipping the due-window guard.
+   */
+  void deliverClaimed(UUID id) {
+    ValidationJob job = repo.findById(id).orElse(null);
+    if (job == null || job.getCallbackUrl() == null) return;
+    deliver(job);
+  }
+
+  // Deliberately NOT @Transactional: the method performs an outbound HTTP call; holding a DB
+  // transaction across it would pin a connection for the whole callback timeout. The single
+  // repo.save at the end commits on its own.
+  private void deliver(ValidationJob job) {
     String secret = cipher.decrypt(job.getCallbackSecretCipher());
     byte[] body = buildBody(job);
     String deliveryId = UUID.randomUUID().toString();

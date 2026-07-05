@@ -195,4 +195,38 @@ public interface ValidationJobRepository extends JpaRepository<ValidationJob, UU
   default List<ValidationJob> findCallbacksDue(Instant now, int maxAttempts, int limit) {
     return findCallbacksDue(now, maxAttempts, PageRequest.of(0, limit));
   }
+
+  /**
+   * Atomically claims a due callback for dispatch by parking {@code nextCallbackAt} into the future
+   * ({@code parkUntil}) in a single conditional update. Returns 1 only for the caller that wins the
+   * race; concurrent polls (same or other instance) get 0 and must skip it. This lets callback
+   * dispatch be offloaded to an executor without holding the {@code @SchedulerLock} for the whole
+   * outbound HTTP call: the park keeps the callback invisible to {@code findCallbacksDue} until the
+   * async dispatch overwrites {@code nextCallbackAt} with the real next attempt (or null). If the
+   * instance dies mid-dispatch, the parked callback becomes due again after {@code parkUntil} and
+   * is retried — the same crash-recovery contract the old lock-held loop had via {@code
+   * lockAtMostFor}. The version column is bumped explicitly (bulk JPQL bypasses {@code @Version}).
+   *
+   * @return number of rows updated (1 = claimed by this caller, 0 = already claimed / not due)
+   */
+  @Modifying(clearAutomatically = true)
+  @Transactional
+  @Query(
+      """
+      UPDATE ValidationJob j
+         SET j.nextCallbackAt = :parkUntil,
+             j.version = j.version + 1
+       WHERE j.id = :id
+         AND j.status IN (org.toresoft.signverify.domain.model.JobStatus.COMPLETED,
+                          org.toresoft.signverify.domain.model.JobStatus.FAILED)
+         AND j.callbackUrl IS NOT NULL
+         AND j.nextCallbackAt IS NOT NULL
+         AND j.nextCallbackAt <= :now
+         AND j.callbackAttempts < :maxAttempts
+      """)
+  int claimCallback(
+      @Param("id") UUID id,
+      @Param("now") Instant now,
+      @Param("parkUntil") Instant parkUntil,
+      @Param("maxAttempts") int maxAttempts);
 }
