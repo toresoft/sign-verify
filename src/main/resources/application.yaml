@@ -62,6 +62,10 @@ app:
       enabled: ${APP_SECURITY_OAUTH_ENABLED:true}
       role-claim: ${APP_SECURITY_OAUTH_ROLE_CLAIM:roles}
       privileged-values: ${APP_SECURITY_OAUTH_PRIVILEGED_VALUES:admin,privileged}
+      # Expected token audience(s). Rejects JWTs minted by the IdP for a different client in the
+      # same realm (cross-audience token confusion). Requires the IdP to emit this value in aud
+      # (Keycloak: an audience mapper) — otherwise every token is rejected with 401.
+      audience: ${APP_SECURITY_OAUTH_AUDIENCE:sign-verify}
     bootstrap-key-file: ${APP_SECURITY_BOOTSTRAP_KEY_FILE:/var/lib/sign-verify/bootstrap-api-key.txt}
     master-key: ${APP_SECRET_MASTER_KEY:}
   storage:
