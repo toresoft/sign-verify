@@ -16,6 +16,14 @@ spring:
     multipart:
       max-file-size: 50MB
       max-request-size: 60MB
+  task:
+    scheduling:
+      # Default is a single thread shared by ALL @Scheduled methods (validation/callback pollers +
+      # TSL refresh + job/extraction cleanup). A long-running poll would then starve the others.
+      # Size it above the scheduler count so no scheduler blocks another; heavy job validation is
+      # additionally offloaded to the dedicated 'validationExecutor' (see ValidationExecutorConfig).
+      pool:
+        size: 4
   security:
     oauth2:
       resourceserver:

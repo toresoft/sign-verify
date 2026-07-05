@@ -24,8 +24,12 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.Semaphore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -49,6 +53,8 @@ public class ValidationWorker {
   private final CircuitBreakerRegistry circuitRegistry;
   private final int maxPickupAttempts;
   private final Duration staleRunningTimeout;
+  private final Executor validationExecutor;
+  private final Semaphore capacity;
 
   public ValidationWorker(
       ValidationJobRepository repo,
@@ -59,7 +65,9 @@ public class ValidationWorker {
       ObjectMapper om,
       CircuitBreakerRegistry circuitRegistry,
       @Value("${app.async.max-pickup-attempts}") int maxPickupAttempts,
-      @Value("${app.async.worker.stale-running-timeout}") Duration staleRunningTimeout) {
+      @Value("${app.async.worker.stale-running-timeout}") Duration staleRunningTimeout,
+      @Qualifier("validationExecutor") Executor validationExecutor,
+      @Value("${app.async.workers}") int workers) {
     this.repo = repo;
     this.storage = storage;
     this.profileService = profileService;
@@ -69,6 +77,8 @@ public class ValidationWorker {
     this.circuitRegistry = circuitRegistry;
     this.maxPickupAttempts = maxPickupAttempts;
     this.staleRunningTimeout = staleRunningTimeout;
+    this.validationExecutor = validationExecutor;
+    this.capacity = new Semaphore(workers);
   }
 
   @Scheduled(fixedDelayString = "${app.async.worker.poll-interval}")
@@ -79,12 +89,32 @@ public class ValidationWorker {
     // invisible to the picker (which only selects PENDING) until their expiry, days later.
     int requeued = repo.resetStaleRunning(Instant.now().minus(staleRunningTimeout));
     if (requeued > 0) log.warn("requeued {} stale RUNNING job(s)", requeued);
-    var jobs = repo.findPickablePending(maxPickupAttempts, Instant.now(), PageRequest.of(0, 4));
+
+    // Backpressure: only claim as many jobs as there is free worker capacity, so poll() never
+    // claims a job it cannot immediately start (which would strand it in RUNNING until the sweep).
+    int free = capacity.availablePermits();
+    if (free == 0) return;
+    var jobs = repo.findPickablePending(maxPickupAttempts, Instant.now(), PageRequest.of(0, free));
     for (ValidationJob j : jobs) {
+      if (!capacity.tryAcquire()) break;
+      UUID id = j.getId();
       try {
-        process(j.getId());
-      } catch (Exception e) {
-        log.error("worker error on job {}", j.getId(), e);
+        // Offload the (potentially minutes-long) DSS validation to the dedicated executor so the
+        // shared @Scheduled thread returns immediately and other schedulers are not starved.
+        validationExecutor.execute(
+            () -> {
+              try {
+                process(id);
+              } catch (Exception e) {
+                log.error("worker error on job {}", id, e);
+              } finally {
+                capacity.release();
+              }
+            });
+      } catch (RejectedExecutionException rex) {
+        capacity.release();
+        log.warn("validation executor saturated; deferring job {} to next poll", id);
+        break;
       }
     }
   }
