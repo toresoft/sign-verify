@@ -27,7 +27,10 @@ import java.time.Instant;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.toresoft.signverify.domain.model.ApiKey;
 import org.toresoft.signverify.domain.port.PasswordHasherPort;
@@ -47,6 +50,8 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 
   private final ApiKeyRepository repo;
   private final PasswordHasherPort hasher;
+  private final SecurityContextRepository contextRepository =
+      new RequestAttributeSecurityContextRepository();
 
   public ApiKeyAuthenticationFilter(ApiKeyRepository repo, PasswordHasherPort hasher) {
     this.repo = repo;
@@ -87,7 +92,14 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
             key.getId().toString(),
             key.getRole(),
             key.getName());
-    SecurityContextHolder.getContext().setAuthentication(new ApiKeyAuthentication(p));
+    SecurityContext context = SecurityContextHolder.createEmptyContext();
+    context.setAuthentication(new ApiKeyAuthentication(p));
+    SecurityContextHolder.setContext(context);
+    // Also save the context as a request attribute: this OncePerRequestFilter does not run on
+    // ASYNC dispatches (e.g. StreamingResponseBody completion on the extraction endpoint), so
+    // without the saved context the authorization filter would see that dispatch as anonymous,
+    // throw after the response is committed, and Tomcat would abort the keep-alive connection.
+    contextRepository.saveContext(context, req, res);
     chain.doFilter(req, res);
   }
 

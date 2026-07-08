@@ -102,5 +102,16 @@ class TsdExtractionSmokeTest {
         .isEqualTo(HttpStatus.OK);
 
     assertThat(response.getBody()).isNotNull().isNotEmpty();
+
+    // Regression: the extraction endpoint streams via StreamingResponseBody, whose completion
+    // triggers an ASYNC dispatch through the security filter chain. If the API-key filter does
+    // not persist the security context for that dispatch, the server throws after the response
+    // is committed and aborts the keep-alive connection, breaking the NEXT request on it.
+    ResponseEntity<String> followUp =
+        rest.postForEntity(
+            "http://localhost:" + port + "/api/v1/extractions", request, String.class);
+    assertThat(followUp.getStatusCode())
+        .as("keep-alive connection must survive the streaming response's async dispatch")
+        .isEqualTo(HttpStatus.OK);
   }
 }
