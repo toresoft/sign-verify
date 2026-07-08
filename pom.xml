@@ -40,6 +40,11 @@
              X.509 CN parsing in SubjectDnX509PrincipalExtractor can read the wrong username
              (user impersonation). Fixed in 6.5.11. -->
         <spring-security.version>6.5.11</spring-security.version>
+        <!-- Override Spring Boot's managed Logback (1.5.32) for CVE-2026-9828 (fixed in 1.5.33)
+             and CVE-2026-10532 (fixed in 1.5.34): HardenedObjectInputStream whitelist bypasses
+             enabling Object Injection via SimpleSocketServer/SimpleSSLSocketServer. 1.5.37 (latest
+             1.5.x) clears both. Real exposure is low: we do not run the socket receiver. -->
+        <logback.version>1.5.37</logback.version>
         <!-- Override transitive TEST-scope deps flagged by Dependabot (test-only, never shipped):
              commons-compress (via Testcontainers) — CVE-2024-25710 (DUMP infinite-loop DoS) and
              CVE-2024-26308 (Pack200 OOM), both fixed in 1.26.0. rhino (via
