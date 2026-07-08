@@ -301,6 +301,7 @@ class AsyncVerificationControllerTest {
     UUID jobId = UUID.randomUUID();
     ValidationJob job = baseJob(jobId, owner);
     job.setStatus(JobStatus.FAILED);
+    job.setErrorCode("signature.parse-error");
     job.setErrorMessage("invalid signature");
     job.setCompletedAt(Instant.parse("2024-01-01T00:10:00Z"));
     when(jobRepository.findById(jobId)).thenReturn(Optional.of(job));
@@ -311,7 +312,25 @@ class AsyncVerificationControllerTest {
                 .with(authentication(authFor(owner, Role.STANDARD))))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("FAILED"))
+        .andExpect(jsonPath("$.errorCode").value("signature.parse-error"))
         .andExpect(jsonPath("$.error").value("invalid signature"));
+  }
+
+  @Test
+  void getJob_failedWithoutCode_fallsBackToInternalErrorCode() throws Exception {
+    UUID jobId = UUID.randomUUID();
+    ValidationJob job = baseJob(jobId, owner);
+    job.setStatus(JobStatus.FAILED);
+    job.setErrorMessage("legacy failure");
+    job.setCompletedAt(Instant.parse("2024-01-01T00:10:00Z"));
+    when(jobRepository.findById(jobId)).thenReturn(Optional.of(job));
+
+    mockMvc
+        .perform(
+            get("/api/v1/verifications/jobs/{id}", jobId)
+                .with(authentication(authFor(owner, Role.STANDARD))))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.errorCode").value("internal-error"));
   }
 
   @Test

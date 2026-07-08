@@ -30,6 +30,7 @@ import org.toresoft.signverify.application.AsyncJobService;
 import org.toresoft.signverify.application.AuditActions;
 import org.toresoft.signverify.application.AuditService;
 import org.toresoft.signverify.domain.exception.AppException;
+import org.toresoft.signverify.domain.exception.Errors;
 import org.toresoft.signverify.domain.model.*;
 import org.toresoft.signverify.domain.port.DocumentStoragePort;
 import org.toresoft.signverify.domain.port.ReportType;
@@ -168,8 +169,9 @@ public class AsyncVerificationController {
     out.put("callbackAttempts", job.getCallbackAttempts());
     if (job.getResultPath() != null) {
       out.put("result", om.readTree(storage.read(job.getResultPath())));
-    } else if (job.getErrorMessage() != null) {
-      out.put("error", job.getErrorMessage());
+    } else if (job.getErrorCode() != null || job.getErrorMessage() != null) {
+      out.put("errorCode", job.getErrorCode() == null ? Errors.INTERNAL : job.getErrorCode());
+      if (job.getErrorMessage() != null) out.put("error", job.getErrorMessage());
     }
     if (job.getLastCallbackError() != null)
       out.put("lastCallbackError", job.getLastCallbackError());

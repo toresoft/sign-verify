@@ -44,6 +44,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.toresoft.signverify.domain.exception.AppException;
+import org.toresoft.signverify.domain.exception.Errors;
 import org.toresoft.signverify.domain.model.JobStatus;
 import org.toresoft.signverify.domain.model.ValidationJob;
 import org.toresoft.signverify.domain.model.VerificationProfile;
@@ -312,6 +313,7 @@ class ValidationWorkerTest {
 
     ValidationJob last = captureLastSave();
     assertThat(last.getStatus()).isEqualTo(JobStatus.FAILED);
+    assertThat(last.getErrorCode()).isEqualTo(Errors.DSS_UNAVAILABLE);
     assertThat(last.getErrorMessage()).isNotBlank();
     assertThat(last.getCompletedAt()).isNotNull();
   }
@@ -328,7 +330,10 @@ class ValidationWorkerTest {
 
     ValidationJob last = captureLastSave();
     assertThat(last.getStatus()).isEqualTo(JobStatus.FAILED);
-    assertThat(last.getErrorMessage()).contains("boom");
+    // Raw exception text must never be persisted: it would leak internals to the client via the
+    // job-status response and the callback payload.
+    assertThat(last.getErrorCode()).isEqualTo(Errors.INTERNAL);
+    assertThat(last.getErrorMessage()).doesNotContain("boom");
     assertThat(last.getCompletedAt()).isNotNull();
   }
 

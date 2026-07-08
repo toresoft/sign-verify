@@ -538,6 +538,17 @@ components:
       description: RFC 9457 problem detail (application/problem+json).
       properties:
         type: { type: string, format: uri }
+        code:
+          type: string
+          description: >
+            Stable machine-readable error code from the service catalog (also embedded in the
+            type URN as urn:signverify:error:<code>). Current catalog:
+            validation.invalid-input, validation.invalid-profile-overrides,
+            auth.missing-credentials, auth.invalid-token, authz.forbidden,
+            resource.not-found, resource.gone, resource.conflict, payload.too-large,
+            media.unsupported, signature.parse-error, excessive-load.concurrency,
+            excessive-load.async-backpressure, tsl.not-ready, dss.unavailable,
+            job.expired, internal-error. New codes may be added over time.
         title: { type: string }
         status: { type: integer, format: int32 }
         detail: { type: string }
@@ -730,3 +741,18 @@ components:
           type: object
           additionalProperties: true
           nullable: true
+        errorCode:
+          type: string
+          nullable: true
+          description: >
+            Stable machine-readable error code from the service catalog (same values as
+            Problem.code, e.g. signature.parse-error, dss.unavailable, job.expired,
+            internal-error). Present only when the job FAILED.
+        error:
+          type: string
+          nullable: true
+          description: Human-readable failure summary. Present only when the job FAILED.
+        lastCallbackError:
+          type: string
+          nullable: true
+          description: Outcome of the last failed callback delivery attempt, if any.

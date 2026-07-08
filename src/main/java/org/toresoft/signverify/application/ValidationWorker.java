@@ -35,6 +35,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.toresoft.signverify.domain.exception.AppException;
+import org.toresoft.signverify.domain.exception.Errors;
 import org.toresoft.signverify.domain.model.*;
 import org.toresoft.signverify.domain.port.*;
 import org.toresoft.signverify.persistence.ValidationJobRepository;
@@ -165,7 +166,8 @@ public class ValidationWorker {
       if (job.getCallbackUrl() != null) job.setNextCallbackAt(Instant.now());
       repo.save(job);
     } catch (AppException ae) {
-      if ("dss.unavailable".equals(ae.getCode()) && job.getPickupAttempts() < maxPickupAttempts) {
+      if (Errors.DSS_UNAVAILABLE.equals(ae.getCode())
+          && job.getPickupAttempts() < maxPickupAttempts) {
         // Reset the in-progress marker set by the claim so the requeued job is not mistaken for a
         // running one by startedAt-based "in progress" queries / SLA metrics.
         job.setStartedAt(null);
@@ -177,13 +179,18 @@ public class ValidationWorker {
         return;
       }
       job.setStatus(JobStatus.FAILED);
-      job.setErrorMessage(ae.getCode() + ": " + ae.getDetail());
+      job.setErrorCode(ae.getCode());
+      job.setErrorMessage(ae.getDetail());
       job.setCompletedAt(Instant.now());
       if (job.getCallbackUrl() != null) job.setNextCallbackAt(Instant.now());
       repo.save(job);
     } catch (Exception e) {
+      // Never persist raw exception text: it reaches the job-status response and the callback
+      // payload. Clients get the catalog code; the specifics stay in the log.
+      log.error("job {} failed with unexpected error", id, e);
       job.setStatus(JobStatus.FAILED);
-      job.setErrorMessage(e.getMessage());
+      job.setErrorCode(Errors.INTERNAL);
+      job.setErrorMessage("unexpected error");
       job.setCompletedAt(Instant.now());
       if (job.getCallbackUrl() != null) job.setNextCallbackAt(Instant.now());
       repo.save(job);

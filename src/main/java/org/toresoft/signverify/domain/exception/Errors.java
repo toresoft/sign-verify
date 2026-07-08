@@ -33,6 +33,7 @@ public final class Errors {
   public static final String EXCESSIVE_LOAD_ASYNC = "excessive-load.async-backpressure";
   public static final String TSL_NOT_READY = "tsl.not-ready";
   public static final String DSS_UNAVAILABLE = "dss.unavailable";
+  public static final String JOB_EXPIRED = "job.expired";
   public static final String INTERNAL = "internal-error";
 
   private Errors() {}

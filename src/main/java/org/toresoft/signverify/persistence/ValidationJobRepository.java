@@ -91,7 +91,8 @@ public interface ValidationJobRepository extends JpaRepository<ValidationJob, UU
       """
       UPDATE ValidationJob j
          SET j.status = org.toresoft.signverify.domain.model.JobStatus.FAILED,
-             j.errorMessage = 'job_expired',
+             j.errorCode = 'job.expired',
+             j.errorMessage = 'job expired before completion',
              j.completedAt = :now,
              j.nextCallbackAt = CASE WHEN j.callbackUrl IS NOT NULL THEN :now ELSE j.nextCallbackAt END,
              j.version = j.version + 1

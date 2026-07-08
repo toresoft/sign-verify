@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.context.ActiveProfiles;
+import org.toresoft.signverify.domain.exception.Errors;
 import org.toresoft.signverify.domain.model.JobStatus;
 import org.toresoft.signverify.domain.model.PrincipalType;
 import org.toresoft.signverify.domain.model.ValidationJob;
@@ -85,7 +86,8 @@ class ValidationJobRepositoryTest {
     assertThat(n).isEqualTo(2);
     ValidationJob p = repo.findById(pendingExpired.getId()).orElseThrow();
     assertThat(p.getStatus()).isEqualTo(JobStatus.FAILED);
-    assertThat(p.getErrorMessage()).isEqualTo("job_expired");
+    assertThat(p.getErrorCode()).isEqualTo(Errors.JOB_EXPIRED);
+    assertThat(p.getErrorMessage()).isEqualTo("job expired before completion");
     assertThat(p.getCompletedAt()).isNotNull();
     assertThat(p.getNextCallbackAt()).isNotNull(); // has callbackUrl
     ValidationJob r = repo.findById(runningExpired.getId()).orElseThrow();

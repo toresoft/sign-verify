@@ -101,6 +101,9 @@ public class ValidationJob {
   @Column(name = "error_message", columnDefinition = "TEXT")
   private String errorMessage;
 
+  @Column(name = "error_code", length = 64)
+  private String errorCode;
+
   @Enumerated(EnumType.STRING)
   @Column(name = "requested_by_principal_type", nullable = false, length = 20)
   private PrincipalType requestedByPrincipalType;
@@ -293,6 +296,14 @@ public class ValidationJob {
 
   public void setErrorMessage(String s) {
     this.errorMessage = s;
+  }
+
+  public String getErrorCode() {
+    return errorCode;
+  }
+
+  public void setErrorCode(String s) {
+    this.errorCode = s;
   }
 
   public PrincipalType getRequestedByPrincipalType() {

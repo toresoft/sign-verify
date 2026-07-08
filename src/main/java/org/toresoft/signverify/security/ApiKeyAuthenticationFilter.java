@@ -123,8 +123,8 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
     res.getWriter()
         .write(
             """
-        {"type":"urn:signverify:error:%s","title":"Unauthorized","status":401}
+        {"type":"urn:signverify:error:%s","code":"%s","title":"Unauthorized","status":401}
         """
-                .formatted(code));
+                .formatted(code, code));
   }
 }

@@ -39,8 +39,21 @@ class GlobalExceptionHandlerTest {
     assertThat(res.getHeaders().getContentType().toString()).contains("application/problem+json");
     var body = (java.util.Map<?, ?>) res.getBody();
     assertThat(body.get("type")).isEqualTo("urn:signverify:error:resource.not-found");
+    assertThat(body.get("code")).isEqualTo("resource.not-found");
     assertThat(body.get("status")).isEqualTo(404);
     assertThat(body.get("detail")).isEqualTo("nope");
+  }
+
+  @Test
+  void generic_exception_maps_to_internal_code_without_leaking() {
+    MockHttpServletRequest httpReq = new MockHttpServletRequest("POST", "/api/v1/test");
+    WebRequest req = new ServletWebRequest(httpReq);
+    ResponseEntity<?> res = h.handleGeneric(new IllegalStateException("secret internals"), req);
+    assertThat(res.getStatusCode().value()).isEqualTo(500);
+    var body = (java.util.Map<?, ?>) res.getBody();
+    assertThat(body.get("code")).isEqualTo("internal-error");
+    assertThat(body.get("detail")).isEqualTo("unexpected error");
+    assertThat(body.toString()).doesNotContain("secret internals");
   }
 
   @Test

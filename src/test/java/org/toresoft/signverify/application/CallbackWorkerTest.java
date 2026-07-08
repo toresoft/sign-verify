@@ -279,6 +279,7 @@ class CallbackWorkerTest {
   void dispatch_sendsBodyWithError_onFailedJob() throws Exception {
     ValidationJob job = newCompletedJob(0, "validation failed: bad signature", null);
     job.setStatus(JobStatus.FAILED);
+    job.setErrorCode("signature.parse-error");
     when(repo.findById(job.getId())).thenReturn(java.util.Optional.of(job));
     stubSecret();
     when(dispatcher.dispatch(
@@ -293,6 +294,7 @@ class CallbackWorkerTest {
     assertThat(tree.get("status").asText()).isEqualTo("FAILED");
     assertThat(tree.has("error")).isTrue();
     assertThat(tree.get("error").asText()).contains("bad signature");
+    assertThat(tree.get("errorCode").asText()).isEqualTo("signature.parse-error");
   }
 
   @Test

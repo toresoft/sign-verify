@@ -119,6 +119,7 @@ public class JobCleanupScheduler {
         j.setCallbackSecretCipher(null);
         j.setProfileOverrides(null);
         j.setErrorMessage(null);
+        j.setErrorCode(null);
         j.setLastCallbackError(null);
       }
       repo.saveAll(page);

@@ -32,6 +32,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.toresoft.signverify.domain.exception.Errors;
 import org.toresoft.signverify.domain.model.*;
 import org.toresoft.signverify.domain.port.CallbackDispatcherPort;
 import org.toresoft.signverify.domain.port.DocumentStoragePort;
@@ -191,6 +192,7 @@ public class CallbackWorker {
         byte[] r = storage.read(job.getResultPath());
         body.put("result", om.readTree(r));
       } else if (job.getStatus() == JobStatus.FAILED) {
+        body.put("errorCode", job.getErrorCode() == null ? Errors.INTERNAL : job.getErrorCode());
         String msg = job.getErrorMessage() == null ? "unknown" : job.getErrorMessage();
         body.put("error", msg);
       }

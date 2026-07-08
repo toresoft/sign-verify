@@ -30,6 +30,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.context.ActiveProfiles;
+import org.toresoft.signverify.domain.exception.Errors;
 import org.toresoft.signverify.domain.model.JobStatus;
 import org.toresoft.signverify.domain.model.PrincipalType;
 import org.toresoft.signverify.domain.model.ValidationJob;
@@ -104,7 +105,8 @@ class JobCleanupSchedulerDbTest {
 
     ValidationJob r = reload(j);
     assertThat(r.getStatus()).isEqualTo(JobStatus.FAILED);
-    assertThat(r.getErrorMessage()).isEqualTo("job_expired");
+    assertThat(r.getErrorCode()).isEqualTo(Errors.JOB_EXPIRED);
+    assertThat(r.getErrorMessage()).isEqualTo("job expired before completion");
     assertThat(r.getCompletedAt()).isNotNull();
   }
 
@@ -194,6 +196,7 @@ class JobCleanupSchedulerDbTest {
     j.setCallbackSecretCipher("enc:v1:c");
     j.setProfileOverrides("{}");
     j.setErrorMessage("e");
+    j.setErrorCode("internal-error");
     j.setLastCallbackError("cb");
     persist(j);
 
@@ -209,6 +212,7 @@ class JobCleanupSchedulerDbTest {
     assertThat(r.getCallbackSecretCipher()).isNull();
     assertThat(r.getProfileOverrides()).isNull();
     assertThat(r.getErrorMessage()).isNull();
+    assertThat(r.getErrorCode()).isNull();
     assertThat(r.getLastCallbackError()).isNull();
   }
 

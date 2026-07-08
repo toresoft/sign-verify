@@ -92,6 +92,9 @@ public class GlobalExceptionHandler {
       int status, String code, String title, String detail, WebRequest req) {
     var body = new java.util.LinkedHashMap<String, Object>();
     body.put("type", URI.create("urn:signverify:error:" + code).toString());
+    // RFC 9457 extension member: the bare catalog code (see Errors), so clients need not parse
+    // the type URN.
+    body.put("code", code);
     body.put("title", title);
     body.put("status", status);
     if (detail != null) body.put("detail", detail);
