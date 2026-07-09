@@ -76,8 +76,15 @@ class ExtractionControllerTest {
 
     var part = new MockMultipartFile("file", "in.pdf", "application/pdf", new byte[] {9});
 
-    String disposition =
+    // The body is a StreamingResponseBody: its content (and the result.close() in its finally
+    // block) only runs on the async dispatch, so drive it explicitly to make close() deterministic.
+    var mvcResult =
         mvc.perform(multipart("/api/v1/extractions").file(part))
+            .andExpect(request().asyncStarted())
+            .andReturn();
+
+    String disposition =
+        mvc.perform(asyncDispatch(mvcResult))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse()
