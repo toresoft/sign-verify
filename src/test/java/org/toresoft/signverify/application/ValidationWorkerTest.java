@@ -29,7 +29,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import java.util.ArrayList;
@@ -54,6 +53,7 @@ import org.toresoft.signverify.domain.port.SignatureValidatorPort;
 import org.toresoft.signverify.domain.port.ValidationRequest;
 import org.toresoft.signverify.domain.port.ValidationResult;
 import org.toresoft.signverify.persistence.ValidationJobRepository;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Unit tests for {@link ValidationWorker}.
@@ -75,7 +75,7 @@ class ValidationWorkerTest {
   @Mock private CircuitBreakerRegistry registry;
   @Mock private CircuitBreaker circuit;
 
-  private final ObjectMapper om = new ObjectMapper();
+  private final JsonMapper om = new JsonMapper();
 
   private ValidationWorker worker;
 

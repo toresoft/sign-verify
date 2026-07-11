@@ -32,7 +32,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -41,13 +40,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.toresoft.signverify.application.AsyncJobService;
 import org.toresoft.signverify.domain.model.JobStatus;
@@ -58,42 +57,27 @@ import org.toresoft.signverify.domain.port.DocumentStoragePort;
 import org.toresoft.signverify.domain.port.ReportType;
 import org.toresoft.signverify.persistence.ValidationJobRepository;
 import org.toresoft.signverify.security.Principal;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Unit tests for {@link AsyncVerificationController}. These tests use {@link WebMvcTest} to load
  * only the MVC slice and mock the controller's collaborators.
  */
 @WebMvcTest(controllers = AsyncVerificationController.class)
-@org.springframework.context.annotation.Import(
-    AsyncVerificationControllerTest.PermissiveSecurity.class)
 class AsyncVerificationControllerTest {
 
-  static class PermissiveSecurity {
-    @org.springframework.context.annotation.Bean
-    @org.springframework.context.annotation.Primary
-    org.springframework.security.web.SecurityFilterChain testFilterChain(
-        org.springframework.security.config.annotation.web.builders.HttpSecurity http)
-        throws Exception {
-      http.csrf(c -> c.disable())
-          .authorizeHttpRequests(a -> a.anyRequest().permitAll())
-          .httpBasic(b -> b.disable())
-          .formLogin(f -> f.disable());
-      return http.build();
-    }
-  }
-
   @Autowired private MockMvc mockMvc;
-  @Autowired private ObjectMapper om;
+  @Autowired private JsonMapper om;
 
-  @MockBean private AsyncJobService asyncService;
+  @MockitoBean private AsyncJobService asyncService;
 
-  @MockBean private ValidationJobRepository jobRepository;
+  @MockitoBean private ValidationJobRepository jobRepository;
 
-  @MockBean private DocumentStoragePort storage;
+  @MockitoBean private DocumentStoragePort storage;
 
-  @MockBean private org.toresoft.signverify.application.AuditService audit;
-  @MockBean private org.toresoft.signverify.persistence.ApiKeyRepository apiKeyRepository;
-  @MockBean private org.toresoft.signverify.domain.port.PasswordHasherPort passwordHasher;
+  @MockitoBean private org.toresoft.signverify.application.AuditService audit;
+  @MockitoBean private org.toresoft.signverify.persistence.ApiKeyRepository apiKeyRepository;
+  @MockitoBean private org.toresoft.signverify.domain.port.PasswordHasherPort passwordHasher;
 
   private final Principal owner =
       new Principal(PrincipalType.API_KEY, "owner-key-1", Role.STANDARD, "owner");
@@ -369,6 +353,7 @@ class AsyncVerificationControllerTest {
     ValidationJob job = baseJob(jobId, owner); // owned by `owner`
     when(jobRepository.findById(jobId)).thenReturn(Optional.of(job));
 
+    SecurityContextHolder.getContext().setAuthentication(authFor(other, Role.STANDARD));
     mockMvc
         .perform(
             get("/api/v1/verifications/jobs/{id}", jobId)
@@ -385,6 +370,7 @@ class AsyncVerificationControllerTest {
     ValidationJob job = baseJob(jobId, owner); // owned by `owner`
     when(jobRepository.findById(jobId)).thenReturn(Optional.of(job));
 
+    SecurityContextHolder.getContext().setAuthentication(authFor(privileged, Role.PRIVILEGED));
     mockMvc
         .perform(
             get("/api/v1/verifications/jobs/{id}", jobId)

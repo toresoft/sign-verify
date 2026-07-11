@@ -17,8 +17,6 @@
  */
 package org.toresoft.signverify.application;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import java.time.Duration;
@@ -39,6 +37,8 @@ import org.toresoft.signverify.domain.exception.Errors;
 import org.toresoft.signverify.domain.model.*;
 import org.toresoft.signverify.domain.port.*;
 import org.toresoft.signverify.persistence.ValidationJobRepository;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 
 @Component
 public class ValidationWorker {
@@ -50,7 +50,7 @@ public class ValidationWorker {
   private final VerificationProfileService profileService;
   private final PolicyOverrideApplier overrideApplier;
   private final SignatureValidatorPort validator;
-  private final ObjectMapper om;
+  private final JsonMapper om;
   private final CircuitBreakerRegistry circuitRegistry;
   private final int maxPickupAttempts;
   private final Duration staleRunningTimeout;
@@ -63,7 +63,7 @@ public class ValidationWorker {
       VerificationProfileService profileService,
       PolicyOverrideApplier overrideApplier,
       SignatureValidatorPort validator,
-      ObjectMapper om,
+      JsonMapper om,
       CircuitBreakerRegistry circuitRegistry,
       @Value("${app.async.max-pickup-attempts}") int maxPickupAttempts,
       @Value("${app.async.worker.stale-running-timeout}") Duration staleRunningTimeout,

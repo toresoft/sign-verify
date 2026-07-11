@@ -25,7 +25,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.time.Duration;
@@ -55,6 +54,7 @@ import org.toresoft.signverify.persistence.ApiKeyRepository;
 import org.toresoft.signverify.persistence.AuditLogRepository;
 import org.toresoft.signverify.persistence.ValidationJobRepository;
 import org.toresoft.signverify.persistence.VerificationProfileRepository;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * End-to-end integration coverage for the audit log subsystem.
@@ -73,7 +73,7 @@ class AuditLogIT {
   @Autowired private VerificationProfileRepository profileRepo;
   @Autowired private ValidationJobRepository jobRepo;
   @Autowired private PasswordHasherPort hasher;
-  @Autowired private ObjectMapper om;
+  @Autowired private JsonMapper om;
   @Autowired private PlatformTransactionManager tx;
   @PersistenceContext private EntityManager em;
 

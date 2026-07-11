@@ -24,7 +24,7 @@ import static org.mockito.Mockito.when;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.actuate.health.Status;
+import org.springframework.boot.health.contributor.Status;
 import org.toresoft.signverify.application.TslService;
 import org.toresoft.signverify.domain.model.TslRefresh;
 

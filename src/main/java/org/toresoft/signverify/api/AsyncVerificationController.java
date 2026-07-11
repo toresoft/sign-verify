@@ -17,8 +17,6 @@
  */
 package org.toresoft.signverify.api;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.*;
@@ -36,6 +34,8 @@ import org.toresoft.signverify.domain.port.DocumentStoragePort;
 import org.toresoft.signverify.domain.port.ReportType;
 import org.toresoft.signverify.persistence.ValidationJobRepository;
 import org.toresoft.signverify.security.Principal;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 
 @RestController
 @RequestMapping("/api/v1/verifications")
@@ -44,14 +44,14 @@ public class AsyncVerificationController {
   private final AsyncJobService asyncService;
   private final ValidationJobRepository repo;
   private final DocumentStoragePort storage;
-  private final ObjectMapper om;
+  private final JsonMapper om;
   private final AuditService audit;
 
   public AsyncVerificationController(
       AsyncJobService s,
       ValidationJobRepository r,
       DocumentStoragePort st,
-      ObjectMapper om,
+      JsonMapper om,
       AuditService audit) {
     this.asyncService = s;
     this.repo = r;
