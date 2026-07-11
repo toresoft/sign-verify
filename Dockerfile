@@ -14,7 +14,7 @@ RUN mvn -B -e -ntp dependency:go-offline
 # Application sources.
 COPY src ./src
 RUN mvn -B -e -ntp -DskipTests clean package \
- && java -Djarmode=layertools -jar target/sign-verify-2.jar extract --destination target/extracted
+ && java -Djarmode=tools -jar target/sign-verify-2.jar extract --layers --destination target/extracted
 
 # =============================================================================
 # JRE-build stage — craft a minimal, musl-linked custom runtime with jlink.
@@ -103,7 +103,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
   CMD wget -q -O /dev/null http://localhost:8080/actuator/health/liveness || exit 1
 
 # Exec form → app is PID 1 and receives SIGTERM for graceful shutdown.
-ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]
+ENTRYPOINT ["java", "-jar", "application.jar"]
 
 LABEL org.opencontainers.image.title="sign-verify" \
       org.opencontainers.image.description="eIDAS digital signature verification service (DSS 6.4)" \
