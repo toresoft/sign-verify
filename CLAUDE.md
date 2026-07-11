@@ -50,7 +50,10 @@ Run locale profilo `dev` (OAuth off, master-key di test, refresh TSL saltato):
 
 ## Convenzioni chiave
 
-- Java 21, Spring Boot 3.4.1, Maven (no wrapper).
+- Java 21, Spring Boot 4.1.0, Maven (no wrapper).
+- Jackson 3 (`tools.jackson`) dal Boot 4.1; i 7 siti `ObjectMapper` usano `tools.jackson.databind.json.JsonMapper`.
+- `jackson-databind-nullable` 0.2.6 ancora su classpath compile (pulla Jackson 2 transitivamente).
+  Follow-up: migrare a variante Jackson 3 o `openApiNullable=false` + rigenerazione DTO.
 - Architettura esagonale (ports & adapters), garantita da ArchUnit (`ArchitectureTest`).
 - API **design-first**: editare `src/main/resources/openapi/openapi.yaml`; il generatore produce
   `api.spi` / `api.dto`. `OpenApiContractIT` protegge il contratto.

@@ -20,7 +20,6 @@ package org.toresoft.signverify.adapter.dss;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -31,13 +30,14 @@ import org.springframework.test.context.ActiveProfiles;
 import org.toresoft.signverify.domain.exception.AppException;
 import org.toresoft.signverify.domain.port.ReportType;
 import org.toresoft.signverify.domain.port.ValidationRequest;
+import tools.jackson.databind.json.JsonMapper;
 
 @SpringBootTest
 @ActiveProfiles("test")
 class DssValidatorAdapterTest {
 
   @Autowired private DssValidatorAdapter adapter;
-  @Autowired private ObjectMapper om;
+  @Autowired private JsonMapper om;
 
   @Test
   void parses_error_for_garbage_input() {

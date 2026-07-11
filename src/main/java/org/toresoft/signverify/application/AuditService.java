@@ -17,8 +17,6 @@
  */
 package org.toresoft.signverify.application;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,6 +35,8 @@ import org.toresoft.signverify.domain.model.AuditLog;
 import org.toresoft.signverify.domain.model.PrincipalType;
 import org.toresoft.signverify.persistence.AuditLogRepository;
 import org.toresoft.signverify.security.Principal;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Application-level service that records audit events.
@@ -66,7 +66,7 @@ public class AuditService {
   static final String MDC_REQUEST_ID = "requestId";
 
   private final AuditLogRepository repo;
-  private final ObjectMapper om;
+  private final JsonMapper om;
   private final AuditProperties props;
 
   /**
@@ -77,7 +77,7 @@ public class AuditService {
    */
   @Autowired @Lazy private AuditService self;
 
-  public AuditService(AuditLogRepository repo, ObjectMapper om, AuditProperties props) {
+  public AuditService(AuditLogRepository repo, JsonMapper om, AuditProperties props) {
     this.repo = repo;
     this.om = om;
     this.props = props;
@@ -194,7 +194,7 @@ public class AuditService {
     if (details == null) return null;
     try {
       return om.writeValueAsString(details);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       log.warn("audit details serialization failed; persisting without details", e);
       return null;
     } catch (RuntimeException e) {

@@ -28,8 +28,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -47,6 +45,8 @@ import org.toresoft.signverify.domain.port.CallbackDispatcherPort.DispatchResult
 import org.toresoft.signverify.domain.port.DocumentStoragePort;
 import org.toresoft.signverify.domain.port.SecretCipherPort;
 import org.toresoft.signverify.persistence.ValidationJobRepository;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Unit tests for {@link CallbackWorker}.
@@ -68,7 +68,7 @@ class CallbackWorkerTest {
   @Mock private SecretCipherPort cipher;
   @Mock private DocumentStoragePort storage;
 
-  private final ObjectMapper om = new ObjectMapper();
+  private final JsonMapper om = new JsonMapper();
 
   private CallbackWorker worker;
 

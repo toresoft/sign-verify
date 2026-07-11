@@ -33,15 +33,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.toresoft.signverify.domain.model.AuditLog;
 import org.toresoft.signverify.domain.model.PrincipalType;
@@ -59,20 +57,17 @@ class AuditControllerTest {
   static class PermissiveSecurity {
     @org.springframework.context.annotation.Bean
     @org.springframework.context.annotation.Primary
-    SecurityFilterChain testFilterChain(HttpSecurity http) throws Exception {
-      http.csrf(c -> c.disable())
-          .authorizeHttpRequests(a -> a.anyRequest().permitAll())
-          .httpBasic(b -> b.disable())
-          .formLogin(f -> f.disable());
-      return http.build();
+    org.springframework.security.web.SecurityFilterChain testFilterChain() {
+      return new org.springframework.security.web.DefaultSecurityFilterChain(
+          org.springframework.security.web.util.matcher.AnyRequestMatcher.INSTANCE);
     }
   }
 
   @Autowired private MockMvc mockMvc;
 
-  @MockBean private AuditLogRepository repo;
-  @MockBean private org.toresoft.signverify.persistence.ApiKeyRepository apiKeyRepository;
-  @MockBean private org.toresoft.signverify.domain.port.PasswordHasherPort passwordHasher;
+  @MockitoBean private AuditLogRepository repo;
+  @MockitoBean private org.toresoft.signverify.persistence.ApiKeyRepository apiKeyRepository;
+  @MockitoBean private org.toresoft.signverify.domain.port.PasswordHasherPort passwordHasher;
 
   private final AuditLog audit1 =
       baseLog(Instant.parse("2024-01-01T10:00:00Z"), "user-1", "create");

@@ -17,7 +17,6 @@
  */
 package org.toresoft.signverify.adapter.dss;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.europa.esig.dss.enumerations.Indication;
 import eu.europa.esig.dss.model.InMemoryDocument;
 import eu.europa.esig.dss.model.policy.ValidationPolicy;
@@ -37,14 +36,15 @@ import org.toresoft.signverify.domain.port.ReportType;
 import org.toresoft.signverify.domain.port.SignatureValidatorPort;
 import org.toresoft.signverify.domain.port.ValidationRequest;
 import org.toresoft.signverify.domain.port.ValidationResult;
+import tools.jackson.databind.json.JsonMapper;
 
 @Component
 public class DssValidatorAdapter implements SignatureValidatorPort {
 
   private final CertificateVerifier certificateVerifier;
-  private final ObjectMapper om;
+  private final JsonMapper om;
 
-  public DssValidatorAdapter(CertificateVerifier certificateVerifier, ObjectMapper om) {
+  public DssValidatorAdapter(CertificateVerifier certificateVerifier, JsonMapper om) {
     this.certificateVerifier = certificateVerifier;
     this.om = om;
   }
@@ -128,8 +128,7 @@ public class DssValidatorAdapter implements SignatureValidatorPort {
     }
   }
 
-  static Map<ReportType, String> serialize(
-      Set<ReportType> wanted, Reports reports, ObjectMapper om) {
+  static Map<ReportType, String> serialize(Set<ReportType> wanted, Reports reports, JsonMapper om) {
     Map<ReportType, String> out = new EnumMap<>(ReportType.class);
     try {
       if (wanted.contains(ReportType.SIMPLE))

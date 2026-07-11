@@ -17,7 +17,6 @@
  */
 package org.toresoft.signverify.application;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -38,6 +37,7 @@ import org.toresoft.signverify.domain.port.CallbackDispatcherPort;
 import org.toresoft.signverify.domain.port.DocumentStoragePort;
 import org.toresoft.signverify.domain.port.SecretCipherPort;
 import org.toresoft.signverify.persistence.ValidationJobRepository;
+import tools.jackson.databind.json.JsonMapper;
 
 @Component
 public class CallbackWorker {
@@ -48,7 +48,7 @@ public class CallbackWorker {
   private final CallbackDispatcherPort dispatcher;
   private final SecretCipherPort cipher;
   private final DocumentStoragePort storage;
-  private final ObjectMapper om;
+  private final JsonMapper om;
   private final int maxAttempts;
   private final List<Duration> backoff;
   private final Set<Integer> successCodes;
@@ -62,7 +62,7 @@ public class CallbackWorker {
       CallbackDispatcherPort dispatcher,
       SecretCipherPort cipher,
       DocumentStoragePort storage,
-      ObjectMapper om,
+      JsonMapper om,
       @Value("${app.callback.max-attempts}") int maxAttempts,
       @Value("${app.callback.backoff}") List<Duration> backoff,
       @Value("${app.callback.success-statuses}") List<Integer> success,

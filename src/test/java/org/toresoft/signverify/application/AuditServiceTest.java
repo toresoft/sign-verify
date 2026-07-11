@@ -24,7 +24,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.lang.reflect.Field;
 import java.time.Instant;
 import java.util.Map;
@@ -39,11 +38,12 @@ import org.toresoft.signverify.domain.model.PrincipalType;
 import org.toresoft.signverify.domain.model.Role;
 import org.toresoft.signverify.persistence.AuditLogRepository;
 import org.toresoft.signverify.security.Principal;
+import tools.jackson.databind.json.JsonMapper;
 
 class AuditServiceTest {
 
   private final AuditLogRepository repo = mock(AuditLogRepository.class);
-  private final ObjectMapper om = new ObjectMapper();
+  private final JsonMapper om = new JsonMapper();
   private final AuditProperties props = new AuditProperties();
   private final AuditService service = new AuditService(repo, om, props);
 

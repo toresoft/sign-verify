@@ -17,7 +17,6 @@
  */
 package org.toresoft.signverify.adapter.dss;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.europa.esig.dss.model.InMemoryDocument;
 import eu.europa.esig.dss.model.policy.ValidationPolicy;
 import eu.europa.esig.dss.simplereport.SimpleReport;
@@ -44,6 +43,7 @@ import org.toresoft.signverify.domain.port.ReportType;
 import org.toresoft.signverify.domain.port.SignatureValidatorPort;
 import org.toresoft.signverify.domain.port.ValidationRequest;
 import org.toresoft.signverify.domain.port.ValidationResult;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Adds RFC 5544 TimeStampedData (TSD) support in front of {@link DssValidatorAdapter}.
@@ -68,10 +68,10 @@ public class TsdAwareValidatorAdapter implements SignatureValidatorPort {
 
   private final DssValidatorAdapter delegate;
   private final CertificateVerifier certificateVerifier;
-  private final ObjectMapper om;
+  private final JsonMapper om;
 
   public TsdAwareValidatorAdapter(
-      DssValidatorAdapter delegate, CertificateVerifier certificateVerifier, ObjectMapper om) {
+      DssValidatorAdapter delegate, CertificateVerifier certificateVerifier, JsonMapper om) {
     this.delegate = delegate;
     this.certificateVerifier = certificateVerifier;
     this.om = om;

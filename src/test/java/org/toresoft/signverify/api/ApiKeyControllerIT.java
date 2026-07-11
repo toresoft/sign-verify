@@ -20,7 +20,6 @@ package org.toresoft.signverify.api;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +34,7 @@ import org.toresoft.signverify.domain.model.ApiKey;
 import org.toresoft.signverify.domain.model.Role;
 import org.toresoft.signverify.domain.port.PasswordHasherPort;
 import org.toresoft.signverify.persistence.ApiKeyRepository;
+import tools.jackson.databind.json.JsonMapper;
 
 @IsolatedDbTest
 class ApiKeyControllerIT {
@@ -42,7 +42,7 @@ class ApiKeyControllerIT {
   @Autowired private WebApplicationContext ctx;
   @Autowired private ApiKeyRepository repo;
   @Autowired private PasswordHasherPort hasher;
-  @Autowired private ObjectMapper om;
+  @Autowired private JsonMapper om;
 
   private MockMvc mvc;
   private String adminKey;

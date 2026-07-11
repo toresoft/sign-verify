@@ -20,7 +20,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.14</version>
+        <version>4.1.0</version>
         <relativePath/>
     </parent>
 
@@ -29,22 +29,6 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <!-- Override Spring Boot's managed Tomcat (10.1.54) to close 2026 CVEs fixed in 10.1.55. -->
-        <tomcat.version>10.1.55</tomcat.version>
-        <!-- Override Spring Boot's managed PostgreSQL driver (42.7.10) for CVE-2026-42198. -->
-        <postgresql.version>42.7.11</postgresql.version>
-        <!-- Override Spring Boot's managed Jackson (2.21.2) for CVE-2026-23183, CVE-2026-54512,
-             CVE-2026-54513 and CVE-2026-54515: all four are fixed in 2.22.1. -->
-        <jackson-bom.version>2.22.1</jackson-bom.version>
-        <!-- Override Spring Boot's managed Spring Security (6.5.10) for CVE-2026-47838: malformed
-             X.509 CN parsing in SubjectDnX509PrincipalExtractor can read the wrong username
-             (user impersonation). Fixed in 6.5.11. -->
-        <spring-security.version>6.5.11</spring-security.version>
-        <!-- Override Spring Boot's managed Logback (1.5.32) for CVE-2026-9828 (fixed in 1.5.33)
-             and CVE-2026-10532 (fixed in 1.5.34): HardenedObjectInputStream whitelist bypasses
-             enabling Object Injection via SimpleSocketServer/SimpleSSLSocketServer. 1.5.37 (latest
-             1.5.x) clears both. Real exposure is low: we do not run the socket receiver. -->
-        <logback.version>1.5.37</logback.version>
         <!-- Override transitive TEST-scope deps flagged by Dependabot (test-only, never shipped):
              commons-compress (via Testcontainers) — CVE-2024-25710 (DUMP infinite-loop DoS) and
              CVE-2024-26308 (Pack200 OOM), both fixed in 1.26.0. rhino (via
@@ -53,6 +37,11 @@
              imported BOMs. -->
         <commons-compress.version>1.27.1</commons-compress.version>
         <rhino.version>1.7.15.1</rhino.version>
+        <!-- Spring Boot 4.1 starter-test transitively depends on JUnit Jupiter 6.0.3, but the
+             parent POM manages it to 5.14.3 which lacks computeIfAbsent(Object,Function,Class).
+             Override to align with what starter-test expects and what Spring’s test extensions
+             are compiled against. -->
+        <junit-jupiter.version>6.0.3</junit-jupiter.version>
         <dss.version>6.4</dss.version>
         <resilience4j.version>2.2.0</resilience4j.version>
         <shedlock.version>5.16.0</shedlock.version>
@@ -63,11 +52,25 @@
         <openapi-generator.version>7.10.0</openapi-generator.version>
         <spotless.version>2.44.0</spotless.version>
         <jacoco.version>0.8.12</jacoco.version>
-        <sentry.version>8.16.0</sentry.version>
+        <sentry.version>8.48.0</sentry.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+            <!-- Pin the transitive Jackson 2.x family (dragged onto the compile classpath by
+                 springdoc/swagger-core, logstash-logback-encoder, and jackson-databind-nullable)
+                 to a patched release. Spring Boot 4.1 manages only Jackson 3 (tools.jackson), so
+                 without this override the Jackson 2 on the classpath falls back to the parent-less
+                 default 2.21.4, reopening CVE-2026-23183, CVE-2026-54512, CVE-2026-54513 and
+                 CVE-2026-54515 (all fixed in 2.22.1). Imported first so it wins. Remove once
+                 Jackson 2 is fully off the classpath (see jackson-databind-nullable follow-up). -->
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>2.22.1</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <dependency>
                 <groupId>eu.europa.ec.joinup.sd-dss</groupId>
                 <artifactId>dss-bom</artifactId>
@@ -99,6 +102,46 @@
                 <groupId>org.mozilla</groupId>
                 <artifactId>rhino</artifactId>
                 <version>${rhino.version}</version>
+            </dependency>
+            <!-- Force JUnit Jupiter 6.0.3: Spring Boot 4.1 starter-test expects it but the parent
+                 POM manages it to 5.14.3 which lacks computeIfAbsent(Object,Function,Class). These
+                 must be direct dependencyManagement entries, not a junit-bom import: an imported BOM
+                 does not override the versions the Spring Boot parent already manages directly, so a
+                 junit-bom import silently reverts to 5.14.3 and breaks the test launcher. -->
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>${junit-jupiter.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter-api</artifactId>
+                <version>${junit-jupiter.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter-engine</artifactId>
+                <version>${junit-jupiter.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter-params</artifactId>
+                <version>${junit-jupiter.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.platform</groupId>
+                <artifactId>junit-platform-commons</artifactId>
+                <version>${junit-jupiter.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.platform</groupId>
+                <artifactId>junit-platform-engine</artifactId>
+                <version>${junit-jupiter.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.platform</groupId>
+                <artifactId>junit-platform-launcher</artifactId>
+                <version>${junit-jupiter.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -132,13 +175,14 @@
 
         <!-- DB -->
         <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-core</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
         </dependency>
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
+
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
@@ -276,7 +320,7 @@
         <!-- Sentry (optional — empty DSN = no-op) -->
         <dependency>
             <groupId>io.sentry</groupId>
-            <artifactId>sentry-spring-boot-starter-jakarta</artifactId>
+            <artifactId>sentry-spring-boot-4-starter</artifactId>
         </dependency>
         <dependency>
             <groupId>io.sentry</groupId>
@@ -304,6 +348,26 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-data-jpa-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-resttestclient</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-restclient</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -338,6 +402,12 @@
             <artifactId>swagger-request-validator-mockmvc</artifactId>
             <version>${swagger-validator.version}</version>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.junit.jupiter</groupId>
+                    <artifactId>junit-jupiter</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <!-- Awaitility: poll-and-wait for asynchronous state in ITs (e.g. audit rows written
              by the auditExecutor worker thread). The version is managed by Spring Boot's parent. -->

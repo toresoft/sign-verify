@@ -17,8 +17,6 @@
  */
 package org.toresoft.signverify.api;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.OffsetDateTime;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
@@ -36,15 +34,17 @@ import org.springframework.web.multipart.MultipartFile;
 import org.toresoft.signverify.application.VerificationService;
 import org.toresoft.signverify.domain.exception.AppException;
 import org.toresoft.signverify.domain.port.ReportType;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 
 @RestController
 @RequestMapping("/api/v1/verifications")
 public class VerificationController {
 
   private final VerificationService service;
-  private final ObjectMapper om;
+  private final JsonMapper om;
 
-  public VerificationController(VerificationService service, ObjectMapper om) {
+  public VerificationController(VerificationService service, JsonMapper om) {
     this.service = service;
     this.om = om;
   }
