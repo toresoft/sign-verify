@@ -2,7 +2,7 @@
 type: entity
 category: tool
 created: 2026-06-27
-updated: 2026-06-27
+updated: 2026-07-11
 sources:
   - sources/SRC-2026-06-27-001
   - sources/SRC-2026-06-27-002
@@ -24,6 +24,15 @@ Open-source **Java framework** by the European Commission (Digital Building Bloc
 
 ## Trusted Lists
 `TLValidationJob` + `LOTLSource`/`TLSource` + `TrustedListsCertificateSource` drive the [[concepts/trusted-lists]] pipeline. EU LOTL at `https://ec.europa.eu/tools/lotl/eu-lotl.xml`, pivot support on, OJ keystore as trust anchor.
+
+## Runtime dependencies (verified 2026-07-11)
+DSS 6.4 is **Jackson-agnostic at runtime**: the only Jackson artifact in the dependency
+tree (`jackson-module-jakarta-xmlbind-annotations`) is **test-scope** in `dss-document`,
+`dss-validation`, and `dss-diagnostic-jaxb`; JAdES support uses `jose4j`, not Jackson.
+Verified by reading the DSS 6.4 POMs directly (not assumed) during Boot 4.1/Jackson 3
+migration planning for [[entities/sign-verify-2]] — see
+[[raw/notes/2026-07-11-ll-boot4-migration-review]]. Practical implication: DSS imposes no
+constraint on which Jackson major version the host service runs.
 
 ## Docs reference
 Full 523-page manual captured in [[sources/SRC-2026-06-27-001]] (indexed in KB as `DSS-6.4-documentation`). Pivotal chapters: §3 concepts, §6 revocation, §7 validation, §10 augmentation, §11 trusted lists.

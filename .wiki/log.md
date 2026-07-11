@@ -24,3 +24,4 @@
 ## [2026-07-03] ll | "fix da tre round di code review (async pipeline, TSL sync, security)" -> raw/notes/2026-07-03-ll-code-review-fixes-hardening.md (7 lessons, 2 articles updated: concepts/hexagonal-architecture, concepts/async-verification-jobs)
 ## [2026-07-05] ll | "extraction filesystem-spill (M2) + JWT audience validation (H2)" -> raw/notes/2026-07-05-ll-extraction-spill-and-jwt-audience.md (6 lessons, 1 article updated: concepts/file-extraction)
 ## [2026-07-05] inventory | 3 follow-ups recorded -> raw/inventory/2026-07-05-followups.md (INV-1 readNode heap guard [open/low], INV-2 IdP audience mapper [open/HIGH, gates H2 rollout], INV-3 full-suite flaky-test watch [monitoring/medium])
+## [2026-07-11] ll | "Spring Boot 3.5->4.1 migration planning (office-hours + eng review)" -> raw/notes/2026-07-11-ll-boot4-migration-review.md (5 lessons, 3 articles updated: entities/dss, concepts/hmac-callback, concepts/problemjson)

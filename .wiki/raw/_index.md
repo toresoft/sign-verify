@@ -13,6 +13,9 @@
 - [[notes/2026-06-28-ll-tsd-jackson-toolchain]] — Lessons: RFC 5544 imprint resolution, DSS↔BC routing, Jackson CVE pinning, JDK-25 Spotless/JaCoCo gotchas
 - [[notes/2026-06-28-quadro-normativo-firma-digitale-eidas]] — Quadro normativo firma digitale: eIDAS, CAD, DPCM 2013, ETSI, IETF
 - [[notes/2026-06-29-openapi-spec-sign-verify-2]] — sign-verify-2 OpenAPI contract: endpoint, schema VerificationResponse/SignatureSummary/TimestampSummary, signatureLevel (firma vs sigillo)
+- [[notes/2026-07-11-ll-boot4-migration-review]] — Lessons: DSS 6.4 has no runtime Jackson (false premise caught by cross-model review), Jackson-3 audit surface = ObjectMapper sites not IOException catches, 4-boundary JSON migration-pin pattern, hidden Tomcat 10→11 major bump, auth-negative smoke gate gap
+
+*(index is stale for notes between 2026-06-29 and 2026-07-11 — needs a `/wiki:compile` pass or manual backfill)*
 
 ## Sources
 
