@@ -27,6 +27,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.toresoft.signverify.application.AsyncJobService;
 import org.toresoft.signverify.application.AuditActions;
 import org.toresoft.signverify.application.AuditService;
+import org.toresoft.signverify.application.VerificationProfileService;
 import org.toresoft.signverify.domain.exception.AppException;
 import org.toresoft.signverify.domain.exception.Errors;
 import org.toresoft.signverify.domain.model.*;
@@ -45,23 +46,27 @@ public class AsyncVerificationController {
   private final DocumentStoragePort storage;
   private final JsonMapper om;
   private final AuditService audit;
+  private final VerificationProfileService profileService;
 
   public AsyncVerificationController(
       AsyncJobService s,
       ValidationJobRepository r,
       DocumentStoragePort st,
       JsonMapper om,
-      AuditService audit) {
+      AuditService audit,
+      VerificationProfileService profileService) {
     this.asyncService = s;
     this.repo = r;
     this.storage = st;
     this.om = om;
     this.audit = audit;
+    this.profileService = profileService;
   }
 
   @PostMapping(value = "/async", consumes = "multipart/form-data")
   public ResponseEntity<Map<String, Object>> submit(
       @RequestPart("file") MultipartFile file,
+      @RequestPart(value = "profile", required = false) String profile,
       @RequestPart(value = "profileId", required = false) String profileId,
       @RequestPart(value = "profileOverrides", required = false) String profileOverrides,
       @RequestPart(value = "reports", required = false) String reports,
@@ -81,9 +86,9 @@ public class AsyncVerificationController {
             callbackUrl,
             callbackSecret,
             callbackAlgorithm,
-            null);
+            profile);
 
-    UUID pid = parts.profileId() == null ? null : UUID.fromString(parts.profileId());
+    UUID pid = profileService.resolveId(parts.profileName(), parts.profileId());
     Map<String, Object> overrides =
         VerificationRequestParts.parseOverrides(om, parts.profileOverridesJson());
     String overridesJson = overrides == null ? null : om.writeValueAsString(overrides);

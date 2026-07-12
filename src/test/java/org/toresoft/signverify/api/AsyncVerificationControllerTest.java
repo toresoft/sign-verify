@@ -76,6 +76,10 @@ class AsyncVerificationControllerTest {
   @MockitoBean private DocumentStoragePort storage;
 
   @MockitoBean private org.toresoft.signverify.application.AuditService audit;
+
+  @MockitoBean
+  private org.toresoft.signverify.application.VerificationProfileService profileService;
+
   @MockitoBean private org.toresoft.signverify.persistence.ApiKeyRepository apiKeyRepository;
   @MockitoBean private org.toresoft.signverify.domain.port.PasswordHasherPort passwordHasher;
 
@@ -147,6 +151,7 @@ class AsyncVerificationControllerTest {
   void postAsync_parsesMetadata() throws Exception {
     UUID jobId = UUID.randomUUID();
     UUID profileId = UUID.randomUUID();
+    when(profileService.resolveId(null, profileId.toString())).thenReturn(profileId);
     when(asyncService.submit(any(AsyncJobService.SubmitRequest.class), any(Principal.class)))
         .thenReturn(jobId);
 
@@ -230,6 +235,7 @@ class AsyncVerificationControllerTest {
   void postAsync_parsesDedicatedParts() throws Exception {
     UUID jobId = UUID.randomUUID();
     UUID profileId = UUID.randomUUID();
+    when(profileService.resolveId(null, profileId.toString())).thenReturn(profileId);
     when(asyncService.submit(any(AsyncJobService.SubmitRequest.class), any(Principal.class)))
         .thenReturn(jobId);
 
@@ -306,6 +312,45 @@ class AsyncVerificationControllerTest {
     verify(asyncService).submit(captor.capture(), eq(owner));
     assertThat(captor.getValue().reports())
         .containsExactlyInAnyOrder(ReportType.SIMPLE, ReportType.ETSI);
+  }
+
+  @Test
+  void postAsync_byProfileName_resolvesToProfileId() throws Exception {
+    UUID jobId = UUID.randomUUID();
+    UUID profileId = UUID.randomUUID();
+    when(profileService.resolveId("AGID", null)).thenReturn(profileId);
+    when(asyncService.submit(any(AsyncJobService.SubmitRequest.class), any(Principal.class)))
+        .thenReturn(jobId);
+
+    mockMvc
+        .perform(
+            multipart("/api/v1/verifications/async")
+                .file(sampleFile())
+                .file(new MockMultipartFile("profile", "", "text/plain", "AGID".getBytes()))
+                .with(authentication(authFor(owner, Role.STANDARD))))
+        .andExpect(status().isAccepted());
+
+    ArgumentCaptor<AsyncJobService.SubmitRequest> captor =
+        ArgumentCaptor.forClass(AsyncJobService.SubmitRequest.class);
+    verify(asyncService).submit(captor.capture(), eq(owner));
+    assertThat(captor.getValue().profileId()).isEqualTo(profileId);
+  }
+
+  @Test
+  void postAsync_profileNameAndId_returns400() throws Exception {
+    mockMvc
+        .perform(
+            multipart("/api/v1/verifications/async")
+                .file(sampleFile())
+                .file(new MockMultipartFile("profile", "", "text/plain", "AGID".getBytes()))
+                .file(
+                    new MockMultipartFile(
+                        "profileId", "", "text/plain", UUID.randomUUID().toString().getBytes()))
+                .with(authentication(authFor(owner, Role.STANDARD))))
+        .andExpect(status().isBadRequest());
+
+    verify(asyncService, never())
+        .submit(any(AsyncJobService.SubmitRequest.class), any(Principal.class));
   }
 
   // ─── GET /jobs/{jobId} ─────────────────────────────────────────────────────
