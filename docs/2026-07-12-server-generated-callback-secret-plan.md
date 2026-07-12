@@ -14,7 +14,12 @@
 
 - License header: every new `.java` file MUST start with the same LGPL-3.0 header used by all other source files in `src/main/java/org/toresoft/signverify/...` (copy verbatim from any existing file; only the `package` line changes).
 - Package conventions: ports in `org.toresoft.signverify.domain.port`, crypto adapters in `org.toresoft.signverify.adapter.crypto`.
-- Tests run with: `./gradlew test` (Java/Groovy Kotlin DSL not used). Target a single test class with `--tests '<FQCN or *Suffix>'`.
+- Build system is **Maven** (not Gradle). `pom.xml` at repo root. Unit tests via `maven-surefire-plugin` (default `test` phase), integration tests (`*IT`) via `maven-failsafe-plugin` (`verify` phase). Both exclude the JUnit `network` tag unless `-Dgroups=network` is set.
+- Run a single **unit** test class: `mvn -B -ntp -Dtest='*RandomSecretGeneratorAdapterTest' test`. Surefire's `-Dtest` accepts the `*Suffix` glob.
+- Run a single **integration** test class: `mvn -B -ntp -Dit.test='*AuthenticationIT' verify -Dtest=none` (failsafe uses `-Dit.test`; `-Dtest=none` skips surefire).
+- Full suite (unit + IT): `mvn -B -ntp verify`. This is what CI runs.
+- `spotless:check` enforces formatting and runs in CI before `verify`. After any code edit, run `mvn -B -ntp spotless:check` before committing; if it fails, run `mvn -B -ntp spotless:apply` to auto-format then re-check.
+- Tests are JUnit 5 + Mockito (inline mock-maker wired as agent) + AssertJ. Follow existing imports in neighbouring test files.
 - No new application config properties — the generator has no tunable parameters.
 - `AppException.badRequest(String detail)` is the project's validation-error convention (see `org.toresoft.signverify.domain.exception.AppException`). It maps to HTTP 400 with `urn:signverify:error:invalid-request`.
 - Jackson 3 package prefix is `tools.jackson.databind` (NOT `com.fasterxml`). Follow existing imports.
@@ -57,7 +62,7 @@ git checkout -b feat/server-generated-callback-secret
 
 - [ ] **Step 2: Confirm baseline build is green**
 
-Run: `./gradlew test`
+Run: `mvn -B -ntp verify`
 Expected: BUILD SUCCESSFUL (all tests pass). If it is red before we start, stop and surface it.
 
 - [ ] **Step 3: Confirm working tree clean**
@@ -140,7 +145,7 @@ class RandomSecretGeneratorAdapterTest {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `./gradlew test --tests '*RandomSecretGeneratorAdapterTest'`
+Run: `mvn -B -ntp -Dtest='*RandomSecretGeneratorAdapterTest' test`
 Expected: COMPILE FAILURE — `RandomSecretGeneratorAdapter` does not exist.
 
 - [ ] **Step 3: Create the port interface**
@@ -197,10 +202,15 @@ public class RandomSecretGeneratorAdapter implements SecretGeneratorPort {
 
 - [ ] **Step 5: Run test to verify it passes**
 
-Run: `./gradlew test --tests '*RandomSecretGeneratorAdapterTest'`
+Run: `mvn -B -ntp -Dtest='*RandomSecretGeneratorAdapterTest' test`
 Expected: BUILD SUCCESSFUL, 4 tests pass (the `@RepeatedTest(50)` counts as one test method declaration run 50 times).
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Verify formatting (Spotless)**
+
+Run: `mvn -B -ntp spotless:check`
+Expected: BUILD SUCCESSFUL. If it fails, run `mvn -B -ntp spotless:apply` to auto-format, then re-run `spotless:check`.
+
+- [ ] **Step 7: Commit**
 
 ```bash
 git add src/main/java/org/toresoft/signverify/domain/port/SecretGeneratorPort.java \
@@ -324,7 +334,7 @@ void submit_omitsSecretWhenNoCallbackUrl() {
 
 - [ ] **Step 2: Run tests to verify they fail (compile errors expected)**
 
-Run: `./gradlew test --tests '*AsyncJobServiceTest'`
+Run: `mvn -B -ntp -Dtest='*AsyncJobServiceTest' test`
 Expected: COMPILE FAILURE — `SubmitRequest` still has 8 components; `submit` returns `UUID`.
 
 - [ ] **Step 3: Modify AsyncJobService — drop input field, add SubmitResult, inject port**
@@ -401,10 +411,15 @@ return new SubmitResult(jobId, callbackSecret);
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `./gradlew test --tests '*AsyncJobServiceTest'`
+Run: `mvn -B -ntp -Dtest='*AsyncJobServiceTest' test`
 Expected: BUILD SUCCESSFUL, all AsyncJobServiceTest tests pass.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Verify formatting (Spotless)**
+
+Run: `mvn -B -ntp spotless:check`
+Expected: BUILD SUCCESSFUL. If it fails, run `mvn -B -ntp spotless:apply` to auto-format, then re-run `spotless:check`.
+
+- [ ] **Step 6: Commit**
 
 ```bash
 git add src/main/java/org/toresoft/signverify/application/AsyncJobService.java \
@@ -467,7 +482,7 @@ void legacyMetadata_resolved() {
 
 - [ ] **Step 2: Run VerificationRequestPartsTest to verify it fails**
 
-Run: `./gradlew test --tests '*VerificationRequestPartsTest'`
+Run: `mvn -B -ntp -Dtest='*VerificationRequestPartsTest' test`
 Expected: COMPILE FAILURE — `from(...)` still has 9 params; `callbackSecret()` accessor missing.
 
 - [ ] **Step 3: Modify VerificationRequestParts — drop field, reject in metadata**
@@ -490,7 +505,7 @@ if (meta.containsKey("callbackSecret")) {
 
 - [ ] **Step 4: Run VerificationRequestPartsTest to verify it passes**
 
-Run: `./gradlew test --tests '*VerificationRequestPartsTest'`
+Run: `mvn -B -ntp -Dtest='*VerificationRequestPartsTest' test`
 Expected: BUILD SUCCESSFUL.
 
 - [ ] **Step 5: Update controller tests (drives the controller change)**
@@ -585,7 +600,7 @@ void postAsync_callbackSecretInMetadata_isRejected400() throws Exception {
 
 - [ ] **Step 6: Run controller tests to verify they fail**
 
-Run: `./gradlew test --tests '*AsyncVerificationControllerTest'`
+Run: `mvn -B -ntp -Dtest='*AsyncVerificationControllerTest' test`
 Expected: COMPILE FAILURE — `submit` returns `UUID` in the controller (not yet updated), `SubmitResult` symbol resolution, etc.
 
 - [ ] **Step 7: Modify AsyncVerificationController**
@@ -642,10 +657,15 @@ return ResponseEntity.status(202)
 
 - [ ] **Step 8: Run controller tests to verify they pass**
 
-Run: `./gradlew test --tests '*AsyncVerificationControllerTest'`
+Run: `mvn -B -ntp -Dtest='*AsyncVerificationControllerTest' test`
 Expected: BUILD SUCCESSFUL.
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 9: Verify formatting (Spotless)**
+
+Run: `mvn -B -ntp spotless:check`
+Expected: BUILD SUCCESSFUL. If it fails, run `mvn -B -ntp spotless:apply` to auto-format, then re-run `spotless:check`.
+
+- [ ] **Step 10: Commit**
 
 ```bash
 git add src/main/java/org/toresoft/signverify/api/AsyncVerificationController.java \
@@ -678,10 +698,15 @@ Edit `src/test/java/org/toresoft/signverify/application/PersistedJsonRereadGolde
 
 - [ ] **Step 4: Run the golden test**
 
-Run: `./gradlew test --tests '*PersistedJsonRereadGoldenTest'`
+Run: `mvn -B -ntp -Dtest='*PersistedJsonRereadGoldenTest' test`
 Expected: BUILD SUCCESSFUL.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Verify formatting (Spotless)**
+
+Run: `mvn -B -ntp spotless:check`
+Expected: BUILD SUCCESSFUL. If it fails, run `mvn -B -ntp spotless:apply` to auto-format, then re-run `spotless:check`.
+
+- [ ] **Step 6: Commit**
 
 ```bash
 git add src/test/resources/fixtures/persisted-job-3.5.json \
@@ -766,7 +791,7 @@ git commit -m "docs(api): drop input callbackSecret, document server-generated s
 
 - [ ] **Step 1: Run the entire test suite**
 
-Run: `./gradlew test`
+Run: `mvn -B -ntp verify`
 Expected: BUILD SUCCESSFUL, zero failures. Pay attention to:
 - `CallbackWorkerTest` — must pass unchanged (the worker is untouched).
 - `AuthenticationIT`, `ApiKeyServiceTest`, `AuditServiceTest` — must pass unchanged.
