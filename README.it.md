@@ -169,7 +169,7 @@ curl -s http://localhost:8080/actuator/health/readiness
 **4. Verifica una firma (sincrona)**
 
 Invio multipart: parte `file` (obbligatoria) più parti dedicate opzionali
-(`profile` — il nome del profilo, es. `AGID`; il deprecato `profileId` UUID;
+(`profile`, il nome del profilo, es. `AGID`; il deprecato `profileId` UUID;
 `profileOverrides` come oggetto JSON; `reports` come CSV). Senza di
 esse viene usato il profilo di default e i report `simple` + `etsi`. La parte
 legacy `metadata` (JSON) è ancora accettata ma **deprecata** e mutuamente

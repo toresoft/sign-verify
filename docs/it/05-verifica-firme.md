@@ -255,13 +255,13 @@ Ogni opzione extra viaggia come parte di primo livello dedicata:
 |-------|------|--------------|-------------|
 | `file` | binary | sì | Il documento firmato da verificare |
 | `profile` | `string` | no | Nome del profilo di validazione da applicare (es. `AGID`). Mutuamente esclusivo con `profileId` |
-| `profileId` | `string` (uuid) | no | **Deprecato** — seleziona per nome tramite `profile`. UUID del profilo di validazione; se assente, si usa il profilo di default. Mutuamente esclusivo con `profile` |
+| `profileId` | `string` (uuid) | no | **Deprecato.** Seleziona per nome tramite `profile`. UUID del profilo di validazione; se assente, si usa il profilo di default. Mutuamente esclusivo con `profile` |
 | `profileOverrides` | `string` (oggetto JSON) | no | Oggetto JSON di override booleani per rilassare controlli specifici (chiavi elencate in §4.2) |
 | `reports` | `string` (CSV) | no | Tipi di report separati da virgola (`simple,detailed,diagnostic,etsi`); default `simple,etsi` |
 | `metadata` | application/json | no | **Deprecata.** Envelope JSON legacy con `profileId?`, `profileOverrides?`, `reports[]?`. Vedi la nota sotto |
 
 > **`metadata` è deprecata e mutuamente esclusiva con le parti dedicate.**
-> Inviare *o* le singole parti *o* il JSON legacy `metadata` — fornire entrambi
+> Inviare *o* le singole parti *o* il JSON legacy `metadata`: fornire entrambi
 > (anche una sola parte dedicata insieme a `metadata`) produce **400**.
 
 Se nessuna delle parti opzionali è presente, vengono prodotti i report `simple`
@@ -491,11 +491,11 @@ asincrono basato su job persistiti.
 `POST /api/v1/verifications/async`: `multipart/form-data`.
 
 Oltre al `file` obbligatorio, accetta le stesse parti dedicate dell'endpoint
-sincrono — `profile` (nome), il deprecato `profileId` (UUID), `profileOverrides` (JSON), `reports` (CSV, default
-`simple,etsi`) — più le parti di callback `callbackUrl?`, `callbackSecret?`,
+sincrono: `profile` (nome), il deprecato `profileId` (UUID), `profileOverrides` (JSON), `reports` (CSV, default
+`simple,etsi`), più le parti di callback `callbackUrl?`, `callbackSecret?`,
 `callbackAlgorithm?`. L'envelope JSON deprecato `metadata` (che in più porta le
 tre chiavi `callback*`) è ancora accettato come alternativa legacy **mutuamente
-esclusiva** — mescolarlo con una qualsiasi parte dedicata produce **400**.
+esclusiva**; mescolarlo con una qualsiasi parte dedicata produce **400**.
 
 ```bash
 curl -sS -X POST http://localhost:8080/api/v1/verifications/async \

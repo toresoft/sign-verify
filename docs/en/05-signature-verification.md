@@ -254,13 +254,13 @@ Each extra option travels as its own first-level part:
 |------|------|----------|-------------|
 | `file` | binary | yes | The signed document to verify |
 | `profile` | `string` | no | Name of the validation profile to apply (e.g. `AGID`). Mutually exclusive with `profileId` |
-| `profileId` | `string` (uuid) | no | **Deprecated** — select by name via `profile`. UUID of the validation profile; if absent, the default profile is used. Mutually exclusive with `profile` |
+| `profileId` | `string` (uuid) | no | **Deprecated.** Select by name via `profile` instead. UUID of the validation profile; if absent, the default profile is used. Mutually exclusive with `profile` |
 | `profileOverrides` | `string` (JSON object) | no | JSON object of boolean overrides to relax specific checks (keys listed in §4.2) |
 | `reports` | `string` (CSV) | no | Comma-separated report types (`simple,detailed,diagnostic,etsi`); default `simple,etsi` |
 | `metadata` | application/json | no | **Deprecated.** Legacy JSON envelope carrying `profileId?`, `profileOverrides?`, `reports[]?`. See the note below |
 
 > **`metadata` is deprecated and mutually exclusive with the dedicated parts.**
-> Send *either* the individual parts *or* the legacy `metadata` JSON — supplying
+> Send *either* the individual parts *or* the legacy `metadata` JSON. Supplying
 > both (even a single dedicated part alongside `metadata`) yields **400**.
 
 If none of the optional parts is present, `simple` and `etsi` reports are
@@ -490,11 +490,11 @@ persisted jobs.
 `POST /api/v1/verifications/async`: `multipart/form-data`.
 
 Beyond the required `file`, it accepts the same dedicated parts as the sync
-endpoint — `profile` (name), the deprecated `profileId` (UUID), `profileOverrides` (JSON), `reports` (CSV, default
-`simple,etsi`) — plus the callback parts `callbackUrl?`, `callbackSecret?`,
+endpoint: `profile` (name), the deprecated `profileId` (UUID), `profileOverrides` (JSON), `reports` (CSV, default
+`simple,etsi`), plus the callback parts `callbackUrl?`, `callbackSecret?`,
 `callbackAlgorithm?`. The deprecated `metadata` JSON envelope (which additionally
 carries the three `callback*` keys) is still accepted as a **mutually exclusive**
-legacy alternative — mixing it with any dedicated part yields **400**.
+legacy alternative; mixing it with any dedicated part yields **400**.
 
 ```bash
 curl -sS -X POST http://localhost:8080/api/v1/verifications/async \

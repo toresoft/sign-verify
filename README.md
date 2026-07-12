@@ -171,7 +171,7 @@ curl -s http://localhost:8080/actuator/health/readiness
 **4. Verify a signature (synchronous)**
 
 Multipart request: a required `file` part plus optional dedicated parts
-(`profile` — the profile name, e.g. `AGID`; the deprecated `profileId` UUID;
+(`profile`, the profile name, e.g. `AGID`; the deprecated `profileId` UUID;
 `profileOverrides` as a JSON object; `reports` as a CSV). Without
 them, the default profile and the `simple` + `etsi` reports are used. A legacy
 `metadata` JSON part is still accepted but **deprecated** and mutually exclusive
