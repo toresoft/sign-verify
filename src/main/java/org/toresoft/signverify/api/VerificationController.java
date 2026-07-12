@@ -31,6 +31,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.toresoft.signverify.application.VerificationProfileService;
 import org.toresoft.signverify.application.VerificationService;
 import org.toresoft.signverify.domain.exception.AppException;
 import org.toresoft.signverify.domain.port.ReportType;
@@ -41,16 +42,20 @@ import tools.jackson.databind.json.JsonMapper;
 public class VerificationController {
 
   private final VerificationService service;
+  private final VerificationProfileService profileService;
   private final JsonMapper om;
 
-  public VerificationController(VerificationService service, JsonMapper om) {
+  public VerificationController(
+      VerificationService service, VerificationProfileService profileService, JsonMapper om) {
     this.service = service;
+    this.profileService = profileService;
     this.om = om;
   }
 
   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<Map<String, Object>> verify(
       @RequestPart("file") MultipartFile file,
+      @RequestPart(value = "profile", required = false) String profile,
       @RequestPart(value = "profileId", required = false) String profileId,
       @RequestPart(value = "profileOverrides", required = false) String profileOverrides,
       @RequestPart(value = "reports", required = false) String reports,
@@ -59,9 +64,9 @@ public class VerificationController {
 
     var parts =
         VerificationRequestParts.from(
-            om, metadataJson, profileId, profileOverrides, reports, null, null, null, null);
+            om, metadataJson, profileId, profileOverrides, reports, null, null, null, profile);
 
-    UUID pid = parts.profileId() == null ? null : UUID.fromString(parts.profileId());
+    UUID pid = profileService.resolveId(parts.profileName(), parts.profileId());
     Map<String, Object> overrides =
         VerificationRequestParts.parseOverrides(om, parts.profileOverridesJson());
     if (overrides == null) {

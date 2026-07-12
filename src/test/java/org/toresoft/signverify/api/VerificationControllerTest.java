@@ -52,6 +52,10 @@ class VerificationControllerTest {
   @Autowired private MockMvc mockMvc;
 
   @MockitoBean private VerificationService service;
+
+  @MockitoBean
+  private org.toresoft.signverify.application.VerificationProfileService profileService;
+
   @MockitoBean private org.toresoft.signverify.persistence.ApiKeyRepository apiKeyRepository;
   @MockitoBean private org.toresoft.signverify.domain.port.PasswordHasherPort passwordHasher;
 
@@ -78,6 +82,7 @@ class VerificationControllerTest {
   void verify_withDedicatedParts_passesParsedValuesToService() throws Exception {
     stubOkResponse();
     UUID profileId = UUID.randomUUID();
+    when(profileService.resolveId(null, profileId.toString())).thenReturn(profileId);
 
     mockMvc
         .perform(
@@ -135,6 +140,59 @@ class VerificationControllerTest {
                         "metadata", "", "application/json", "{\"profileId\":\"x\"}".getBytes()))
                 .with(authentication(authFor(owner))))
         .andExpect(status().isBadRequest());
+
+    verify(service, never()).verifySync(any());
+  }
+
+  @Test
+  void verify_byProfileName_resolvesToProfileId() throws Exception {
+    stubOkResponse();
+    UUID profileId = UUID.randomUUID();
+    when(profileService.resolveId("AGID", null)).thenReturn(profileId);
+
+    mockMvc
+        .perform(
+            multipart("/api/v1/verifications")
+                .file(sampleFile())
+                .file(new MockMultipartFile("profile", "", "text/plain", "AGID".getBytes()))
+                .with(authentication(authFor(owner))))
+        .andExpect(status().isOk());
+
+    ArgumentCaptor<VerificationService.VerifyRequest> captor =
+        ArgumentCaptor.forClass(VerificationService.VerifyRequest.class);
+    verify(service).verifySync(captor.capture());
+    assertThat(captor.getValue().profileId()).isEqualTo(profileId);
+  }
+
+  @Test
+  void verify_profileNameAndId_returns400() throws Exception {
+    mockMvc
+        .perform(
+            multipart("/api/v1/verifications")
+                .file(sampleFile())
+                .file(new MockMultipartFile("profile", "", "text/plain", "AGID".getBytes()))
+                .file(
+                    new MockMultipartFile(
+                        "profileId", "", "text/plain", UUID.randomUUID().toString().getBytes()))
+                .with(authentication(authFor(owner))))
+        .andExpect(status().isBadRequest());
+
+    verify(service, never()).verifySync(any());
+  }
+
+  @Test
+  void verify_unknownProfileName_returns404() throws Exception {
+    when(profileService.resolveId("nope", null))
+        .thenThrow(
+            org.toresoft.signverify.domain.exception.AppException.notFound("profile not found"));
+
+    mockMvc
+        .perform(
+            multipart("/api/v1/verifications")
+                .file(sampleFile())
+                .file(new MockMultipartFile("profile", "", "text/plain", "nope".getBytes()))
+                .with(authentication(authFor(owner))))
+        .andExpect(status().isNotFound());
 
     verify(service, never()).verifySync(any());
   }
