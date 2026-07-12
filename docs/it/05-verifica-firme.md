@@ -86,7 +86,7 @@ qualificazione, timestamp, ecc.).
 
 All'avvio, se non esiste alcun profilo, viene seminato il profilo **STANDARD**
 come default di sistema (`isDefault = true`). Vengono seminati anche due profili
-non-default, pronti all'uso: **`agid`** (preset `AGID`) e **`agid-ts`** (preset
+non-default, pronti all'uso: **`AGID`** (preset `AGID`) e **`AGID_TS`** (preset
 `AGID_TS`). Il seeding è idempotente e salta ogni nome già esistente, così un
 operatore può personalizzarli o eliminarli senza che vengano ricreati.
 
@@ -254,7 +254,8 @@ Ogni opzione extra viaggia come parte di primo livello dedicata:
 | Parte | Tipo | Obbligatoria | Descrizione |
 |-------|------|--------------|-------------|
 | `file` | binary | sì | Il documento firmato da verificare |
-| `profileId` | `string` (uuid) | no | UUID del profilo di validazione; se assente, si usa il profilo di default |
+| `profile` | `string` | no | Nome del profilo di validazione da applicare (es. `AGID`). Mutuamente esclusivo con `profileId` |
+| `profileId` | `string` (uuid) | no | **Deprecato** — seleziona per nome tramite `profile`. UUID del profilo di validazione; se assente, si usa il profilo di default. Mutuamente esclusivo con `profile` |
 | `profileOverrides` | `string` (oggetto JSON) | no | Oggetto JSON di override booleani per rilassare controlli specifici (chiavi elencate in §4.2) |
 | `reports` | `string` (CSV) | no | Tipi di report separati da virgola (`simple,detailed,diagnostic,etsi`); default `simple,etsi` |
 | `metadata` | application/json | no | **Deprecata.** Envelope JSON legacy con `profileId?`, `profileOverrides?`, `reports[]?`. Vedi la nota sotto |
@@ -270,6 +271,7 @@ ed `etsi` con il profilo di default.
 curl -sS -X POST http://localhost:8080/api/v1/verifications \
   -H "X-API-Key: $KEY" \
   -F 'file=@contratto.pdf' \
+  -F 'profile=AGID' \
   -F 'reports=simple,detailed' \
   -F 'profileOverrides={"checkRevocation":false}'
 ```
@@ -334,7 +336,7 @@ La risposta contiene due array di timestamp a livello di firma:
 | Campo | Tipo JSON | Obbligatorio | Descrizione | Valori possibili |
 |-------|-----------|--------------|-------------|------------------|
 | `verifiedAt` | `string` | sì | Timestamp della verifica (ISO-8601 UTC) | es. `2026-06-08T10:15:30Z` |
-| `profileUsed` | `string` | sì | Nome del profilo di validazione applicato | `STANDARD`, `agid`, `agid-ts`, oppure un nome personalizzato |
+| `profileUsed` | `string` | sì | Nome del profilo di validazione applicato | `STANDARD`, `AGID`, `AGID_TS`, oppure un nome personalizzato |
 | `overridesApplied` | `boolean` | sì | Indica se sono stati applicati override al volo sulla policy | `true`, `false` |
 | `signatureFormat` | `string` | sì | Formato/livello della firma rilevato | es. `PAdES-BASELINE-B`, `CAdES-BASELINE-B` |
 | `indication` | `string` | sì | Esito complessivo della validazione | `TOTAL_PASSED`, `TOTAL_FAILED`, `INDETERMINATE` |
@@ -489,7 +491,7 @@ asincrono basato su job persistiti.
 `POST /api/v1/verifications/async`: `multipart/form-data`.
 
 Oltre al `file` obbligatorio, accetta le stesse parti dedicate dell'endpoint
-sincrono — `profileId`, `profileOverrides` (JSON), `reports` (CSV, default
+sincrono — `profile` (nome), il deprecato `profileId` (UUID), `profileOverrides` (JSON), `reports` (CSV, default
 `simple,etsi`) — più le parti di callback `callbackUrl?`, `callbackSecret?`,
 `callbackAlgorithm?`. L'envelope JSON deprecato `metadata` (che in più porta le
 tre chiavi `callback*`) è ancora accettato come alternativa legacy **mutuamente

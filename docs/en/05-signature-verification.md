@@ -85,7 +85,7 @@ are evaluated.
 
 At startup, if no profile exists, the **STANDARD** profile is seeded as the
 system default (`isDefault = true`). Two additional ready-to-use, non-default
-profiles are also seeded: **`agid`** (preset `AGID`) and **`agid-ts`** (preset
+profiles are also seeded: **`AGID`** (preset `AGID`) and **`AGID_TS`** (preset
 `AGID_TS`). Seeding is idempotent and skips any name that already exists, so an
 operator can customise or delete them without the seeder resurrecting them.
 
@@ -253,7 +253,8 @@ Each extra option travels as its own first-level part:
 | Part | Type | Required | Description |
 |------|------|----------|-------------|
 | `file` | binary | yes | The signed document to verify |
-| `profileId` | `string` (uuid) | no | UUID of the validation profile; if absent, the default profile is used |
+| `profile` | `string` | no | Name of the validation profile to apply (e.g. `AGID`). Mutually exclusive with `profileId` |
+| `profileId` | `string` (uuid) | no | **Deprecated** — select by name via `profile`. UUID of the validation profile; if absent, the default profile is used. Mutually exclusive with `profile` |
 | `profileOverrides` | `string` (JSON object) | no | JSON object of boolean overrides to relax specific checks (keys listed in §4.2) |
 | `reports` | `string` (CSV) | no | Comma-separated report types (`simple,detailed,diagnostic,etsi`); default `simple,etsi` |
 | `metadata` | application/json | no | **Deprecated.** Legacy JSON envelope carrying `profileId?`, `profileOverrides?`, `reports[]?`. See the note below |
@@ -269,6 +270,7 @@ produced with the default profile.
 curl -sS -X POST http://localhost:8080/api/v1/verifications \
   -H "X-API-Key: $KEY" \
   -F 'file=@contract.pdf' \
+  -F 'profile=AGID' \
   -F 'reports=simple,detailed' \
   -F 'profileOverrides={"checkRevocation":false}'
 ```
@@ -333,7 +335,7 @@ The response contains two timestamp arrays at the signature level:
 | Field | JSON Type | Mandatory | Description | Possible values |
 |-------|-----------|-----------|-------------|-----------------|
 | `verifiedAt` | `string` | yes | Verification timestamp (ISO-8601 UTC) | e.g. `2026-06-08T10:15:30Z` |
-| `profileUsed` | `string` | yes | Name of the validation profile applied | `STANDARD`, `agid`, `agid-ts`, or a custom name |
+| `profileUsed` | `string` | yes | Name of the validation profile applied | `STANDARD`, `AGID`, `AGID_TS`, or a custom name |
 | `overridesApplied` | `boolean` | yes | Whether on-the-fly policy overrides were applied | `true`, `false` |
 | `signatureFormat` | `string` | yes | Detected signature format/level | e.g. `PAdES-BASELINE-B`, `CAdES-BASELINE-B` |
 | `indication` | `string` | yes | Overall validation outcome | `TOTAL_PASSED`, `TOTAL_FAILED`, `INDETERMINATE` |
@@ -488,7 +490,7 @@ persisted jobs.
 `POST /api/v1/verifications/async`: `multipart/form-data`.
 
 Beyond the required `file`, it accepts the same dedicated parts as the sync
-endpoint — `profileId`, `profileOverrides` (JSON), `reports` (CSV, default
+endpoint — `profile` (name), the deprecated `profileId` (UUID), `profileOverrides` (JSON), `reports` (CSV, default
 `simple,etsi`) — plus the callback parts `callbackUrl?`, `callbackSecret?`,
 `callbackAlgorithm?`. The deprecated `metadata` JSON envelope (which additionally
 carries the three `callback*` keys) is still accepted as a **mutually exclusive**

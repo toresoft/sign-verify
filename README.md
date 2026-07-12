@@ -171,7 +171,8 @@ curl -s http://localhost:8080/actuator/health/readiness
 **4. Verify a signature (synchronous)**
 
 Multipart request: a required `file` part plus optional dedicated parts
-(`profileId`, `profileOverrides` as a JSON object, `reports` as a CSV). Without
+(`profile` — the profile name, e.g. `AGID`; the deprecated `profileId` UUID;
+`profileOverrides` as a JSON object; `reports` as a CSV). Without
 them, the default profile and the `simple` + `etsi` reports are used. A legacy
 `metadata` JSON part is still accepted but **deprecated** and mutually exclusive
 with the dedicated parts (mixing the two yields **400**).
@@ -210,7 +211,7 @@ curl -s http://localhost:8080/api/v1/profiles -H "X-API-Key: $KEY" | jq '.[].id,
 curl -s -X POST http://localhost:8080/api/v1/verifications \
   -H "X-API-Key: $KEY" \
   -F "file=@src/test/resources/assets/pades/sample-pades-valid.pdf" \
-  -F 'profileId=<UUID>' \
+  -F 'profile=AGID' \
   -F 'reports=simple,detailed' | jq
 ```
 
