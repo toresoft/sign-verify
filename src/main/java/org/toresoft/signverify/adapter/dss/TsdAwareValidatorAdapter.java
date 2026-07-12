@@ -43,7 +43,6 @@ import org.toresoft.signverify.domain.port.ReportType;
 import org.toresoft.signverify.domain.port.SignatureValidatorPort;
 import org.toresoft.signverify.domain.port.ValidationRequest;
 import org.toresoft.signverify.domain.port.ValidationResult;
-import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Adds RFC 5544 TimeStampedData (TSD) support in front of {@link DssValidatorAdapter}.
@@ -68,13 +67,11 @@ public class TsdAwareValidatorAdapter implements SignatureValidatorPort {
 
   private final DssValidatorAdapter delegate;
   private final CertificateVerifier certificateVerifier;
-  private final JsonMapper om;
 
   public TsdAwareValidatorAdapter(
-      DssValidatorAdapter delegate, CertificateVerifier certificateVerifier, JsonMapper om) {
+      DssValidatorAdapter delegate, CertificateVerifier certificateVerifier) {
     this.delegate = delegate;
     this.certificateVerifier = certificateVerifier;
-    this.om = om;
   }
 
   @Override
@@ -161,7 +158,8 @@ public class TsdAwareValidatorAdapter implements SignatureValidatorPort {
     }
 
     String format = innerFormat != null ? innerFormat : TSD_FORMAT;
-    Map<ReportType, String> out = DssValidatorAdapter.serialize(req.reports(), primaryReports, om);
+    Map<ReportType, String> out =
+        DssValidatorAdapter.serialize(req.reports(), primaryReports, delegate.reportMapper());
     return new ValidationResult(
         format,
         worst.indication() != null ? worst.indication() : "INDETERMINATE",

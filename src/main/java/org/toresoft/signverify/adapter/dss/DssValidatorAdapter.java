@@ -18,10 +18,13 @@
 package org.toresoft.signverify.adapter.dss;
 
 import eu.europa.esig.dss.enumerations.Indication;
+import eu.europa.esig.dss.model.DSSException;
 import eu.europa.esig.dss.model.InMemoryDocument;
 import eu.europa.esig.dss.model.policy.ValidationPolicy;
 import eu.europa.esig.dss.policy.EtsiValidationPolicyFactory;
 import eu.europa.esig.dss.simplereport.SimpleReport;
+import eu.europa.esig.dss.spi.exception.DSSExternalResourceException;
+import eu.europa.esig.dss.spi.exception.IllegalInputException;
 import eu.europa.esig.dss.spi.validation.CertificateVerifier;
 import eu.europa.esig.dss.validation.SignedDocumentValidator;
 import eu.europa.esig.dss.validation.reports.Reports;
@@ -37,6 +40,7 @@ import org.toresoft.signverify.domain.port.SignatureValidatorPort;
 import org.toresoft.signverify.domain.port.ValidationRequest;
 import org.toresoft.signverify.domain.port.ValidationResult;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.module.jakarta.xmlbind.JakartaXmlBindAnnotationModule;
 
 @Component
 public class DssValidatorAdapter implements SignatureValidatorPort {
@@ -46,7 +50,17 @@ public class DssValidatorAdapter implements SignatureValidatorPort {
 
   public DssValidatorAdapter(CertificateVerifier certificateVerifier, JsonMapper om) {
     this.certificateVerifier = certificateVerifier;
-    this.om = om;
+    // Report serialization needs a JAXB-aware mapper: DSS diagnostic/ETSI JAXB models use
+    // @XmlID/@XmlIDREF to break the cyclic timestamp<->signature references. A plain Jackson
+    // mapper follows those references in full and exceeds Jackson 3's max nesting depth (500),
+    // so we derive a dedicated mapper that honours the JAXB identity annotations. Kept separate
+    // from the shared API mapper to avoid the JAXB introspector affecting DTO serialization.
+    this.om = om.rebuild().addModule(new JakartaXmlBindAnnotationModule()).build();
+  }
+
+  /** JAXB-aware mapper used for serializing DSS reports (see constructor). */
+  JsonMapper reportMapper() {
+    return om;
   }
 
   @Override
@@ -62,34 +76,49 @@ public class DssValidatorAdapter implements SignatureValidatorPort {
     validator.setCertificateVerifier(certificateVerifier);
 
     ValidationPolicy policy = loadPolicy(req.policyXml());
-    Reports reports = validator.validateDocument(policy);
-    SimpleReport simple = reports.getSimpleReport();
+    try {
+      // DSS builds the report model lazily, so a structurally-unprocessable input (broken timestamp
+      // token, non-CAdES payload, …) may throw here at validateDocument or later while the model is
+      // materialised (getSimpleReport, report JAXB). validateDocument surfaces genuine validation
+      // outcomes (bad signature, missing revocation, …) as report indications and only throws for a
+      // deterministic input error, which we map to a parse error (4xx). AppException is ignored by
+      // the breaker, so a burst of malformed documents cannot open it and DoS legitimate traffic.
+      // A DSSExternalResourceException (revocation/TSL fetch failure) is a genuine transient
+      // outage,
+      // not bad input, so it is rethrown below to still count against the breaker.
+      Reports reports = validator.validateDocument(policy);
+      SimpleReport simple = reports.getSimpleReport();
 
-    Map<ReportType, String> out = serialize(req.reports(), reports, om);
+      Map<ReportType, String> out = serialize(req.reports(), reports, om);
 
-    // For multi-signature documents the top-level outcome reflects the worst signature, so a single
-    // invalid signature can never be masked by a passing one appearing first.
-    String reportingId = worstSignatureId(simple);
-    String format =
-        reportingId != null && simple.getSignatureFormat(reportingId) != null
-            ? simple.getSignatureFormat(reportingId).toString()
-            : "UNKNOWN";
-    String indication =
-        reportingId != null && simple.getIndication(reportingId) != null
-            ? simple.getIndication(reportingId).toString()
-            : "INDETERMINATE";
-    String subIndication =
-        reportingId != null && simple.getSubIndication(reportingId) != null
-            ? simple.getSubIndication(reportingId).toString()
-            : null;
-    return new ValidationResult(
-        format,
-        indication,
-        subIndication,
-        simple.getSignaturesCount(),
-        out,
-        SimpleReportMapper.signatures(simple),
-        SimpleReportMapper.timestamps(simple));
+      // For multi-signature documents the top-level outcome reflects the worst signature, so a
+      // single invalid signature can never be masked by a passing one appearing first.
+      String reportingId = worstSignatureId(simple);
+      String format =
+          reportingId != null && simple.getSignatureFormat(reportingId) != null
+              ? simple.getSignatureFormat(reportingId).toString()
+              : "UNKNOWN";
+      String indication =
+          reportingId != null && simple.getIndication(reportingId) != null
+              ? simple.getIndication(reportingId).toString()
+              : "INDETERMINATE";
+      String subIndication =
+          reportingId != null && simple.getSubIndication(reportingId) != null
+              ? simple.getSubIndication(reportingId).toString()
+              : null;
+      return new ValidationResult(
+          format,
+          indication,
+          subIndication,
+          simple.getSignaturesCount(),
+          out,
+          SimpleReportMapper.signatures(simple),
+          SimpleReportMapper.timestamps(simple));
+    } catch (DSSExternalResourceException e) {
+      throw e; // genuine external/transient failure (revocation/TSL fetch) → let the breaker see it
+    } catch (DSSException | IllegalInputException e) {
+      throw AppException.signatureParseError("cannot validate signed document: " + e.getMessage());
+    }
   }
 
   /**
@@ -139,6 +168,10 @@ public class DssValidatorAdapter implements SignatureValidatorPort {
         out.put(ReportType.DIAGNOSTIC, om.writeValueAsString(reports.getDiagnosticDataJaxb()));
       if (wanted.contains(ReportType.ETSI))
         out.put(ReportType.ETSI, om.writeValueAsString(reports.getEtsiValidationReportJaxb()));
+    } catch (DSSException | IllegalInputException e) {
+      // Building a report JAXB model can fail lazily for structurally-broken input; let it
+      // propagate so validate() maps it to a parse error (4xx) rather than an internal failure.
+      throw e;
     } catch (Exception e) {
       throw new IllegalStateException("report serialization", e);
     }

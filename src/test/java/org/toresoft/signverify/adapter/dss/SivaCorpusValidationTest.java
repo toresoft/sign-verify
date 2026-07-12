@@ -32,10 +32,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.test.context.ActiveProfiles;
 import org.toresoft.signverify.domain.exception.AppException;
+import org.toresoft.signverify.domain.exception.Errors;
 import org.toresoft.signverify.domain.port.ReportType;
 import org.toresoft.signverify.domain.port.SignatureValidatorPort;
 import org.toresoft.signverify.domain.port.ValidationRequest;
 import org.toresoft.signverify.domain.port.ValidationResult;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Data-driven validation tests over the imported Estonian SiVa signed-document corpus ({@code
@@ -54,8 +56,14 @@ import org.toresoft.signverify.domain.port.ValidationResult;
 class SivaCorpusValidationTest {
 
   @Autowired private SignatureValidatorPort validator; // @Primary TsdAware over Dss
+  @Autowired private JsonMapper om;
 
   private static final String POLICY = loadPolicy();
+
+  /**
+   * Exercise every report flavour so DIAGNOSTIC/ETSI serialization is covered across the corpus.
+   */
+  private static final Set<ReportType> ALL_REPORTS = Set.of(ReportType.values());
 
   static Stream<Path> sivaCorpus() throws Exception {
     Path root = Path.of(SivaCorpusValidationTest.class.getResource("/assets/siva").toURI());
@@ -71,6 +79,11 @@ class SivaCorpusValidationTest {
    * exception (NPE, parser crash, …). For parsed results we also assert the no-trust invariant and,
    * when a signature is present, that its format is detected in the family expected from the
    * container type.
+   *
+   * <p>All four report flavours are requested so the full serialization path — including the
+   * DIAGNOSTIC/ETSI JAXB models whose cyclic {@code @XmlIDREF} timestamp references are only
+   * present on LT/LTA fixtures — is exercised over the whole corpus, and each emitted report is
+   * asserted to be well-formed JSON.
    */
   @ParameterizedTest(name = "{0}")
   @MethodSource("sivaCorpus")
@@ -83,10 +96,15 @@ class SivaCorpusValidationTest {
     try {
       result =
           validator.validate(
-              new ValidationRequest(
-                  bytes, file.getFileName().toString(), POLICY, Set.of(ReportType.SIMPLE)));
+              new ValidationRequest(bytes, file.getFileName().toString(), POLICY, ALL_REPORTS));
     } catch (AppException e) {
-      return; // controlled rejection of an unparseable/unsupported fixture is acceptable
+      // A controlled rejection of an unparseable/unsupported fixture is acceptable, but a
+      // dss.unavailable is an internal failure (e.g. report serialization tripping the circuit
+      // breaker) that must never be silently swallowed as a "rejection".
+      assertThat(e.getCode())
+          .as("internal DSS failure on %s: %s", file.getFileName(), e.getDetail())
+          .isNotEqualTo(Errors.DSS_UNAVAILABLE);
+      return;
     }
 
     assertThat(result).isNotNull();
@@ -94,6 +112,19 @@ class SivaCorpusValidationTest {
     assertThat(result.indication())
         .as("no fixture may pass without a Trusted List: %s", file.getFileName())
         .isNotEqualTo("TOTAL_PASSED");
+
+    // Every requested report must have serialized to well-formed JSON. This is the corpus-wide net
+    // for the cyclic-reference serialization bug: many LT/LTA fixtures carry mutually-covering
+    // timestamps that a JAXB-unaware mapper would recurse into until Jackson's max nesting depth.
+    for (var entry : result.reportsJson().entrySet()) {
+      String json = entry.getValue();
+      assertThat(json)
+          .as("report %s for %s must be present", entry.getKey(), file.getFileName())
+          .isNotBlank();
+      assertThat(om.readTree(json).isObject())
+          .as("report %s for %s must be a JSON object", entry.getKey(), file.getFileName())
+          .isTrue();
+    }
 
     if (!result.signatures().isEmpty()) {
       String fmt = result.signatures().get(0).signatureFormat();

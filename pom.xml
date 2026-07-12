@@ -351,6 +351,15 @@
             <version>2.2.25</version>
         </dependency>
 
+        <!-- Lets Jackson honour JAXB @XmlID/@XmlIDREF when serialising DSS diagnostic/ETSI
+             reports to JSON. Without it the cyclic timestamp<->signature references in
+             XmlDiagnosticData are traversed in full and blow past Jackson 3's default
+             max nesting depth (500). Version managed by the Boot-imported tools.jackson BOM. -->
+        <dependency>
+            <groupId>tools.jackson.module</groupId>
+            <artifactId>jackson-module-jakarta-xmlbind-annotations</artifactId>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
