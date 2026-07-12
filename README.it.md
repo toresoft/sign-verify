@@ -168,8 +168,11 @@ curl -s http://localhost:8080/actuator/health/readiness
 
 **4. Verifica una firma (sincrona)**
 
-Invio multipart: parte `file` (obbligatoria) e parte opzionale `metadata` (JSON).
-Senza `metadata` viene usato il profilo di default e i report `simple` + `etsi`.
+Invio multipart: parte `file` (obbligatoria) più parti dedicate opzionali
+(`profileId`, `profileOverrides` come oggetto JSON, `reports` come CSV). Senza di
+esse viene usato il profilo di default e i report `simple` + `etsi`. La parte
+legacy `metadata` (JSON) è ancora accettata ma **deprecata** e mutuamente
+esclusiva con le parti dedicate (mescolarle produce **400**).
 
 ```bash
 curl -s -X POST http://localhost:8080/api/v1/verifications \
@@ -205,7 +208,8 @@ curl -s http://localhost:8080/api/v1/profiles -H "X-API-Key: $KEY" | jq '.[].id,
 curl -s -X POST http://localhost:8080/api/v1/verifications \
   -H "X-API-Key: $KEY" \
   -F "file=@src/test/resources/assets/pades/sample-pades-valid.pdf" \
-  -F 'metadata={"profileId":"<UUID>","reports":["simple","detailed"]};type=application/json' | jq
+  -F 'profileId=<UUID>' \
+  -F 'reports=simple,detailed' | jq
 ```
 
 > **Nota sulla verifica reale dei certificati**: nel profilo `docker` la TSL è

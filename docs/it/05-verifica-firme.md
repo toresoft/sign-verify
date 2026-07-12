@@ -221,8 +221,9 @@ curl -sS -X POST http://localhost:8080/api/v1/profiles \
 ### Override al volo
 
 Senza creare un profilo, si può **rilassare** alcuni controlli per la singola
-richiesta passando override booleani nei metadati. Impostando una chiave a
-`false`, i corrispondenti vincoli della policy vengono portati a `Level=IGNORE`:
+richiesta passando override booleani nella parte `profileOverrides` (oppure, sul
+percorso deprecato, dentro il JSON `metadata`). Impostando una chiave a `false`,
+i corrispondenti vincoli della policy vengono portati a `Level=IGNORE`:
 
 | Chiave override | Vincoli interessati (Level → IGNORE) |
 |-----------------|--------------------------------------|
@@ -239,27 +240,29 @@ La risposta segnala `overridesApplied: true`.
 
 `POST /api/v1/verifications`: `multipart/form-data`.
 
+Ogni opzione extra viaggia come parte di primo livello dedicata:
+
 | Parte | Tipo | Obbligatoria | Descrizione |
 |-------|------|--------------|-------------|
 | `file` | binary | sì | Il documento firmato da verificare |
-| `metadata` | application/json | no | Oggetto JSON con opzioni di verifica |
-| `metadata.profileId` | `string` | no | UUID del profilo di validazione; se assente, si usa il profilo di default |
-| `metadata.profileOverrides` | `object` | no | Mappa chiave-valore di override booleani per rilassare controlli specifici (vedi §4.2) |
-| `metadata.profileOverrides.checkRevocation` | `boolean` | no | Porta i vincoli di revoca a `IGNORE` |
-| `metadata.profileOverrides.checkSignatureIntegrity` | `boolean` | no | Porta i vincoli di integrità della firma a `IGNORE` |
-| `metadata.profileOverrides.checkCertificateChain` | `boolean` | no | Porta i vincoli sulla catena di certificati a `IGNORE` |
-| `metadata.profileOverrides.checkTimestamp` | `boolean` | no | Porta i vincoli sui timestamp a `IGNORE` |
-| `metadata.profileOverrides.checkQualified` | `boolean` | no | Porta il vincolo sul certificato qualificato a `IGNORE` |
-| `metadata.reports` | `array[string]` | no | Tipi di report richiesti; default `["simple","etsi"]` |
+| `profileId` | `string` (uuid) | no | UUID del profilo di validazione; se assente, si usa il profilo di default |
+| `profileOverrides` | `string` (oggetto JSON) | no | Oggetto JSON di override booleani per rilassare controlli specifici (chiavi elencate in §4.2) |
+| `reports` | `string` (CSV) | no | Tipi di report separati da virgola (`simple,detailed,diagnostic,etsi`); default `simple,etsi` |
+| `metadata` | application/json | no | **Deprecata.** Envelope JSON legacy con `profileId?`, `profileOverrides?`, `reports[]?`. Vedi la nota sotto |
 
-Se `metadata` è assente, vengono prodotti i report `simple` ed `etsi` con il
-profilo di default.
+> **`metadata` è deprecata e mutuamente esclusiva con le parti dedicate.**
+> Inviare *o* le singole parti *o* il JSON legacy `metadata` — fornire entrambi
+> (anche una sola parte dedicata insieme a `metadata`) produce **400**.
+
+Se nessuna delle parti opzionali è presente, vengono prodotti i report `simple`
+ed `etsi` con il profilo di default.
 
 ```bash
 curl -sS -X POST http://localhost:8080/api/v1/verifications \
   -H "X-API-Key: $KEY" \
   -F 'file=@contratto.pdf' \
-  -F 'metadata={"reports":["simple","detailed"],"profileOverrides":{"checkRevocation":false}}'
+  -F 'reports=simple,detailed' \
+  -F 'profileOverrides={"checkRevocation":false}'
 ```
 
 Risposta `200`:
@@ -293,9 +296,12 @@ Risposta `200`:
 }
 ```
 
-Valori ammessi per `reports`: `simple`, `detailed`, `diagnostic`, `etsi`.
-Un valore sconosciuto produce **400** (`unknown report type`). Un JSON di
-metadata malformato produce **400** (`invalid metadata json`).
+Valori ammessi per `reports`: `simple`, `detailed`, `diagnostic`, `etsi`
+(separati da virgola nella parte `reports`). Un valore sconosciuto produce
+**400** (`unknown report type`). Un `profileOverrides` JSON malformato produce
+**400** (`invalid profileOverrides json`); un JSON legacy `metadata` malformato
+produce **400** (`invalid metadata json`). Mescolare le parti dedicate con la
+parte legacy `metadata` produce **400**.
 
 ### Timestamp del documento vs timestamp di archivio
 
@@ -391,6 +397,12 @@ completo per ogni codice. Quelli più probabili su questo endpoint:
 {"type":"urn:signverify:error:validation.invalid-input","title":"Bad Request","status":400,"detail":"invalid metadata json","instance":"/api/v1/verifications"}
 ```
 
+**400: codifiche di richiesta in conflitto** (parti dedicate + `metadata` legacy)
+
+```json
+{"type":"urn:signverify:error:validation.invalid-input","title":"Bad Request","status":400,"detail":"provide either the 'metadata' part or the individual parts, not both","instance":"/api/v1/verifications"}
+```
+
 **413: file troppo grande**
 
 ```json
@@ -445,7 +457,7 @@ sequenceDiagram
     participant S as VerificationService
     participant D as Adapter DSS
     end
-    C->>V: POST /verifications (file + metadata)
+    C->>V: POST /verifications (file + parti)
     V->>S: verifySync(file, profileId, overrides, reports)
     S->>S: tryAcquire semaforo (max-concurrent)
     alt limite raggiunto
@@ -465,17 +477,23 @@ asincrono basato su job persistiti.
 
 ### Sottomissione
 
-`POST /api/v1/verifications/async`: `multipart/form-data` (`file` + `metadata`).
+`POST /api/v1/verifications/async`: `multipart/form-data`.
 
-Campi di `metadata` (JSON): `profileId?`, `profileOverrides?`, `reports[]?`
-(default `simple,diagnostic`), `callbackUrl?`, `callbackSecret?`,
-`callbackAlgorithm?`.
+Oltre al `file` obbligatorio, accetta le stesse parti dedicate dell'endpoint
+sincrono — `profileId`, `profileOverrides` (JSON), `reports` (CSV, default
+`simple,etsi`) — più le parti di callback `callbackUrl?`, `callbackSecret?`,
+`callbackAlgorithm?`. L'envelope JSON deprecato `metadata` (che in più porta le
+tre chiavi `callback*`) è ancora accettato come alternativa legacy **mutuamente
+esclusiva** — mescolarlo con una qualsiasi parte dedicata produce **400**.
 
 ```bash
 curl -sS -X POST http://localhost:8080/api/v1/verifications/async \
   -H "X-API-Key: $KEY" \
   -F 'file=@grande.pdf' \
-  -F 'metadata={"reports":["simple","etsi"],"callbackUrl":"https://app.example.org/hook","callbackSecret":"s3cr3t","callbackAlgorithm":"HmacSHA256"}'
+  -F 'reports=simple,etsi' \
+  -F 'callbackUrl=https://app.example.org/hook' \
+  -F 'callbackSecret=s3cr3t' \
+  -F 'callbackAlgorithm=HmacSHA256'
 ```
 
 Risposta `202`:

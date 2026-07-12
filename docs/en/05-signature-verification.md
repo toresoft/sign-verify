@@ -220,7 +220,8 @@ curl -sS -X POST http://localhost:8080/api/v1/profiles \
 ### On-the-fly overrides
 
 Without creating a profile, you can **relax** some checks for a single request
-by passing boolean overrides in the metadata. Setting a key to `false` drives
+by passing boolean overrides in the `profileOverrides` part (or, on the
+deprecated path, inside the `metadata` JSON). Setting a key to `false` drives
 the corresponding policy constraints to `Level=IGNORE`:
 
 | Override key | Affected constraints (Level → IGNORE) |
@@ -238,27 +239,29 @@ Overrides only disable a check (value `false`). The response reports
 
 `POST /api/v1/verifications`: `multipart/form-data`.
 
+Each extra option travels as its own first-level part:
+
 | Part | Type | Required | Description |
 |------|------|----------|-------------|
 | `file` | binary | yes | The signed document to verify |
-| `metadata` | application/json | no | JSON object with verification options |
-| `metadata.profileId` | `string` | no | UUID of the validation profile; if absent, default profile is used |
-| `metadata.profileOverrides` | `object` | no | Key-value map of boolean overrides to relax specific checks (see §4.2) |
-| `metadata.profileOverrides.checkRevocation` | `boolean` | no | Drive revocation constraints to `IGNORE` |
-| `metadata.profileOverrides.checkSignatureIntegrity` | `boolean` | no | Drive signature integrity constraints to `IGNORE` |
-| `metadata.profileOverrides.checkCertificateChain` | `boolean` | no | Drive certificate chain constraints to `IGNORE` |
-| `metadata.profileOverrides.checkTimestamp` | `boolean` | no | Drive timestamp constraints to `IGNORE` |
-| `metadata.profileOverrides.checkQualified` | `boolean` | no | Drive qualified certificate constraint to `IGNORE` |
-| `metadata.reports` | `array[string]` | no | Requested report types; default `["simple","etsi"]` |
+| `profileId` | `string` (uuid) | no | UUID of the validation profile; if absent, the default profile is used |
+| `profileOverrides` | `string` (JSON object) | no | JSON object of boolean overrides to relax specific checks (keys listed in §4.2) |
+| `reports` | `string` (CSV) | no | Comma-separated report types (`simple,detailed,diagnostic,etsi`); default `simple,etsi` |
+| `metadata` | application/json | no | **Deprecated.** Legacy JSON envelope carrying `profileId?`, `profileOverrides?`, `reports[]?`. See the note below |
 
-If `metadata` is absent, `simple` and `etsi` reports are produced with the
-default profile.
+> **`metadata` is deprecated and mutually exclusive with the dedicated parts.**
+> Send *either* the individual parts *or* the legacy `metadata` JSON — supplying
+> both (even a single dedicated part alongside `metadata`) yields **400**.
+
+If none of the optional parts is present, `simple` and `etsi` reports are
+produced with the default profile.
 
 ```bash
 curl -sS -X POST http://localhost:8080/api/v1/verifications \
   -H "X-API-Key: $KEY" \
   -F 'file=@contract.pdf' \
-  -F 'metadata={"reports":["simple","detailed"],"profileOverrides":{"checkRevocation":false}}'
+  -F 'reports=simple,detailed' \
+  -F 'profileOverrides={"checkRevocation":false}'
 ```
 
 `200` response:
@@ -292,9 +295,12 @@ curl -sS -X POST http://localhost:8080/api/v1/verifications \
 }
 ```
 
-Allowed `reports` values: `simple`, `detailed`, `diagnostic`, `etsi`. An unknown
-value yields **400** (`unknown report type`). Malformed metadata JSON yields
-**400** (`invalid metadata json`).
+Allowed `reports` values: `simple`, `detailed`, `diagnostic`, `etsi`
+(comma-separated in the `reports` part). An unknown value yields **400**
+(`unknown report type`). Malformed `profileOverrides` JSON yields **400**
+(`invalid profileOverrides json`); malformed legacy `metadata` JSON yields
+**400** (`invalid metadata json`). Mixing the dedicated parts with the legacy
+`metadata` part yields **400**.
 
 ### Document timestamps vs archive timestamps
 
@@ -390,6 +396,12 @@ for every code. The ones you are most likely to hit on this endpoint:
 {"type":"urn:signverify:error:validation.invalid-input","title":"Bad Request","status":400,"detail":"invalid metadata json","instance":"/api/v1/verifications"}
 ```
 
+**400: conflicting request encodings** (dedicated parts + legacy `metadata`)
+
+```json
+{"type":"urn:signverify:error:validation.invalid-input","title":"Bad Request","status":400,"detail":"provide either the 'metadata' part or the individual parts, not both","instance":"/api/v1/verifications"}
+```
+
 **413: file too large**
 
 ```json
@@ -444,7 +456,7 @@ sequenceDiagram
     participant S as VerificationService
     participant D as DSS adapter
     end
-    C->>V: POST /verifications (file + metadata)
+    C->>V: POST /verifications (file + parts)
     V->>S: verifySync(file, profileId, overrides, reports)
     S->>S: tryAcquire semaphore (max-concurrent)
     alt limit reached
@@ -464,17 +476,23 @@ persisted jobs.
 
 ### Submission
 
-`POST /api/v1/verifications/async`: `multipart/form-data` (`file` + `metadata`).
+`POST /api/v1/verifications/async`: `multipart/form-data`.
 
-`metadata` fields (JSON): `profileId?`, `profileOverrides?`, `reports[]?`
-(default `simple,diagnostic`), `callbackUrl?`, `callbackSecret?`,
-`callbackAlgorithm?`.
+Beyond the required `file`, it accepts the same dedicated parts as the sync
+endpoint — `profileId`, `profileOverrides` (JSON), `reports` (CSV, default
+`simple,etsi`) — plus the callback parts `callbackUrl?`, `callbackSecret?`,
+`callbackAlgorithm?`. The deprecated `metadata` JSON envelope (which additionally
+carries the three `callback*` keys) is still accepted as a **mutually exclusive**
+legacy alternative — mixing it with any dedicated part yields **400**.
 
 ```bash
 curl -sS -X POST http://localhost:8080/api/v1/verifications/async \
   -H "X-API-Key: $KEY" \
   -F 'file=@large.pdf' \
-  -F 'metadata={"reports":["simple","etsi"],"callbackUrl":"https://app.example.org/hook","callbackSecret":"s3cr3t","callbackAlgorithm":"HmacSHA256"}'
+  -F 'reports=simple,etsi' \
+  -F 'callbackUrl=https://app.example.org/hook' \
+  -F 'callbackSecret=s3cr3t' \
+  -F 'callbackAlgorithm=HmacSHA256'
 ```
 
 `202` response:
