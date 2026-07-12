@@ -103,7 +103,10 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
   CMD wget -q -O /dev/null http://localhost:8080/actuator/health/liveness || exit 1
 
 # Exec form → app is PID 1 and receives SIGTERM for graceful shutdown.
-ENTRYPOINT ["java", "-jar", "application.jar"]
+# `extract` (jarmode=tools) drops a slim runnable jar named after the artifact
+# plus a lib/ dir here; its manifest Class-Path points at lib/, so `java -jar`
+# resolves everything. The name tracks the Maven finalName (sign-verify-2).
+ENTRYPOINT ["java", "-jar", "sign-verify-2.jar"]
 
 LABEL org.opencontainers.image.title="sign-verify" \
       org.opencontainers.image.description="eIDAS digital signature verification service (DSS 6.4)" \
