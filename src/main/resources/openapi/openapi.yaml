@@ -268,10 +268,14 @@ paths:
               required: [file]
               properties:
                 file: { type: string, format: binary }
+                profile:
+                  type: string
+                  description: Name of the validation profile to apply (e.g. AGID). Mutually exclusive with profileId.
                 profileId:
                   type: string
                   format: uuid
-                  description: Verification profile to apply.
+                  deprecated: true
+                  description: DEPRECATED. Select the profile by name via `profile` instead. Mutually exclusive with `profile`.
                 profileOverrides:
                   type: string
                   description: JSON object with per-request policy overrides.
@@ -312,10 +316,14 @@ paths:
               required: [file]
               properties:
                 file: { type: string, format: binary }
+                profile:
+                  type: string
+                  description: Name of the validation profile to apply (e.g. AGID). Mutually exclusive with profileId.
                 profileId:
                   type: string
                   format: uuid
-                  description: Verification profile to apply.
+                  deprecated: true
+                  description: DEPRECATED. Select the profile by name via `profile` instead. Mutually exclusive with `profile`.
                 profileOverrides:
                   type: string
                   description: JSON object with per-request policy overrides.
