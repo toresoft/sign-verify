@@ -173,7 +173,11 @@ public class VerificationProfileService {
       return getByName(name).getId();
     }
     if (id != null) {
-      return UUID.fromString(id);
+      try {
+        return UUID.fromString(id);
+      } catch (IllegalArgumentException e) {
+        throw AppException.badRequest("invalid profileId: not a valid UUID");
+      }
     }
     return null;
   }

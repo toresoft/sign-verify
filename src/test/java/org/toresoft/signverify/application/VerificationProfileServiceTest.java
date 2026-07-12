@@ -77,4 +77,10 @@ class VerificationProfileServiceTest {
     assertThat(service.resolveId(null, standard.getId().toString())).isEqualTo(standard.getId());
     assertThat(service.resolveId(null, null)).isNull();
   }
+
+  @Test
+  void resolveId_malformedId_throwsBadRequest() {
+    assertThatThrownBy(() -> service.resolveId(null, "not-a-uuid"))
+        .isInstanceOf(AppException.class);
+  }
 }

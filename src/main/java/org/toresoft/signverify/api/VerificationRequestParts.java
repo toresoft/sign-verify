@@ -31,7 +31,7 @@ import tools.jackson.databind.json.JsonMapper;
  *
  * <p>A profile can be selected either by name ({@code profile} part) or, on the deprecated path, by
  * id ({@code profileId} part); the two are mutually exclusive. {@link #profileName()} is only
- * populated by the {@code profile} part — the legacy {@code metadata} envelope carries {@code
+ * populated by the {@code profile} part; the legacy {@code metadata} envelope carries {@code
  * profileId} only.
  *
  * <p>{@link #reports()} is {@code null} when not supplied, so each controller keeps its own default
