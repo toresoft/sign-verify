@@ -163,7 +163,7 @@ package:dockerhub-readme:
 # --------------------------------------------------------------------------- #
 # security                                                                     #
 #   image-scan: needs package:docker (parte appena l'immagine è pushata)       #
-#   dependency-scan: needs test:verify (parte in parallelo con package:docker) #
+#   dependency-scan: needs test:verify (parte in parallelo con package:docker) #\
 # --------------------------------------------------------------------------- #
 security:image-scan:
   stage: security
