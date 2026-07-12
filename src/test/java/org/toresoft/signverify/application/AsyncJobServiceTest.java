@@ -47,6 +47,7 @@ import org.toresoft.signverify.domain.model.ValidationJob;
 import org.toresoft.signverify.domain.port.DocumentStoragePort;
 import org.toresoft.signverify.domain.port.ReportType;
 import org.toresoft.signverify.domain.port.SecretCipherPort;
+import org.toresoft.signverify.domain.port.SecretGeneratorPort;
 import org.toresoft.signverify.persistence.ValidationJobRepository;
 import org.toresoft.signverify.security.Principal;
 
@@ -57,6 +58,7 @@ class AsyncJobServiceTest {
   @Mock private DocumentStoragePort storage;
   @Mock private SecretCipherPort cipher;
   @Mock private AuditService audit;
+  @Mock private SecretGeneratorPort secretGenerator;
 
   private AsyncJobService service;
   private final Principal actor =
@@ -69,6 +71,7 @@ class AsyncJobServiceTest {
             repo,
             storage,
             cipher,
+            secretGenerator,
             audit,
             5,
             10,
@@ -79,6 +82,7 @@ class AsyncJobServiceTest {
     lenient()
         .when(repo.countActiveByPrincipal(any(PrincipalType.class), anyString()))
         .thenReturn(0L);
+    lenient().when(secretGenerator.generateCallbackSecret()).thenReturn("svcbk_test-secret-value");
   }
 
   private AsyncJobService.SubmitRequest baseRequest() {
@@ -89,7 +93,6 @@ class AsyncJobServiceTest {
         "{\"k\":\"v\"}",
         Set.of(ReportType.SIMPLE, ReportType.ETSI),
         "https://callback.example/hook",
-        "secret-123",
         "HmacSHA256");
   }
 
@@ -100,13 +103,13 @@ class AsyncJobServiceTest {
     when(storage.storeInput(anyString(), anyString(), any()))
         .thenReturn("/var/lib/sign-verify/jobs/abc/input-doc.pdf");
 
-    UUID returned = service.submit(req, actor);
+    AsyncJobService.SubmitResult returned = service.submit(req, actor);
 
     ArgumentCaptor<ValidationJob> captor = ArgumentCaptor.forClass(ValidationJob.class);
     verify(repo).save(captor.capture());
     ValidationJob saved = captor.getValue();
 
-    assertThat(saved.getId()).isEqualTo(returned);
+    assertThat(saved.getId()).isEqualTo(returned.jobId());
     assertThat(saved.getStatus()).isEqualTo(JobStatus.PENDING);
     assertThat(saved.getProfileId()).isEqualTo(profileId);
     assertThat(saved.getProfileOverrides()).isEqualTo("{\"k\":\"v\"}");
@@ -129,7 +132,6 @@ class AsyncJobServiceTest {
             null,
             Set.of(ReportType.SIMPLE),
             "https://callback.example/hook",
-            "secret-123",
             "HmacMD5");
 
     AppException ex =
@@ -150,7 +152,6 @@ class AsyncJobServiceTest {
             null,
             Set.of(ReportType.SIMPLE),
             "https://callback.example/hook",
-            "secret-123",
             "hmacsha512");
     when(storage.storeInput(anyString(), anyString(), any())).thenReturn("p");
 
@@ -159,39 +160,6 @@ class AsyncJobServiceTest {
     ArgumentCaptor<ValidationJob> captor = ArgumentCaptor.forClass(ValidationJob.class);
     verify(repo).save(captor.capture());
     assertThat(captor.getValue().getCallbackAlgorithm()).isEqualTo("hmacsha512");
-  }
-
-  @Test
-  void submit_encryptsCallbackSecret() {
-    var req = baseRequest();
-    when(cipher.encrypt("secret-123")).thenReturn("enc-cipher");
-
-    service.submit(req, actor);
-
-    verify(cipher, times(1)).encrypt("secret-123");
-    ArgumentCaptor<ValidationJob> captor = ArgumentCaptor.forClass(ValidationJob.class);
-    verify(repo).save(captor.capture());
-    assertThat(captor.getValue().getCallbackSecretCipher()).isEqualTo("enc-cipher");
-  }
-
-  @Test
-  void submit_callbackUrlWithoutSecret_isRejected() {
-    var req =
-        new AsyncJobService.SubmitRequest(
-            new byte[] {1},
-            "doc.pdf",
-            UUID.randomUUID(),
-            null,
-            Set.of(ReportType.SIMPLE),
-            "https://callback.example/hook",
-            null,
-            "HmacSHA256");
-
-    assertThatThrownBy(() -> service.submit(req, actor))
-        .isInstanceOf(AppException.class)
-        .satisfies(e -> assertThat(((AppException) e).getDetail()).contains("callbackSecret"));
-    verify(cipher, never()).encrypt(anyString());
-    verify(repo, never()).save(any());
   }
 
   @Test
@@ -204,29 +172,11 @@ class AsyncJobServiceTest {
             null,
             Set.of(ReportType.SIMPLE),
             "ftp://not-http/hook",
-            "secret-123",
             "HmacSHA256");
 
     assertThatThrownBy(() -> service.submit(req, actor))
         .isInstanceOf(AppException.class)
         .satisfies(e -> assertThat(((AppException) e).getDetail()).contains("callbackUrl"));
-    verify(repo, never()).save(any());
-  }
-
-  @Test
-  void submit_callbackUrlWithBlankSecret_isRejected() {
-    var req =
-        new AsyncJobService.SubmitRequest(
-            new byte[] {1},
-            "doc.pdf",
-            UUID.randomUUID(),
-            null,
-            Set.of(ReportType.SIMPLE),
-            "https://callback.example/hook",
-            "   ",
-            "HmacSHA256");
-
-    assertThatThrownBy(() -> service.submit(req, actor)).isInstanceOf(AppException.class);
     verify(repo, never()).save(any());
   }
 
@@ -239,7 +189,6 @@ class AsyncJobServiceTest {
             UUID.randomUUID(),
             null,
             Set.of(ReportType.SIMPLE),
-            null,
             null,
             "HmacSHA256");
 
@@ -261,7 +210,6 @@ class AsyncJobServiceTest {
             null,
             Set.of(ReportType.SIMPLE),
             "https://callback.example/hook",
-            "secret",
             null);
 
     service.submit(req, actor);
@@ -281,7 +229,6 @@ class AsyncJobServiceTest {
             null,
             Set.of(ReportType.SIMPLE),
             "https://callback.example/hook",
-            "secret",
             "HmacSHA512");
 
     service.submit(req, actor);
@@ -295,7 +242,7 @@ class AsyncJobServiceTest {
   void submit_emptyReports_defaultsToSimpleEtsi() {
     var req =
         new AsyncJobService.SubmitRequest(
-            new byte[] {1}, "doc.pdf", UUID.randomUUID(), null, Set.of(), null, null, null);
+            new byte[] {1}, "doc.pdf", UUID.randomUUID(), null, Set.of(), null, null);
 
     service.submit(req, actor);
 
@@ -313,7 +260,6 @@ class AsyncJobServiceTest {
             UUID.randomUUID(),
             null,
             Set.of(ReportType.SIMPLE, ReportType.DIAGNOSTIC),
-            null,
             null,
             null);
 
@@ -379,19 +325,19 @@ class AsyncJobServiceTest {
 
   @Test
   void submit_returnsJobId() {
-    UUID id = service.submit(baseRequest(), actor);
+    AsyncJobService.SubmitResult r = service.submit(baseRequest(), actor);
 
-    assertThat(id).isNotNull();
+    assertThat(r.jobId()).isNotNull();
     ArgumentCaptor<ValidationJob> captor = ArgumentCaptor.forClass(ValidationJob.class);
     verify(repo).save(captor.capture());
-    assertThat(captor.getValue().getId()).isEqualTo(id);
+    assertThat(captor.getValue().getId()).isEqualTo(r.jobId());
   }
 
   @Test
   void submit_auditsSuccessfulSubmission() {
     var req = baseRequest();
 
-    UUID id = service.submit(req, actor);
+    AsyncJobService.SubmitResult r = service.submit(req, actor);
 
     @SuppressWarnings("unchecked")
     ArgumentCaptor<java.util.Map<String, Object>> details =
@@ -401,11 +347,64 @@ class AsyncJobServiceTest {
             eq(actor),
             eq(AuditActions.JOB_SUBMIT),
             eq("job"),
-            eq(id.toString()),
+            eq(r.jobId().toString()),
             eq(true),
             details.capture());
     assertThat(details.getValue())
         .containsEntry("filename", "doc.pdf")
         .containsEntry("profileId", req.profileId().toString());
+  }
+
+  @Test
+  void submit_generatesAndEncryptsSecretWhenCallbackUrlPresent() {
+    var req = baseRequest();
+    when(secretGenerator.generateCallbackSecret()).thenReturn("svcbk_gen");
+    when(cipher.encrypt("svcbk_gen")).thenReturn("enc-cipher");
+    when(storage.storeInput(anyString(), anyString(), any())).thenReturn("p");
+
+    service.submit(req, actor);
+
+    verify(secretGenerator, times(1)).generateCallbackSecret();
+    verify(cipher, times(1)).encrypt("svcbk_gen");
+    ArgumentCaptor<ValidationJob> captor = ArgumentCaptor.forClass(ValidationJob.class);
+    verify(repo).save(captor.capture());
+    assertThat(captor.getValue().getCallbackSecretCipher()).isEqualTo("enc-cipher");
+  }
+
+  @Test
+  void submit_returnsGeneratedSecretInResult() {
+    var req = baseRequest();
+    when(secretGenerator.generateCallbackSecret()).thenReturn("svcbk_gen");
+    when(cipher.encrypt("svcbk_gen")).thenReturn("enc");
+    when(storage.storeInput(anyString(), anyString(), any())).thenReturn("p");
+
+    AsyncJobService.SubmitResult result = service.submit(req, actor);
+
+    assertThat(result.jobId()).isNotNull();
+    // The PLAINTEXT is returned, not the ciphertext.
+    assertThat(result.callbackSecret()).isEqualTo("svcbk_gen");
+  }
+
+  @Test
+  void submit_omitsSecretWhenNoCallbackUrl() {
+    var req =
+        new AsyncJobService.SubmitRequest(
+            new byte[] {1},
+            "doc.pdf",
+            UUID.randomUUID(),
+            null,
+            Set.of(ReportType.SIMPLE),
+            null,
+            "HmacSHA256");
+    when(storage.storeInput(anyString(), anyString(), any())).thenReturn("p");
+
+    AsyncJobService.SubmitResult result = service.submit(req, actor);
+
+    verify(secretGenerator, never()).generateCallbackSecret();
+    verify(cipher, never()).encrypt(anyString());
+    ArgumentCaptor<ValidationJob> captor = ArgumentCaptor.forClass(ValidationJob.class);
+    verify(repo).save(captor.capture());
+    assertThat(captor.getValue().getCallbackSecretCipher()).isNull();
+    assertThat(result.callbackSecret()).isNull();
   }
 }

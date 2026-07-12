@@ -35,6 +35,7 @@ import org.toresoft.signverify.domain.model.ValidationJob;
 import org.toresoft.signverify.domain.port.DocumentStoragePort;
 import org.toresoft.signverify.domain.port.ReportType;
 import org.toresoft.signverify.domain.port.SecretCipherPort;
+import org.toresoft.signverify.domain.port.SecretGeneratorPort;
 import org.toresoft.signverify.persistence.ValidationJobRepository;
 import org.toresoft.signverify.security.Principal;
 
@@ -42,8 +43,10 @@ import org.toresoft.signverify.security.Principal;
  * Application service that submits asynchronous validation jobs.
  *
  * <p>Enforces global and per-principal backpressure limits, persists a {@link ValidationJob} in
- * {@code PENDING} state, and stores the input document via {@link DocumentStoragePort}. The
- * callback secret, if provided, is encrypted via {@link SecretCipherPort} before persistence.
+ * {@code PENDING} state, and stores the input document via {@link DocumentStoragePort}. When a
+ * callback URL is supplied, a fresh callback secret is generated via {@link SecretGeneratorPort}
+ * and encrypted via {@link SecretCipherPort} before persistence; the plaintext is returned to the
+ * caller in {@link SubmitResult} and never stored.
  */
 @Service
 public class AsyncJobService {
@@ -57,12 +60,14 @@ public class AsyncJobService {
       String overridesJson,
       Set<ReportType> reports,
       String callbackUrl,
-      String callbackSecret,
       String callbackAlgorithm) {}
+
+  public record SubmitResult(UUID jobId, String callbackSecret) {}
 
   private final ValidationJobRepository repo;
   private final DocumentStoragePort storage;
   private final SecretCipherPort cipher;
+  private final SecretGeneratorPort secretGenerator;
   private final AuditService audit;
   private final int maxPerPrincipal;
   private final int maxGlobal;
@@ -74,6 +79,7 @@ public class AsyncJobService {
       ValidationJobRepository repo,
       DocumentStoragePort storage,
       SecretCipherPort cipher,
+      SecretGeneratorPort secretGenerator,
       AuditService audit,
       @Value("${app.async.max-pending-per-principal}") int maxPerPrincipal,
       @Value("${app.async.max-pending-global}") int maxGlobal,
@@ -83,6 +89,7 @@ public class AsyncJobService {
     this.repo = repo;
     this.storage = storage;
     this.cipher = cipher;
+    this.secretGenerator = secretGenerator;
     this.audit = audit;
     this.maxPerPrincipal = maxPerPrincipal;
     this.maxGlobal = maxGlobal;
@@ -103,12 +110,12 @@ public class AsyncJobService {
    *
    * @param req submission payload
    * @param actor principal performing the submission
-   * @return the generated job id
+   * @return the generated job id and the plaintext callback secret (null when no callbackUrl)
    * @throws AppException with backpressure semantics if either global or per-principal active-job
    *     limits are reached
    */
   @Transactional
-  public UUID submit(SubmitRequest req, Principal actor) {
+  public SubmitResult submit(SubmitRequest req, Principal actor) {
     long globalActive = repo.countActiveGlobal();
     long principalActive = repo.countActiveByPrincipal(actor.type(), actor.id());
     if (globalActive >= maxGlobal) {
@@ -125,11 +132,10 @@ public class AsyncJobService {
           "per-principal async backpressure",
           "per-principal async backpressure");
     }
+    String callbackSecret = null;
     if (req.callbackUrl() != null) {
       validateCallbackUrl(req.callbackUrl());
-      if (req.callbackSecret() == null || req.callbackSecret().isBlank()) {
-        throw AppException.badRequest("callbackSecret is required when callbackUrl is provided");
-      }
+      callbackSecret = secretGenerator.generateCallbackSecret();
     }
     // Enforce the HMAC algorithm allowlist at submit time: HmacSigner passes this value straight
     // to Mac.getInstance, so an unvetted value would either weaken the callback signature (e.g.
@@ -151,8 +157,8 @@ public class AsyncJobService {
     j.setDocumentPath(docPath);
     j.setDocumentFilename(req.filename());
     j.setCallbackUrl(req.callbackUrl());
-    if (req.callbackSecret() != null) {
-      j.setCallbackSecretCipher(cipher.encrypt(req.callbackSecret()));
+    if (callbackSecret != null) {
+      j.setCallbackSecretCipher(cipher.encrypt(callbackSecret));
     }
     j.setCallbackAlgorithm(
         req.callbackAlgorithm() == null ? defaultAlgorithm : req.callbackAlgorithm());
@@ -172,7 +178,7 @@ public class AsyncJobService {
     if (req.profileId() != null) details.put("profileId", req.profileId().toString());
     audit.log(actor, AuditActions.JOB_SUBMIT, "job", jobId.toString(), true, details);
 
-    return jobId;
+    return new SubmitResult(jobId, callbackSecret);
   }
 
   /** Fail fast on malformed callback URLs at submission instead of only at dispatch time. */
