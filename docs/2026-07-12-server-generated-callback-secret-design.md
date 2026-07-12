@@ -38,20 +38,19 @@ Decisions locked in during brainstorming:
 Unchanged parts: `file`, `profile`, `profileId` (deprecated), `profileOverrides`, `reports`,
 `callbackUrl`, `callbackAlgorithm`, `metadata` (deprecated).
 
-**Removed:** `callbackSecret`.
+**Removed:** `callbackSecret`. Its presence is rejected on **both** input paths:
 
-- **Multipart part:** a request that still includes a `callbackSecret` part is rejected with
-  `400 invalid-request`. Spring silently drops multipart parts that are not bound to any
-  `@RequestPart`, so the controller must explicitly check for a `callbackSecret` part in the
-  incoming multipart request and reject it. This makes the breaking change loudly enforced rather
-  than silently ignored.
-- **Legacy `metadata` JSON envelope:** `callbackSecret` is no longer read. If present it is
-  ignored, consistent with how other unknown metadata keys behave today. The `metadata` path is
-  itself deprecated, so we do not add key-specific rejection there (avoid special-casing a legacy
-  envelope that is already scheduled for removal).
+- **Multipart part:** Spring silently drops multipart parts that are not bound to any
+  `@RequestPart`, so the controller must explicitly check the incoming multipart request for a
+  `callbackSecret` part and, if present, reject with `400 invalid-request`.
+- **Legacy `metadata` JSON envelope:** `VerificationRequestParts.fromMetadata` already parses the
+  JSON, so it checks for a `callbackSecret` key and, if present, rejects with `400
+  invalid-request`.
 
-The asymmetry (reject on multipart, ignore on metadata) is intentional: new callers use parts and
-must be told loudly; legacy callers use a deprecated envelope already on its way out.
+Rejecting on both paths (rather than silently ignoring on `metadata`) is required for correctness:
+ignoring it would make the server generate a different secret from the one the caller expects,
+silently breaking callback verification for legacy clients. A loud `400` tells the caller to
+migrate. This matches the "clean breaking change" decision applied uniformly.
 
 Semantics of `callbackUrl` are unchanged: when present, the job is eligible for callback delivery;
 when absent, no callback is attempted. The difference is that the secret is now **derived** from the
@@ -75,7 +74,7 @@ presence of `callbackUrl`, not supplied by the caller.
 ### OpenAPI changes (`src/main/resources/openapi/openapi.yaml`)
 
 - Remove `callbackSecret` from the `/api/v1/verifications/async` multipart schema.
-- Remove `callbackSecret` from the `metadata` description text.
+- Update the `metadata` description text to drop `callbackSecret` from the listed keys.
 - Add optional `callbackSecret` (type `string`, nullable absent) to the `JobAcceptedResponse`
   schema, with a description noting it is returned only when `callbackUrl` was supplied and is
   shown once.
@@ -135,6 +134,15 @@ secret. **No new `V7__*.sql` is required.**
   implements the loud breaking-change enforcement on the parts path.
 - Map the new `SubmitResult` into the 202 body: include `callbackSecret` only when non-null.
 
+### `VerificationRequestParts.fromMetadata` changes
+
+- After parsing the legacy `metadata` JSON envelope, reject it if it contains a `callbackSecret`
+  key (present and non-null): throw `AppException.badRequest(...)`. This is the enforcement point
+  for the `metadata` path, and keeps the rejection logic in the same place that already parses the
+  envelope.
+- Remove the now-unused `callbackSecret` parameter and field from the record and the `from(...)`
+  factory.
+
 ### `CallbackWorker` — unchanged
 
 `deliver()` continues to do `cipher.decrypt(job.getCallbackSecretCipher())` and pass the plaintext
@@ -167,10 +175,14 @@ Red → green → refactor per unit. Order:
      `callbackSecret` with the `svcbk_` prefix.
    - `submit_omitsCallbackSecretInBody_whenNoCallbackUrl` — body has no `callbackSecret` key.
    - `submit_callbackSecretPartIsRejected_with400` — breaking-change enforcement on the multipart
-     input.
+     parts path.
+   - `submit_callbackSecretInMetadataIsRejected_with400` — breaking-change enforcement on the
+     legacy `metadata` envelope (a `metadata` JSON carrying `callbackSecret` returns 400).
 
 4. **Collateral test fixes (references removed `callbackSecret` field)**
-   - `VerificationRequestPartsTest` — drop `callbackSecret` assertions and metadata key.
+   - `VerificationRequestPartsTest` — `fromMetadata_rejectsCallbackSecretKey` (legacy envelope
+     path explicitly rejects a `callbackSecret` key with `400`); drop the existing
+     `callbackSecret` assertions on the parts path (field removed).
    - `PersistedJsonRereadGoldenTest` — remove the `callbackSecret` golden value (the persisted job
      payload no longer carries a client secret).
    - Any other test constructing `SubmitRequest` with the old arity is updated.
