@@ -23,8 +23,8 @@ the DSS validation reports (Simple, Detailed, Diagnostic, ETSI).
 
 - Signature verification, both synchronous and asynchronous (job + HMAC-signed HTTP
   callback).
-- Verification profiles (presets `BASIC` / `STANDARD` / `STRICT`) with per-request
-  policy overrides.
+- Verification profiles (presets `BASIC` / `STANDARD` / `STRICT` / `AGID` /
+  `AGID_TS` / `CUSTOM`) with per-request policy overrides.
 - Extraction of the original document from a signed container.
 - TSL management: download and mirror of the EU List of Trusted Lists (LOTL),
   scheduled refresh, inspection of trusted certificates.

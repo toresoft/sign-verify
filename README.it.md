@@ -21,8 +21,8 @@ report di validazione DSS (Simple, Detailed, Diagnostic, ETSI).
 **Funzionalità principali**
 
 - Verifica firma, sia sincrona che asincrona (job + callback HTTP firmato in HMAC).
-- Profili di verifica configurabili (preset `BASIC` / `STANDARD` / `STRICT`) con
-  override di policy per singola richiesta.
+- Profili di verifica configurabili (preset `BASIC` / `STANDARD` / `STRICT` /
+  `AGID` / `AGID_TS` / `CUSTOM`) con override di policy per singola richiesta.
 - Estrazione del documento originale da un contenitore firmato.
 - Gestione TSL: scaricamento e mirror della European List of Trusted Lists (LOTL),
   refresh schedulato, consultazione dei certificati di fiducia.

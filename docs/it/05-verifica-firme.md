@@ -77,13 +77,18 @@ qualificazione, timestamp, ecc.).
 
 | Preset | File policy | Note |
 |--------|-------------|------|
-| `BASIC` | `policy/BASIC.xml` | Vincoli minimi |
+| `BASIC` | `policy/BASIC.xml` | Vincoli minimi; accetta firme AdES e qualificate (agnostico al tipo, cfr. SiVa POLv3) |
 | `STANDARD` | `policy/STANDARD.xml` | Policy DSS di default (QES/AES su base TSL), **seminato come default** |
-| `STRICT` | `policy/STRICT.xml` | Vincoli più severi |
+| `STRICT` | `policy/STRICT.xml` | Semantica solo-qualificate — QES/QESeal (cfr. SiVa POLv4) |
+| `AGID` | `policy/AGID.xml` | Baseline della firma digitale italiana: certificato qualificato (`QcCompliance`) + key usage `nonRepudiation` obbligatori (CAD art. 24, DPCM 22/02/2013 art. 28) |
+| `AGID_TS` | `policy/AGID_TS.xml` | Come `AGID`, più una marca temporale di livello T valida obbligatoria |
 | `CUSTOM` | - | Policy XML fornita dall'utente |
 
 All'avvio, se non esiste alcun profilo, viene seminato il profilo **STANDARD**
-(`isDefault = true`).
+come default di sistema (`isDefault = true`). Vengono seminati anche due profili
+non-default, pronti all'uso: **`agid`** (preset `AGID`) e **`agid-ts`** (preset
+`AGID_TS`). Il seeding è idempotente e salta ogni nome già esistente, così un
+operatore può personalizzarli o eliminarli senza che vengano ricreati.
 
 ### Formato della policy XML
 
@@ -91,7 +96,8 @@ La policy è un documento XML nel **namespace DSS**
 `http://dss.esig.europa.eu/validation/policy`, con radice
 `<ConstraintsParameters>`. È lo stesso formato usato dalla libreria DSS (cfr.
 *DSS: Validation policy*); i file `policy/BASIC.xml`, `policy/STANDARD.xml`,
-`policy/STRICT.xml` sono esempi completi inclusi nel servizio.
+`policy/STRICT.xml`, `policy/AGID.xml` e `policy/AGID_TS.xml` sono esempi
+completi inclusi nel servizio.
 
 #### Il concetto chiave: l'attributo `Level`
 
@@ -194,6 +200,9 @@ più `<SignedAttributes>` per gli attributi firmati (es. `SigningTime`).
 > Differenza fra i preset: `BASIC`, `STANDARD` e `STRICT` condividono la stessa
 > struttura ma si distinguono per i `Level` assegnati ai singoli vincoli:
 > `STRICT` promuove a `FAIL` controlli che `BASIC` lascia a `WARN`/`IGNORE`.
+> `AGID` e `AGID_TS` vanno oltre, imponendo la semantica di legge italiana — un
+> certificato qualificato con key usage `nonRepudiation` e (per `AGID_TS`) una
+> marca temporale di livello T valida — non un semplice `Level` più severo.
 > Per i dettagli completi della grammatica fare riferimento alla documentazione
 > ufficiale DSS (*Validation policy* / XSD `policy.xsd`).
 
@@ -325,7 +334,7 @@ La risposta contiene due array di timestamp a livello di firma:
 | Campo | Tipo JSON | Obbligatorio | Descrizione | Valori possibili |
 |-------|-----------|--------------|-------------|------------------|
 | `verifiedAt` | `string` | sì | Timestamp della verifica (ISO-8601 UTC) | es. `2026-06-08T10:15:30Z` |
-| `profileUsed` | `string` | sì | Nome del profilo di validazione applicato | `BASIC`, `STANDARD`, `STRICT`, oppure un nome personalizzato |
+| `profileUsed` | `string` | sì | Nome del profilo di validazione applicato | `STANDARD`, `agid`, `agid-ts`, oppure un nome personalizzato |
 | `overridesApplied` | `boolean` | sì | Indica se sono stati applicati override al volo sulla policy | `true`, `false` |
 | `signatureFormat` | `string` | sì | Formato/livello della firma rilevato | es. `PAdES-BASELINE-B`, `CAdES-BASELINE-B` |
 | `indication` | `string` | sì | Esito complessivo della validazione | `TOTAL_PASSED`, `TOTAL_FAILED`, `INDETERMINATE` |
