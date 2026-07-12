@@ -255,8 +255,10 @@ paths:
       summary: Verify electronic signatures synchronously
       description: >-
         Verifies the signatures of an uploaded document and returns the result
-        inline. The optional `metadata` part selects the profile, per-request
-        overrides and the report types to produce.
+        inline. The optional `profileId`, `profileOverrides` and `reports` parts
+        select the profile, per-request overrides and the report types to
+        produce. The deprecated `metadata` JSON part is a mutually exclusive
+        legacy alternative to those parts.
       requestBody:
         required: true
         content:
@@ -266,9 +268,22 @@ paths:
               required: [file]
               properties:
                 file: { type: string, format: binary }
+                profileId:
+                  type: string
+                  format: uuid
+                  description: Verification profile to apply.
+                profileOverrides:
+                  type: string
+                  description: JSON object with per-request policy overrides.
+                reports:
+                  type: string
+                  description: "CSV of report types: simple|detailed|diagnostic|etsi (default: simple,etsi)."
                 metadata:
                   type: string
-                  description: "JSON con profileId?, profileOverrides?, reports[]?"
+                  deprecated: true
+                  description: >-
+                    DEPRECATED. Legacy JSON envelope with profileId?, profileOverrides?,
+                    reports[]?. Mutually exclusive with the individual parts above.
       responses:
         '200':
           description: ok
@@ -297,7 +312,32 @@ paths:
               required: [file]
               properties:
                 file: { type: string, format: binary }
-                metadata: { type: string }
+                profileId:
+                  type: string
+                  format: uuid
+                  description: Verification profile to apply.
+                profileOverrides:
+                  type: string
+                  description: JSON object with per-request policy overrides.
+                reports:
+                  type: string
+                  description: "CSV of report types: simple|detailed|diagnostic|etsi (default: simple,etsi)."
+                callbackUrl:
+                  type: string
+                  description: Optional signed callback delivery URL.
+                callbackSecret:
+                  type: string
+                  description: Shared secret for the callback signature.
+                callbackAlgorithm:
+                  type: string
+                  description: Callback signature algorithm (e.g. HmacSHA256).
+                metadata:
+                  type: string
+                  deprecated: true
+                  description: >-
+                    DEPRECATED. Legacy JSON envelope with profileId?, profileOverrides?,
+                    reports[]?, callbackUrl?, callbackSecret?, callbackAlgorithm?.
+                    Mutually exclusive with the individual parts above.
       responses:
         '202':
           description: accepted
