@@ -68,7 +68,7 @@ RUN set -eu; \
 # needs. fontconfig/freetype/ttf-dejavu back the java.desktop (AWT) module so
 # PDFBox font handling never trips on a missing libfontconfig.
 # =============================================================================
-FROM alpine:3.21 AS runtime
+FROM alpine:3.22 AS runtime
 
 RUN apk upgrade --no-cache \
  && apk add --no-cache fontconfig freetype ttf-dejavu \

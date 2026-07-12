@@ -53,6 +53,13 @@
         <spotless.version>2.44.0</spotless.version>
         <jacoco.version>0.8.12</jacoco.version>
         <sentry.version>8.48.0</sentry.version>
+        <!-- logback is pulled in transitively by spring-boot-starter-logging and its version is
+             managed by the Spring Boot parent (which defines <logback.version>). Override the
+             property to force a patched release past the parent's 1.5.34: CVE-2026-10532
+             (object injection via HardenedObjectInputStream, fixed in 1.5.35) is resolved by 1.5.38,
+             the current actively-developed release. Safe to bump here because logback-spring.xml
+             uses no Janino-based conditional (<if>/<then>/<else>) processing, which 1.5.37 removed. -->
+        <logback.version>1.5.38</logback.version>
     </properties>
 
     <dependencyManagement>
