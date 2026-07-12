@@ -42,3 +42,13 @@ summary: "Three tracked follow-ups from the M2 extraction spill and H2 JWT audie
 - **Detail**: `TsdSmokeTest` and `ProfileSeederTest` (both `@SpringBootTest(webEnvironment=RANDOM_PORT)`) intermittently fail only under full-suite resource contention — `TsdSmokeTest` throws `ResourceAccessException: localhost:<port> failed to respond` (embedded server not up under load). Both pass 100% standalone.
 - **Next action**: if it recurs in CI, isolate the heavy `@SpringBootTest` classes (Failsafe/forkCount tuning, or a dedicated group), or add a startup/readiness wait; until then, re-run standalone to confirm green.
 - **Refs**: `adapter/dss/TsdSmokeTest.java`, `application/ProfileSeederTest.java`.
+
+## INV-4: springdoc Jackson 3 migration — gates full Jackson 2 removal
+
+- **Type**: upstream dependency watch / blocker
+- **Status**: open — BLOCKS Phase 3 of the Jackson 2 removal plan
+- **Priority**: medium (Jackson 2 residual is patched, no known CVE, so not urgent)
+- **Origin**: Boot 4.1 migration (merged `9f4d831`); full-tree analysis found 3 Jackson 2 bringers, springdoc is the only one without a Jackson-3-native release.
+- **Detail**: `springdoc-openapi-starter-webmvc-ui` (2.7.0 now; even the Boot-4-compatible 3.0.x) still depends on Jackson 2 via `swagger-core-jakarta:2.2.25` (`jackson-dataformat-yaml` + `jackson-datatype-jsr310`). Jackson 3 migration tracked upstream in springdoc issues #3200, #3216 (closed as duplicate), #3169 — no Jackson-3-only release as of 2026-07-11. Until then the `jackson-bom:2.22.1` override in `pom.xml` must stay to keep the residual Jackson 2 patched.
+- **Next action**: watch springdoc releases for a Jackson-3-only build; when it lands, execute Phase 3 of [[../../../docs/superpowers/plans/2026-07-11-jackson2-removal]] (bump springdoc, remove jackson-bom override, verify empty `com.fasterxml.jackson` tree). Fallback if it stalls: drop springdoc runtime and serve static `openapi.yaml` + swagger-ui webjar.
+- **Refs**: `pom.xml` (jackson-bom override ~L59-73, springdoc dep); `docs/superpowers/plans/2026-07-11-jackson2-removal.md` Phase 3; lessons [[2026-07-11-ll-boot4-migration-execution]].

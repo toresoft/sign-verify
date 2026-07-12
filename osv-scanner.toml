@@ -1,0 +1,14 @@
+# osv-scanner suppressions. Kept at the repo root and passed explicitly via
+# `--config` in CI because the scanned SBOM (target/bom.json) is regenerated
+# every build, so a config next to it would not persist.
+
+[[IgnoredVulns]]
+id = "GHSA-5jmj-h7xm-6q6v"
+# CVE-2020-36518 (jackson-databind DoS via deeply nested JSON) was fixed in
+# 2.13.0 / 2.12.6.1. The project pins the whole Jackson 2.x family to 2.22.1
+# (jackson-bom import in pom.xml), which is far past the fix, so this is a
+# false positive: OSV's malformed affected-range flags every later 2.x build
+# and reports no fixed version ("--", 0 fixable). The real remediation is
+# dropping Jackson 2 from the classpath entirely (springdoc 2.x +
+# jackson-databind-nullable follow-up); revisit this entry once that lands.
+reason = "False positive: CVE-2020-36518 fixed in 2.13.0; project pins jackson-bom 2.22.1"

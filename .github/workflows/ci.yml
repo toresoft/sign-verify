@@ -231,12 +231,12 @@ jobs:
       - name: OSV-Scanner (dependency SCA)
         run: |
           docker run --rm -v "$PWD:/src" -w /src ghcr.io/google/osv-scanner:latest \
-            scan source --format table ./target/bom.json > osv-report.txt || true
+            scan source --config=./osv-scanner.toml --format table ./target/bom.json > osv-report.txt || true
           cat osv-report.txt
       - name: OSV-Scanner SARIF (code scanning)
         run: |
           docker run --rm -v "$PWD:/src" -w /src ghcr.io/google/osv-scanner:latest \
-            scan source --format sarif ./target/bom.json > osv-results.sarif || true
+            scan source --config=./osv-scanner.toml --format sarif ./target/bom.json > osv-results.sarif || true
           # upload-sarif rejects an empty file; drop it when the scan produced no SARIF.
           [ -s osv-results.sarif ] || rm -f osv-results.sarif
       - name: Upload SARIF to code scanning

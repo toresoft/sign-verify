@@ -267,7 +267,7 @@ security:dependency-scan:
         mvn -B -ntp -DskipTests -DincludeTestScope=true -Dmaven.repo.local=/src/.m2/repository \
         org.cyclonedx:cyclonedx-maven-plugin:makeAggregateBom
       docker run --rm -v "$CI_PROJECT_DIR:/src" -w /src ghcr.io/google/osv-scanner:latest \
-        scan source --format table ./target/bom.json > osv-report.txt
+        scan source --config=./osv-scanner.toml --format table ./target/bom.json > osv-report.txt
       status=$?
       cat osv-report.txt
       exit $status
