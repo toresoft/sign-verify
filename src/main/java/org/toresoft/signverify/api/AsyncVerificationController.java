@@ -34,7 +34,6 @@ import org.toresoft.signverify.domain.port.DocumentStoragePort;
 import org.toresoft.signverify.domain.port.ReportType;
 import org.toresoft.signverify.persistence.ValidationJobRepository;
 import org.toresoft.signverify.security.Principal;
-import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
 @RestController
@@ -63,34 +62,42 @@ public class AsyncVerificationController {
   @PostMapping(value = "/async", consumes = "multipart/form-data")
   public ResponseEntity<Map<String, Object>> submit(
       @RequestPart("file") MultipartFile file,
+      @RequestPart(value = "profileId", required = false) String profileId,
+      @RequestPart(value = "profileOverrides", required = false) String profileOverrides,
+      @RequestPart(value = "reports", required = false) String reports,
+      @RequestPart(value = "callbackUrl", required = false) String callbackUrl,
+      @RequestPart(value = "callbackSecret", required = false) String callbackSecret,
+      @RequestPart(value = "callbackAlgorithm", required = false) String callbackAlgorithm,
       @RequestPart(value = "metadata", required = false) String metadataJson)
       throws Exception {
 
-    Map<String, Object> meta =
-        (metadataJson == null || metadataJson.isBlank())
-            ? Map.of()
-            : om.readValue(metadataJson, new TypeReference<Map<String, Object>>() {});
-    UUID profileId =
-        meta.get("profileId") == null
-            ? null
-            : UUID.fromString(String.valueOf(meta.get("profileId")));
-    String overridesJson =
-        meta.get("profileOverrides") == null
-            ? null
-            : om.writeValueAsString(meta.get("profileOverrides"));
-    @SuppressWarnings("unchecked")
-    List<String> reports = (List<String>) meta.getOrDefault("reports", List.of("simple", "etsi"));
+    var parts =
+        VerificationRequestParts.from(
+            om,
+            metadataJson,
+            profileId,
+            profileOverrides,
+            reports,
+            callbackUrl,
+            callbackSecret,
+            callbackAlgorithm);
+
+    UUID pid = parts.profileId() == null ? null : UUID.fromString(parts.profileId());
+    Map<String, Object> overrides =
+        VerificationRequestParts.parseOverrides(om, parts.profileOverridesJson());
+    String overridesJson = overrides == null ? null : om.writeValueAsString(overrides);
+
+    List<String> reportList = parts.reports() == null ? List.of("simple", "etsi") : parts.reports();
     Set<ReportType> reportTypes = EnumSet.noneOf(ReportType.class);
-    for (String r : reports) {
+    for (String r : reportList) {
       try {
         reportTypes.add(ReportType.valueOf(r.toUpperCase()));
       } catch (Exception ignored) {
       }
     }
-    if (reportTypes.isEmpty()) reportTypes.add(ReportType.SIMPLE);
-    String callbackUrl = (String) meta.get("callbackUrl");
-    String callbackSecret = (String) meta.get("callbackSecret");
-    String callbackAlgo = (String) meta.get("callbackAlgorithm");
+    if (reportTypes.isEmpty()) {
+      reportTypes.add(ReportType.SIMPLE);
+    }
 
     Principal actor =
         (Principal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -99,12 +106,12 @@ public class AsyncVerificationController {
             new AsyncJobService.SubmitRequest(
                 file.getBytes(),
                 file.getOriginalFilename(),
-                profileId,
+                pid,
                 overridesJson,
                 reportTypes,
-                callbackUrl,
-                callbackSecret,
-                callbackAlgo),
+                parts.callbackUrl(),
+                parts.callbackSecret(),
+                parts.callbackAlgorithm()),
             actor);
 
     return ResponseEntity.status(202)

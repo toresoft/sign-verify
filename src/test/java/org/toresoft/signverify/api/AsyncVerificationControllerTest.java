@@ -226,6 +226,88 @@ class AsyncVerificationControllerTest {
         .submit(any(AsyncJobService.SubmitRequest.class), any(Principal.class));
   }
 
+  @Test
+  void postAsync_parsesDedicatedParts() throws Exception {
+    UUID jobId = UUID.randomUUID();
+    UUID profileId = UUID.randomUUID();
+    when(asyncService.submit(any(AsyncJobService.SubmitRequest.class), any(Principal.class)))
+        .thenReturn(jobId);
+
+    mockMvc
+        .perform(
+            multipart("/api/v1/verifications/async")
+                .file(sampleFile())
+                .file(
+                    new MockMultipartFile(
+                        "profileId", "", "text/plain", profileId.toString().getBytes()))
+                .file(
+                    new MockMultipartFile(
+                        "profileOverrides", "", "application/json", "{\"x\":1}".getBytes()))
+                .file(new MockMultipartFile("reports", "", "text/plain", "simple,etsi".getBytes()))
+                .file(
+                    new MockMultipartFile(
+                        "callbackUrl", "", "text/plain", "https://hook.example/submit".getBytes()))
+                .file(new MockMultipartFile("callbackSecret", "", "text/plain", "shh".getBytes()))
+                .file(
+                    new MockMultipartFile(
+                        "callbackAlgorithm", "", "text/plain", "HmacSHA256".getBytes()))
+                .with(authentication(authFor(owner, Role.STANDARD))))
+        .andExpect(status().isAccepted());
+
+    ArgumentCaptor<AsyncJobService.SubmitRequest> captor =
+        ArgumentCaptor.forClass(AsyncJobService.SubmitRequest.class);
+    verify(asyncService).submit(captor.capture(), eq(owner));
+    AsyncJobService.SubmitRequest req = captor.getValue();
+    assertThat(req.profileId()).isEqualTo(profileId);
+    assertThat(req.reports()).containsExactlyInAnyOrder(ReportType.SIMPLE, ReportType.ETSI);
+    assertThat(req.callbackUrl()).isEqualTo("https://hook.example/submit");
+    assertThat(req.callbackSecret()).isEqualTo("shh");
+    assertThat(req.callbackAlgorithm()).isEqualTo("HmacSHA256");
+    assertThat(req.overridesJson()).contains("\"x\":1");
+  }
+
+  @Test
+  void postAsync_bothMetadataAndParts_returns400() throws Exception {
+    MockMultipartFile meta =
+        new MockMultipartFile(
+            "metadata", "", "application/json", "{\"profileId\":\"x\"}".getBytes());
+
+    mockMvc
+        .perform(
+            multipart("/api/v1/verifications/async")
+                .file(sampleFile())
+                .file(new MockMultipartFile("reports", "", "text/plain", "simple".getBytes()))
+                .file(meta)
+                .with(authentication(authFor(owner, Role.STANDARD))))
+        .andExpect(status().isBadRequest());
+
+    verify(asyncService, never())
+        .submit(any(AsyncJobService.SubmitRequest.class), any(Principal.class));
+  }
+
+  @Test
+  void postAsync_defaultsReports_withDedicatedPartsButNoReports() throws Exception {
+    UUID jobId = UUID.randomUUID();
+    when(asyncService.submit(any(AsyncJobService.SubmitRequest.class), any(Principal.class)))
+        .thenReturn(jobId);
+
+    mockMvc
+        .perform(
+            multipart("/api/v1/verifications/async")
+                .file(sampleFile())
+                .file(
+                    new MockMultipartFile(
+                        "callbackUrl", "", "text/plain", "https://hook".getBytes()))
+                .with(authentication(authFor(owner, Role.STANDARD))))
+        .andExpect(status().isAccepted());
+
+    ArgumentCaptor<AsyncJobService.SubmitRequest> captor =
+        ArgumentCaptor.forClass(AsyncJobService.SubmitRequest.class);
+    verify(asyncService).submit(captor.capture(), eq(owner));
+    assertThat(captor.getValue().reports())
+        .containsExactlyInAnyOrder(ReportType.SIMPLE, ReportType.ETSI);
+  }
+
   // ─── GET /jobs/{jobId} ─────────────────────────────────────────────────────
 
   private ValidationJob baseJob(UUID id, Principal requester) {
