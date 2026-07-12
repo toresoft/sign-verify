@@ -1,0 +1,44 @@
+name: E2E (Docker image)
+
+# End-to-end check that boots the actual Docker image and drives a real
+# signature verification over HTTP. Runs on branch pushes and PRs (unlike the
+# tag-driven ci.yml), so image/startup regressions — e.g. a broken ENTRYPOINT —
+# are caught before merge rather than only at release time.
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      # Build the image locally (load into the runner's Docker, no push) with a
+      # shared GHA layer cache. Same Dockerfile the release pipeline publishes.
+      - name: Build image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          tags: sign-verify:e2e
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Boots image + PostgreSQL, waits for readiness, then verifies a signed
+      # fixture through the API using the auto-generated bootstrap key.
+      # jq and curl are preinstalled on ubuntu-latest runners.
+      - name: Run end-to-end smoke test
+        run: IMAGE=sign-verify:e2e scripts/docker-e2e-test.sh
