@@ -1,8 +1,19 @@
-/*
+/**
  * sign-verify Copyright (C) 2026 toresoft
  *
- * This file is part of the "sign-verify" project and is licensed under the
- * GNU Lesser General Public License v3 or later. See the project headers for details.
+ * <p>This file is part of the "sign-verify" project.
+ *
+ * <p>This library is free software; you can redistribute it and/or modify it under the terms of the
+ * GNU Lesser General Public License as published by the Free Software Foundation; either version 3
+ * of the License, or (at your option) any later version.
+ *
+ * <p>This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * <p>You should have received a copy of the GNU Lesser General Public License along with this
+ * library; if not, write to the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ * Boston, MA 02110-1301 USA
  */
 package org.toresoft.signverify.api;
 
@@ -18,6 +29,11 @@ import tools.jackson.databind.json.JsonMapper;
  * supported and are mutually exclusive: the legacy {@code metadata} JSON part, or the individual
  * first-level parts. Supplying both (even partially) is a client error.
  *
+ * <p>A profile can be selected either by name ({@code profile} part) or, on the deprecated path, by
+ * id ({@code profileId} part); the two are mutually exclusive. {@link #profileName()} is only
+ * populated by the {@code profile} part — the legacy {@code metadata} envelope carries {@code
+ * profileId} only.
+ *
  * <p>{@link #reports()} is {@code null} when not supplied, so each controller keeps its own default
  * and mapping semantics.
  */
@@ -27,7 +43,8 @@ public record VerificationRequestParts(
     List<String> reports,
     String callbackUrl,
     String callbackSecret,
-    String callbackAlgorithm) {
+    String callbackAlgorithm,
+    String profileName) {
 
   public static VerificationRequestParts from(
       JsonMapper om,
@@ -37,11 +54,13 @@ public record VerificationRequestParts(
       String reportsCsv,
       String callbackUrl,
       String callbackSecret,
-      String callbackAlgorithm) {
+      String callbackAlgorithm,
+      String profileName) {
 
     boolean hasMetadata = present(metadataJson);
     boolean hasParts =
-        present(profileId)
+        present(profileName)
+            || present(profileId)
             || present(profileOverridesJson)
             || present(reportsCsv)
             || present(callbackUrl)
@@ -52,6 +71,9 @@ public record VerificationRequestParts(
       throw AppException.badRequest(
           "provide either the 'metadata' part or the individual parts, not both");
     }
+    if (present(profileName) && present(profileId)) {
+      throw AppException.badRequest("provide either 'profile' (by name) or 'profileId', not both");
+    }
     if (hasMetadata) {
       return fromMetadata(om, metadataJson);
     }
@@ -61,7 +83,8 @@ public record VerificationRequestParts(
         parseCsv(reportsCsv),
         trimToNull(callbackUrl),
         trimToNull(callbackSecret),
-        trimToNull(callbackAlgorithm));
+        trimToNull(callbackAlgorithm),
+        trimToNull(profileName));
   }
 
   /** Parses the (nullable) profileOverrides JSON into a map, or {@code null} when absent. */
@@ -109,7 +132,8 @@ public record VerificationRequestParts(
         reports,
         stringOrNull(meta.get("callbackUrl")),
         stringOrNull(meta.get("callbackSecret")),
-        stringOrNull(meta.get("callbackAlgorithm")));
+        stringOrNull(meta.get("callbackAlgorithm")),
+        null);
   }
 
   private static List<String> parseCsv(String csv) {

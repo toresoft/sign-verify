@@ -80,7 +80,8 @@ public class AsyncVerificationController {
             reports,
             callbackUrl,
             callbackSecret,
-            callbackAlgorithm);
+            callbackAlgorithm,
+            null);
 
     UUID pid = parts.profileId() == null ? null : UUID.fromString(parts.profileId());
     Map<String, Object> overrides =
