@@ -90,17 +90,51 @@ ha forma `urn:signverify:error:<codice>`.
 > ancora corretta.
 
 Ogni risposta condivide la stessa busta; cambiano solo `type`, `status`,
-`title` e `detail`:
+`title` e `detail`. È sempre presente anche un `code` stabile e machine-readable
+(lo stesso valore incapsulato nell'URN `type`), così i client non devono
+interpretare l'URN:
 
 ```json
 {
   "type": "urn:signverify:error:resource.conflict",
+  "code": "resource.conflict",
   "title": "Conflict",
   "status": 409,
   "detail": "cannot remove last enabled privileged api key",
   "instance": "/api/v1/api-keys/3f1e..."
 }
 ```
+
+### Validazione a livello di campo (`invalid-params`)
+
+Le risposte `validation.invalid-input` (400) includono inoltre un array
+`invalid-params` — il membro di estensione RFC 9457 §3.1 — con **una voce per
+ciascun input respinto**, così il client può associare l'errore a un campo
+specifico invece di interpretare `detail`. Viene popolato per la bean validation
+del body, per campi del body malformati o di tipo errato (enum non valida, tipo
+sbagliato) e per i parametri di path/query che falliscono la coercizione o la
+validazione (`page` non numerico, `{id}` UUID malformato, parametro obbligatorio
+mancante).
+
+```json
+{
+  "type": "urn:signverify:error:validation.invalid-input",
+  "code": "validation.invalid-input",
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "name: must not be null; role: must not be null",
+  "instance": "/api/v1/api-keys",
+  "invalid-params": [
+    { "name": "name", "reason": "must not be null" },
+    { "name": "role", "reason": "must not be null" }
+  ]
+}
+```
+
+Ogni voce ha un `name` (il campo o il parametro, es. `name`, `page`,
+`items[2].role`) e un `reason` leggibile. Un puro errore di sintassi JSON non ha
+un campo localizzabile: `invalid-params` viene omesso e `detail` è
+`"malformed request body"`.
 
 | Codice errore | Esempio `detail` |
 |---------------|-------------------|

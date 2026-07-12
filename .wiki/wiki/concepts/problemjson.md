@@ -45,6 +45,24 @@ would show it. Flagged as a **critical, no-question-asked** regression-test requ
 ahead of the Boot 4.1/Jackson 3 migration — see
 [[raw/notes/2026-07-11-ll-boot4-migration-review]].
 
+## Field-level validation: `invalid-params` (RFC 9457 §3.1)
+Validation failures carry an `invalid-params` array (`[{name, reason}]`), one entry per rejected
+field, so clients can bind the error to a specific input instead of parsing the flat `detail`.
+Four sources feed it: `MethodArgumentNotValidException` (body bean validation → `getFieldErrors()`),
+`HttpMessageNotReadableException` (body type/enum mismatch), `MethodArgumentTypeMismatchException`
+(path/query coercion, e.g. bad UUID or non-numeric `page`), and `HandlerMethodValidationException`
+(method-level `@RequestParam`/`@PathVariable`/`@RequestPart` constraints). For the malformed-body
+case, resolve the field from the base `tools.jackson.core.JacksonException.getPath()` — **not**
+`MismatchedInputException`: the OpenAPI-generated enum `@JsonCreator` throws `IllegalArgumentException`,
+which Jackson 3 wraps as a broader `JacksonException`, so the narrow subclass check misses bad-enum
+bodies. A pure syntax error has an empty path → `"malformed request body"`.
+
+The param handlers matter beyond aesthetics: before them, a path/query type-mismatch
+(`page=abc`, non-UUID `{id}`) had **no** handler and fell through to the catch-all → `500
+internal-error`, contradicting the documented "bad query param → 400". Any body-shape change must
+also update the OpenAPI `Problem` schema and be covered by a full-stack MockMvc test. See
+[[raw/notes/2026-07-12-ll-rfc9457-invalid-params]].
+
 ## Related
 - [[entities/sign-verify-2]] · [[concepts/design-first-openapi]]
 - [[concepts/structured-logging]] / observability ([[sources/SRC-2026-06-27-007]])

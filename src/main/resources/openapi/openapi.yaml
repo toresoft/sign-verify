@@ -602,6 +602,20 @@ components:
         detail: { type: string }
         instance: { type: string }
         traceId: { type: string }
+        invalid-params:
+          type: array
+          description: >
+            RFC 9457 extension member (spec section 3.1 example). Present on validation failures
+            (status 400 / code validation.invalid-input): one entry per rejected input field.
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                description: Name/path of the offending field (e.g. name, expiresAt, items[2].role).
+              reason:
+                type: string
+                description: Human-readable reason the field was rejected.
 
     Page:
       type: object

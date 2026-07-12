@@ -89,17 +89,48 @@ Application errors derive from `AppException` and are serialised as **RFC 9457**
 > of a 400. This is a known gap, not yet fixed.
 
 Every response shares the same envelope; only `type`, `status`, `title` and
-`detail` change:
+`detail` change. A stable machine-readable `code` (the same value embedded in the
+`type` URN) is always present so clients need not parse the URN:
 
 ```json
 {
   "type": "urn:signverify:error:resource.conflict",
+  "code": "resource.conflict",
   "title": "Conflict",
   "status": 409,
   "detail": "cannot remove last enabled privileged api key",
   "instance": "/api/v1/api-keys/3f1e..."
 }
 ```
+
+### Field-level validation (`invalid-params`)
+
+`validation.invalid-input` (400) responses additionally carry an `invalid-params`
+array — the RFC 9457 §3.1 extension member — with **one entry per rejected input**
+so a client can bind the failure to a specific field instead of parsing `detail`.
+It is populated for request-body bean validation, malformed/mistyped body fields
+(bad enum, wrong type), and path/query parameters that fail coercion or validation
+(non-numeric `page`, malformed `{id}` UUID, missing required parameter).
+
+```json
+{
+  "type": "urn:signverify:error:validation.invalid-input",
+  "code": "validation.invalid-input",
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "name: must not be null; role: must not be null",
+  "instance": "/api/v1/api-keys",
+  "invalid-params": [
+    { "name": "name", "reason": "must not be null" },
+    { "name": "role", "reason": "must not be null" }
+  ]
+}
+```
+
+Each entry has a `name` (the field or parameter, e.g. `name`, `page`,
+`items[2].role`) and a human-readable `reason`. A pure JSON syntax error has no
+locatable field, so `invalid-params` is omitted and `detail` is
+`"malformed request body"`.
 
 | Error code | Example `detail` |
 |------------|-------------------|

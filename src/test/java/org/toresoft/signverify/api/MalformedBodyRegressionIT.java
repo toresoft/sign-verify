@@ -17,6 +17,8 @@
  */
 package org.toresoft.signverify.api;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -77,5 +79,56 @@ class MalformedBodyRegressionIT {
         .andExpect(status().isBadRequest())
         .andExpect(content().contentType(MediaType.parseMediaType("application/problem+json")))
         .andExpect(jsonPath("$.code").value("validation.invalid-input"));
+  }
+
+  @Test
+  void missingRequiredField_returns400_withInvalidParamsNamingField() throws Exception {
+    // "name" is @NotNull @Size(min=1); omitting it must point the client at that specific field.
+    mockMvc
+        .perform(
+            post("/api/v1/api-keys")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"role\":\"STANDARD\"}"))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentType(MediaType.parseMediaType("application/problem+json")))
+        .andExpect(jsonPath("$.code").value("validation.invalid-input"))
+        .andExpect(jsonPath("$.invalid-params[0].name").value("name"))
+        .andExpect(jsonPath("$.invalid-params[0].reason").isNotEmpty());
+  }
+
+  @Test
+  void invalidEnumValue_returns400_withInvalidParamsNamingField() throws Exception {
+    // A bad enum is rejected by Jackson (not bean validation); the field path must still surface.
+    mockMvc
+        .perform(
+            post("/api/v1/api-keys")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"k\",\"role\":\"NOPE\"}"))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentType(MediaType.parseMediaType("application/problem+json")))
+        .andExpect(jsonPath("$.code").value("validation.invalid-input"))
+        .andExpect(jsonPath("$.invalid-params[0].name").value("role"));
+  }
+
+  @Test
+  void nonNumericQueryParam_returns400_namingParam() throws Exception {
+    // page is Integer; a non-numeric value must be a 400 naming the param, not a generic 500.
+    mockMvc
+        .perform(get("/api/v1/api-keys").param("page", "abc"))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentType(MediaType.parseMediaType("application/problem+json")))
+        .andExpect(jsonPath("$.code").value("validation.invalid-input"))
+        .andExpect(jsonPath("$.invalid-params[0].name").value("page"));
+  }
+
+  @Test
+  void nonUuidPathVariable_returns400_namingParam() throws Exception {
+    // {id} is a UUID; a malformed value must be a 400 naming the param, not a generic 500.
+    mockMvc
+        .perform(delete("/api/v1/api-keys/not-a-uuid"))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentType(MediaType.parseMediaType("application/problem+json")))
+        .andExpect(jsonPath("$.code").value("validation.invalid-input"))
+        .andExpect(jsonPath("$.invalid-params[0].name").value("id"));
   }
 }
