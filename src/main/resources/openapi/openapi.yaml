@@ -255,8 +255,10 @@ paths:
       summary: Verify electronic signatures synchronously
       description: >-
         Verifies the signatures of an uploaded document and returns the result
-        inline. The optional `metadata` part selects the profile, per-request
-        overrides and the report types to produce.
+        inline. The optional `profileId`, `profileOverrides` and `reports` parts
+        select the profile, per-request overrides and the report types to
+        produce. The deprecated `metadata` JSON part is a mutually exclusive
+        legacy alternative to those parts.
       requestBody:
         required: true
         content:
