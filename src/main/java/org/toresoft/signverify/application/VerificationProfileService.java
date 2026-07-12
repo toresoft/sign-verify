@@ -157,4 +157,24 @@ public class VerificationProfileService {
     return repo.findByIsDefaultTrue()
         .orElseThrow(() -> AppException.notFound("no default profile"));
   }
+
+  /** Resolves a profile by its unique name, 404 when absent. */
+  public VerificationProfile getByName(String name) {
+    return repo.findByName(name).orElseThrow(() -> AppException.notFound("profile not found"));
+  }
+
+  /**
+   * Resolves the target profile id from an optional name and an optional id. Name wins; falls back
+   * to the (deprecated) id; {@code null} when neither is supplied (caller uses the default
+   * profile).
+   */
+  public UUID resolveId(String name, String id) {
+    if (name != null) {
+      return getByName(name).getId();
+    }
+    if (id != null) {
+      return UUID.fromString(id);
+    }
+    return null;
+  }
 }

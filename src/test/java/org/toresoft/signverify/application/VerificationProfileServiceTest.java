@@ -58,4 +58,23 @@ class VerificationProfileServiceTest {
     assertThat(newDef.getIsDefault()).isTrue();
     assertThat(repo.findById(oldDefault.getId()).orElseThrow().getIsDefault()).isFalse();
   }
+
+  @Test
+  void getByName_returnsSeededProfile() {
+    var standard = service.getByName("STANDARD");
+    assertThat(standard.getName()).isEqualTo("STANDARD");
+  }
+
+  @Test
+  void getByName_unknown_throwsNotFound() {
+    assertThatThrownBy(() -> service.getByName("does-not-exist")).isInstanceOf(AppException.class);
+  }
+
+  @Test
+  void resolveId_prefersName_thenId_thenNull() {
+    var standard = service.getByName("STANDARD");
+    assertThat(service.resolveId("STANDARD", null)).isEqualTo(standard.getId());
+    assertThat(service.resolveId(null, standard.getId().toString())).isEqualTo(standard.getId());
+    assertThat(service.resolveId(null, null)).isNull();
+  }
 }
