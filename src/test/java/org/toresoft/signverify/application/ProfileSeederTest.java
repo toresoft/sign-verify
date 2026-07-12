@@ -34,7 +34,7 @@ class ProfileSeederTest {
 
   @Test
   void seeds_agid_preset_without_timestamp() {
-    var agid = repo.findByName("agid").orElseThrow();
+    var agid = repo.findByName("AGID").orElseThrow();
     assertThat(agid.getPreset()).isEqualTo(ProfilePreset.AGID);
     assertThat(agid.getIsDefault()).isFalse();
     // QES (firma digitale): qualified cert on a QSCD, CA/QC trust service.
@@ -47,7 +47,7 @@ class ProfileSeederTest {
 
   @Test
   void seeds_agid_ts_preset_requiring_timestamp() {
-    var agidTs = repo.findByName("agid-ts").orElseThrow();
+    var agidTs = repo.findByName("AGID_TS").orElseThrow();
     assertThat(agidTs.getPreset()).isEqualTo(ProfilePreset.AGID_TS);
     assertThat(agidTs.getIsDefault()).isFalse();
     assertThat(agidTs.getPolicyXml()).contains("<TLevelTimeStamp Level=\"FAIL\" />");

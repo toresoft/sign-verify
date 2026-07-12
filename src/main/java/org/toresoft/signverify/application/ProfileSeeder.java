@@ -59,9 +59,9 @@ public class ProfileSeeder {
   public void onReady(ApplicationReadyEvent ev) {
     seedStandardDefault();
     seedPreset(
-        "agid", "Firma digitale italiana (AgID) — solo firme qualificate", ProfilePreset.AGID);
+        "AGID", "Firma digitale italiana (AgID) — solo firme qualificate", ProfilePreset.AGID);
     seedPreset(
-        "agid-ts",
+        "AGID_TS",
         "Firma digitale italiana (AgID) — solo firme qualificate con marca temporale",
         ProfilePreset.AGID_TS);
   }
