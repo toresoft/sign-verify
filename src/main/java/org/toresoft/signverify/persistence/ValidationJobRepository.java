@@ -80,6 +80,31 @@ public interface ValidationJobRepository extends JpaRepository<ValidationJob, UU
   int claimForProcessing(@Param("id") UUID id, @Param("now") Instant now);
 
   /**
+   * Marks a single RUNNING job FAILED with {@code job.timeout} when it exceeds its wall-clock
+   * budget. Conditional on {@code status = RUNNING} and version-bumped explicitly (bulk JPQL
+   * bypasses {@code @Version}), so a job that finished, was requeued, or expired in the meantime
+   * yields 0 rows instead of clobbering the new state. The first callback is armed when a callback
+   * URL is configured.
+   *
+   * @return number of rows updated (1 = timed out, 0 = no longer RUNNING)
+   */
+  @Modifying(clearAutomatically = true)
+  @Transactional
+  @Query(
+      """
+      UPDATE ValidationJob j
+         SET j.status = org.toresoft.signverify.domain.model.JobStatus.FAILED,
+             j.errorCode = 'job.timeout',
+             j.errorMessage = 'validation exceeded time budget',
+             j.completedAt = :now,
+             j.nextCallbackAt = CASE WHEN j.callbackUrl IS NOT NULL THEN :now ELSE j.nextCallbackAt END,
+             j.version = j.version + 1
+       WHERE j.id = :id
+         AND j.status = org.toresoft.signverify.domain.model.JobStatus.RUNNING
+      """)
+  int markTimedOut(@Param("id") UUID id, @Param("now") Instant now);
+
+  /**
    * Finalizes a validated job with a single conditional UPDATE: {@code RUNNING -> COMPLETED},
    * writes the result path and completion time, and arms the first callback when configured. The
    * version column is bumped explicitly (bulk JPQL bypasses {@code @Version}) so a worker that lost

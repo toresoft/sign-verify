@@ -101,6 +101,35 @@ class ValidationJobRepositoryTest {
   }
 
   @Test
+  void markTimedOut_failsRunningJob_andArmsCallback() {
+    ValidationJob running = newJob(JobStatus.RUNNING, "alice");
+    running.setCallbackUrl("https://callback.example/hook");
+    repo.save(running);
+    em.flush();
+
+    int n = repo.markTimedOut(running.getId(), Instant.now());
+
+    assertThat(n).isEqualTo(1);
+    ValidationJob j = repo.findById(running.getId()).orElseThrow();
+    assertThat(j.getStatus()).isEqualTo(JobStatus.FAILED);
+    assertThat(j.getErrorCode()).isEqualTo(Errors.JOB_TIMEOUT);
+    assertThat(j.getErrorMessage()).isEqualTo("validation exceeded time budget");
+    assertThat(j.getCompletedAt()).isNotNull();
+    assertThat(j.getNextCallbackAt()).isNotNull();
+  }
+
+  @Test
+  void markTimedOut_isNoOp_whenJobNotRunning() {
+    ValidationJob completed = newJob(JobStatus.COMPLETED, "alice");
+    repo.save(completed);
+    em.flush();
+
+    assertThat(repo.markTimedOut(completed.getId(), Instant.now())).isZero();
+    assertThat(repo.findById(completed.getId()).orElseThrow().getStatus())
+        .isEqualTo(JobStatus.COMPLETED);
+  }
+
+  @Test
   void resetStaleRunning_requeuesOnlyStaleRunningJobs() {
     Instant now = Instant.now();
     ValidationJob stale = newJob(JobStatus.RUNNING, "alice");
