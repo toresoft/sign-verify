@@ -545,6 +545,7 @@ class AsyncVerificationControllerTest {
 
     // must not leak status: verify no body status, and we don't update lastAccessedAt
     verify(jobRepository, never()).save(any(ValidationJob.class));
+    verify(jobRepository, never()).touchLastAccessed(any(), any());
   }
 
   @Test
@@ -576,10 +577,12 @@ class AsyncVerificationControllerTest {
                 .with(authentication(authFor(owner, Role.STANDARD))))
         .andExpect(status().isOk());
 
-    ArgumentCaptor<ValidationJob> captor = ArgumentCaptor.forClass(ValidationJob.class);
-    verify(jobRepository).save(captor.capture());
-    ValidationJob saved = captor.getValue();
-    assertThat(saved.getLastAccessedAt()).isNotNull();
-    assertThat(saved.getLastAccessedAt()).isAfterOrEqualTo(before);
+    // Last-access is stamped via the version-neutral bulk UPDATE (touchLastAccessed), never via
+    // save(): a version bump here would race an in-flight worker and drop its result.
+    ArgumentCaptor<Instant> whenCaptor = ArgumentCaptor.forClass(Instant.class);
+    verify(jobRepository).touchLastAccessed(eq(jobId), whenCaptor.capture());
+    Instant stamped = whenCaptor.getValue();
+    assertThat(stamped).isAfterOrEqualTo(before);
+    verify(jobRepository, never()).save(any(ValidationJob.class));
   }
 }

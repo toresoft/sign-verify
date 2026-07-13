@@ -39,7 +39,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.toresoft.signverify.domain.exception.AppException;
@@ -146,22 +145,8 @@ class ValidationWorkerTest {
   }
 
   /**
-   * Captures all entities passed to {@code repo.save(...)} during a single call and returns the
-   * last one.
-   */
-  private ValidationJob captureLastSave() {
-    ArgumentCaptor<ValidationJob> captor = ArgumentCaptor.forClass(ValidationJob.class);
-    verify(repo, atLeastOnce()).save(captor.capture());
-    List<ValidationJob> all = captor.getAllValues();
-    return all.get(all.size() - 1);
-  }
-
-  private static org.mockito.verification.VerificationMode atLeastOnce() {
-    return org.mockito.Mockito.atLeastOnce();
-  }
-
-  /**
-   * Stubs the typical happy-path collaborator chain: storage.read, profile lookup, validator.
+   * Stubs the typical happy-path collaborator chain: storage.read, profile lookup, validator, and
+   * the finalize bulk update (returns 1 = finalized).
    *
    * @return the returned {@link ValidationResult} for further assertions
    */
@@ -171,6 +156,9 @@ class ValidationWorkerTest {
     ValidationResult result = validationResult();
     when(validator.validate(any(ValidationRequest.class))).thenReturn(result);
     when(storage.storeResult(anyString(), any())).thenReturn("storage/result/path");
+    // markCompleted returns 1 by default (the finalize landed); tests that exercise the no-op path
+    // (job no longer RUNNING) override this with 0.
+    lenient().when(repo.markCompleted(any(), anyString(), any())).thenReturn(1);
     return result;
   }
 
@@ -186,11 +174,9 @@ class ValidationWorkerTest {
 
     worker.process(job.getId());
 
-    ValidationJob last = captureLastSave();
-    assertThat(last.getStatus()).isEqualTo(JobStatus.COMPLETED);
-    assertThat(last.getResultPath()).isEqualTo("storage/result/path");
-    assertThat(last.getCompletedAt()).isNotNull();
-    assertThat(last.getErrorMessage()).isNull();
+    // Finalize goes through the conditional bulk UPDATE (status=RUNNING), not save() on the entity.
+    verify(repo).markCompleted(eq(job.getId()), eq("storage/result/path"), any());
+    verify(repo, never()).save(any());
 
     verify(validator, times(1)).validate(any(ValidationRequest.class));
     verify(storage).read(job.getDocumentPath());
@@ -207,6 +193,9 @@ class ValidationWorkerTest {
     worker.process(id);
 
     verify(repo, never()).save(any());
+    verify(repo, never()).markCompleted(any(), anyString(), any());
+    verify(repo, never()).markFailed(any(), anyString(), anyString(), any());
+    verify(repo, never()).requeueTransient(any());
     verify(validator, never()).validate(any());
   }
 
@@ -220,6 +209,7 @@ class ValidationWorkerTest {
 
     verify(repo, never()).findById(any());
     verify(repo, never()).save(any());
+    verify(repo, never()).markCompleted(any(), anyString(), any());
     verify(validator, never()).validate(any());
   }
 
@@ -269,33 +259,12 @@ class ValidationWorkerTest {
 
     worker.process(job.getId());
 
-    ValidationJob last = captureLastSave();
-    assertThat(last.getStatus()).isEqualTo(JobStatus.PENDING);
-    assertThat(last.getErrorMessage()).isNull();
-    assertThat(last.getCompletedAt()).isNull();
-    // The in-progress marker must be cleared so the requeued job is not seen as running.
-    assertThat(last.getStartedAt()).isNull();
-  }
-
-  @Test
-  void process_dssUnavailable_givesBackThePickupAttempt() {
-    ValidationJob job = newPendingJob();
-    // Post-claim state: the claim incremented the counter from 0 to 1.
-    job.setPickupAttempts(1);
-    job.setStartedAt(java.time.Instant.now());
-    when(repo.findById(job.getId())).thenReturn(Optional.of(job));
-    when(storage.read(anyString())).thenReturn(new byte[] {0});
-    when(profileService.getOrDefault(PROFILE_ID)).thenReturn(profile());
-    when(validator.validate(any(ValidationRequest.class)))
-        .thenThrow(AppException.dssUnavailable("dss down"));
-
-    worker.process(job.getId());
-
-    // Transient DSS unavailability must not consume the poison-job pickup budget: the requeue
-    // compensates the claim's increment. Retries stay bounded by the job TTL + circuit breaker.
-    ValidationJob last = captureLastSave();
-    assertThat(last.getStatus()).isEqualTo(JobStatus.PENDING);
-    assertThat(last.getPickupAttempts()).isZero();
+    // The requeue goes through the conditional bulk UPDATE (status=RUNNING); clearing startedAt and
+    // decrementing pickupAttempts happens in JPQL, so the worker never touches the entity.
+    verify(repo).requeueTransient(job.getId());
+    verify(repo, never()).save(any());
+    verify(repo, never()).markFailed(any(), anyString(), anyString(), any());
+    verify(repo, never()).markCompleted(any(), anyString(), any());
   }
 
   @Test
@@ -311,11 +280,9 @@ class ValidationWorkerTest {
 
     worker.process(job.getId());
 
-    ValidationJob last = captureLastSave();
-    assertThat(last.getStatus()).isEqualTo(JobStatus.FAILED);
-    assertThat(last.getErrorCode()).isEqualTo(Errors.DSS_UNAVAILABLE);
-    assertThat(last.getErrorMessage()).isNotBlank();
-    assertThat(last.getCompletedAt()).isNotNull();
+    verify(repo).markFailed(eq(job.getId()), eq(Errors.DSS_UNAVAILABLE), anyString(), any());
+    verify(repo, never()).requeueTransient(any());
+    verify(repo, never()).save(any());
   }
 
   @Test
@@ -328,13 +295,10 @@ class ValidationWorkerTest {
 
     worker.process(job.getId());
 
-    ValidationJob last = captureLastSave();
-    assertThat(last.getStatus()).isEqualTo(JobStatus.FAILED);
     // Raw exception text must never be persisted: it would leak internals to the client via the
     // job-status response and the callback payload.
-    assertThat(last.getErrorCode()).isEqualTo(Errors.INTERNAL);
-    assertThat(last.getErrorMessage()).doesNotContain("boom");
-    assertThat(last.getCompletedAt()).isNotNull();
+    verify(repo).markFailed(eq(job.getId()), eq(Errors.INTERNAL), eq("unexpected error"), any());
+    verify(repo, never()).save(any());
   }
 
   @Test
@@ -345,9 +309,11 @@ class ValidationWorkerTest {
 
     worker.process(job.getId());
 
-    ValidationJob last = captureLastSave();
-    assertThat(last.getStatus()).isEqualTo(JobStatus.COMPLETED);
-    assertThat(last.getNextCallbackAt()).isNotNull();
+    // The callback is armed in the markCompleted JPQL (CASE WHEN callbackUrl IS NOT NULL). The unit
+    // test only asserts the worker routes through markCompleted; the JPQL arming is covered by the
+    // JPA repository test.
+    verify(repo).markCompleted(eq(job.getId()), anyString(), any());
+    verify(repo, never()).save(any());
   }
 
   @Test
@@ -358,9 +324,27 @@ class ValidationWorkerTest {
 
     worker.process(job.getId());
 
-    ValidationJob last = captureLastSave();
-    assertThat(last.getStatus()).isEqualTo(JobStatus.COMPLETED);
-    assertThat(last.getNextCallbackAt()).isNull();
+    verify(repo).markCompleted(eq(job.getId()), anyString(), any());
+    verify(repo, never()).save(any());
+  }
+
+  @Test
+  void process_finalizeNoLongerRunning_isLoggedNoOp() {
+    // The job was requeued by the stale-RUNNING sweep (or expired) while the worker validated. The
+    // conditional bulk update affects 0 rows: the outcome is intentionally dropped, no exception.
+    ValidationJob job = newPendingJob();
+    when(repo.findById(job.getId())).thenReturn(Optional.of(job));
+    when(storage.read(anyString())).thenReturn(new byte[] {1, 2, 3});
+    when(profileService.getOrDefault(PROFILE_ID)).thenReturn(profile());
+    when(validator.validate(any(ValidationRequest.class))).thenReturn(validationResult());
+    when(storage.storeResult(anyString(), any())).thenReturn("storage/result/path");
+    when(repo.markCompleted(any(), anyString(), any())).thenReturn(0);
+
+    worker.process(job.getId());
+
+    verify(repo).markCompleted(eq(job.getId()), anyString(), any());
+    verify(repo, never()).save(any());
+    verify(repo, never()).markFailed(any(), anyString(), anyString(), any());
   }
 
   // ---------------------------------------------------------------------

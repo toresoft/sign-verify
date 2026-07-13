@@ -170,8 +170,10 @@ public class AsyncVerificationController {
       throw AppException.notFound("job not found");
     }
 
-    job.setLastAccessedAt(Instant.now());
-    repo.save(job);
+    // Stamp last-access as a version-neutral bulk UPDATE: setLastAccessedAt + save would bump
+    // @Version and lose the race against an in-flight worker (it would fail its final save with an
+    // optimistic-lock conflict and drop the result). See touchLastAccessed.
+    repo.touchLastAccessed(job.getId(), Instant.now());
 
     if (job.getStatus() == JobStatus.DELETED) {
       Map<String, Object> body = new LinkedHashMap<>();

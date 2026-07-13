@@ -160,40 +160,42 @@ public class ValidationWorker {
 
       String resultPath =
           storage.storeResult(job.getId().toString(), om.writeValueAsBytes(resultJson));
-      job.setResultPath(resultPath);
-      job.setStatus(JobStatus.COMPLETED);
-      job.setCompletedAt(Instant.now());
-      if (job.getCallbackUrl() != null) job.setNextCallbackAt(Instant.now());
-      repo.save(job);
+      // Finalize via a conditional bulk UPDATE (status=RUNNING), not save() on the stale entity:
+      // polling GETs and the cleanup scheduler mutate this row concurrently, and save() would throw
+      // ObjectOptimisticLockingFailureException on a stale @Version — losing the result. If the job
+      // is no longer RUNNING (requeued by the stale sweep, or expired), this is a no-op and the
+      // outcome is intentionally dropped.
+      int updated = repo.markCompleted(id, resultPath, Instant.now());
+      if (updated == 0) {
+        log.info("job {} result dropped: no longer RUNNING at finalize", id);
+      }
     } catch (AppException ae) {
       if (Errors.DSS_UNAVAILABLE.equals(ae.getCode())
           && job.getPickupAttempts() < maxPickupAttempts) {
-        // Reset the in-progress marker set by the claim so the requeued job is not mistaken for a
-        // running one by startedAt-based "in progress" queries / SLA metrics.
-        job.setStartedAt(null);
-        job.setStatus(JobStatus.PENDING);
-        // Give back the claim's increment: transient DSS unavailability must not consume the
-        // poison-job pickup budget. Retries stay bounded by the job TTL + the DSS circuit breaker.
-        job.setPickupAttempts(job.getPickupAttempts() - 1);
-        repo.save(job);
+        // Give back the claim's pickup-attempt increment via the conditional requeue: transient DSS
+        // unavailability must not consume the poison-job budget. Retries stay bounded by the job
+        // TTL + the DSS circuit breaker. No-op (logged) if the job is no longer RUNNING.
+        int updated = repo.requeueTransient(id);
+        if (updated == 0) {
+          log.info("job {} not requeued: no longer RUNNING after transient DSS error", id);
+        }
         return;
       }
-      job.setStatus(JobStatus.FAILED);
-      job.setErrorCode(ae.getCode());
-      job.setErrorMessage(ae.getDetail());
-      job.setCompletedAt(Instant.now());
-      if (job.getCallbackUrl() != null) job.setNextCallbackAt(Instant.now());
-      repo.save(job);
+      markFailedConditional(id, ae.getCode(), ae.getDetail());
     } catch (Exception e) {
       // Never persist raw exception text: it reaches the job-status response and the callback
       // payload. Clients get the catalog code; the specifics stay in the log.
       log.error("job {} failed with unexpected error", id, e);
-      job.setStatus(JobStatus.FAILED);
-      job.setErrorCode(Errors.INTERNAL);
-      job.setErrorMessage("unexpected error");
-      job.setCompletedAt(Instant.now());
-      if (job.getCallbackUrl() != null) job.setNextCallbackAt(Instant.now());
-      repo.save(job);
+      markFailedConditional(id, Errors.INTERNAL, "unexpected error");
+    }
+  }
+
+  // Finalize-as-FAILED via the conditional bulk UPDATE. Extracted so both catch arms share the
+  // identical no-op-on-not-RUNNING semantics (and the same log line).
+  private void markFailedConditional(UUID id, String code, String detail) {
+    int updated = repo.markFailed(id, code, detail, Instant.now());
+    if (updated == 0) {
+      log.info("job {} failure not recorded: no longer RUNNING at finalize", id);
     }
   }
 
