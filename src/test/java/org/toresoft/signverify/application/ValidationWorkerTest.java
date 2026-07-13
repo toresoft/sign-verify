@@ -18,6 +18,7 @@
 package org.toresoft.signverify.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyMap;
@@ -31,11 +32,15 @@ import static org.mockito.Mockito.when;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.Executor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -75,10 +80,30 @@ class ValidationWorkerTest {
   @Mock private CircuitBreaker circuit;
 
   private final JsonMapper om = new JsonMapper();
+  private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
 
   private ValidationWorker worker;
 
   private static final int WORKERS = 4;
+
+  private ValidationWorker workerWithBudget(Duration maxValidationTime, Duration staleRunning) {
+    // Executor that runs submitted tasks inline so process() completes within the test.
+    Executor inline = Runnable::run;
+    return new ValidationWorker(
+        repo,
+        storage,
+        profileService,
+        applier,
+        validator,
+        om,
+        registry,
+        MAX_PICKUP_ATTEMPTS,
+        staleRunning,
+        maxValidationTime,
+        inline,
+        WORKERS,
+        meterRegistry);
+  }
 
   @BeforeEach
   void setUp() {
@@ -93,10 +118,12 @@ class ValidationWorkerTest {
             registry,
             MAX_PICKUP_ATTEMPTS,
             java.time.Duration.ofMinutes(30),
+            java.time.Duration.ofMinutes(5),
             // Inline executor: run submitted work synchronously so poll() behaves like the pre-
             // offload version under test (assertions can observe process() side effects at once).
             Runnable::run,
-            WORKERS);
+            WORKERS,
+            meterRegistry);
     lenient().when(registry.circuitBreaker("dssValidator")).thenReturn(circuit);
     // By default the worker wins the atomic claim; tests that exercise the lost-race / not-pending
     // path override this with 0.
@@ -160,6 +187,43 @@ class ValidationWorkerTest {
     // (job no longer RUNNING) override this with 0.
     lenient().when(repo.markCompleted(any(), anyString(), any())).thenReturn(1);
     return result;
+  }
+
+  // ---------------------------------------------------------------------
+  // budget watchdog tests
+  // ---------------------------------------------------------------------
+
+  @Test
+  void constructor_rejectsBudgetNotSmallerThanStaleTimeout() {
+    assertThatThrownBy(() -> workerWithBudget(Duration.ofMinutes(30), Duration.ofMinutes(30)))
+        .isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  void enforceBudgets_timesOutPastDeadlineJobs_incrementsCounter_andForgetsThem() {
+    ValidationWorker w = workerWithBudget(Duration.ofMinutes(5), Duration.ofMinutes(30));
+    UUID overdue = UUID.randomUUID();
+    // Register a deadline already in the past for this instance's job.
+    w.registerDeadlineForTest(overdue, Instant.now().minusSeconds(1));
+    when(repo.markTimedOut(eq(overdue), any())).thenReturn(1);
+
+    w.enforceBudgets();
+
+    verify(repo).markTimedOut(eq(overdue), any());
+    assertThat(meterRegistry.counter("signverify.validation.timeout").count()).isEqualTo(1.0);
+    // Second run must not re-time-out the same job (entry was forgotten).
+    w.enforceBudgets();
+    verify(repo, times(1)).markTimedOut(eq(overdue), any());
+  }
+
+  @Test
+  void enforceBudgets_ignoresJobsWithinDeadline() {
+    ValidationWorker w = workerWithBudget(Duration.ofMinutes(5), Duration.ofMinutes(30));
+    w.registerDeadlineForTest(UUID.randomUUID(), Instant.now().plusSeconds(300));
+
+    w.enforceBudgets();
+
+    verify(repo, never()).markTimedOut(any(), any());
   }
 
   // ---------------------------------------------------------------------
@@ -408,8 +472,10 @@ class ValidationWorkerTest {
             registry,
             MAX_PICKUP_ATTEMPTS,
             java.time.Duration.ofMinutes(30),
+            java.time.Duration.ofMinutes(5),
             captured::add,
-            2);
+            2,
+            meterRegistry);
     when(circuit.getState()).thenReturn(CircuitBreaker.State.CLOSED);
     when(repo.findPickablePending(eq(MAX_PICKUP_ATTEMPTS), any(), any()))
         .thenReturn(List.of(newPendingJob(), newPendingJob()));

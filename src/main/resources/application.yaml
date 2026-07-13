@@ -115,6 +115,11 @@ app:
       # RUNNING jobs whose claim is older than this are assumed stranded by a crashed instance
       # and requeued. Must exceed the longest legitimate validation by a wide margin.
       stale-running-timeout: 30m
+      # Hard wall-clock budget for a single validation. On overrun the job is FAILED job.timeout
+      # (no retry). MUST be < stale-running-timeout so the watchdog fires before the stale sweep.
+      max-validation-time: 5m
+      # How often each instance checks its own in-flight jobs against their deadlines.
+      budget-check-interval: 15s
     max-pending-per-principal: 50
     max-pending-global: 500
     max-pickup-attempts: 10

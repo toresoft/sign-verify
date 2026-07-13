@@ -19,9 +19,11 @@ package org.toresoft.signverify.application;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
@@ -54,8 +56,15 @@ public class ValidationWorker {
   private final CircuitBreakerRegistry circuitRegistry;
   private final int maxPickupAttempts;
   private final Duration staleRunningTimeout;
+  private final Duration maxValidationTime;
   private final Executor validationExecutor;
   private final Semaphore capacity;
+  private final MeterRegistry meterRegistry;
+  // Per-instance deadlines for jobs THIS instance is validating. A DB sweep cannot enforce the
+  // budget safely in a multi-instance deployment (it cannot tell "slow but alive on instance B"
+  // from "crashed on instance B"); each instance times out only its own in-flight jobs. Crash of
+  // this instance drops these deadlines, and the (longer) stale-RUNNING sweep requeues the job.
+  private final ConcurrentHashMap<UUID, Instant> deadlines = new ConcurrentHashMap<>();
 
   public ValidationWorker(
       ValidationJobRepository repo,
@@ -67,8 +76,20 @@ public class ValidationWorker {
       CircuitBreakerRegistry circuitRegistry,
       @Value("${app.async.max-pickup-attempts}") int maxPickupAttempts,
       @Value("${app.async.worker.stale-running-timeout}") Duration staleRunningTimeout,
+      @Value("${app.async.worker.max-validation-time}") Duration maxValidationTime,
       @Qualifier("validationExecutor") Executor validationExecutor,
-      @Value("${app.async.workers}") int workers) {
+      @Value("${app.async.workers}") int workers,
+      MeterRegistry meterRegistry) {
+    // The watchdog must fire before the stale-RUNNING sweep, or a slow-but-alive job would be
+    // requeued (crash-recovery path) instead of failing deterministically with job.timeout.
+    if (maxValidationTime.compareTo(staleRunningTimeout) >= 0) {
+      throw new IllegalStateException(
+          "app.async.worker.max-validation-time ("
+              + maxValidationTime
+              + ") must be < stale-running-timeout ("
+              + staleRunningTimeout
+              + ")");
+    }
     this.repo = repo;
     this.storage = storage;
     this.profileService = profileService;
@@ -78,8 +99,10 @@ public class ValidationWorker {
     this.circuitRegistry = circuitRegistry;
     this.maxPickupAttempts = maxPickupAttempts;
     this.staleRunningTimeout = staleRunningTimeout;
+    this.maxValidationTime = maxValidationTime;
     this.validationExecutor = validationExecutor;
     this.capacity = new Semaphore(workers);
+    this.meterRegistry = meterRegistry;
   }
 
   @Scheduled(fixedDelayString = "${app.async.worker.poll-interval}")
@@ -104,11 +127,13 @@ public class ValidationWorker {
         // shared @Scheduled thread returns immediately and other schedulers are not starved.
         validationExecutor.execute(
             () -> {
+              deadlines.put(id, Instant.now().plus(maxValidationTime));
               try {
                 process(id);
               } catch (Exception e) {
                 log.error("worker error on job {}", id, e);
               } finally {
+                deadlines.remove(id);
                 capacity.release();
               }
             });
@@ -118,6 +143,34 @@ public class ValidationWorker {
         break;
       }
     }
+  }
+
+  /**
+   * Times out jobs THIS instance has been validating past their budget. Runs on a short fixed
+   * delay. Each over-deadline job is failed with job.timeout via a conditional bulk update (no-op
+   * if it already finished) and then forgotten so it is not timed out twice. The orphaned
+   * validation thread keeps draining (bounded by the DSS HTTP timeouts) and its eventual
+   * markCompleted/ markFailed no-ops because the job is no longer RUNNING.
+   */
+  @Scheduled(fixedDelayString = "${app.async.worker.budget-check-interval}")
+  public void enforceBudgets() {
+    Instant now = Instant.now();
+    for (Map.Entry<UUID, Instant> e : deadlines.entrySet()) {
+      if (now.isAfter(e.getValue())) {
+        UUID id = e.getKey();
+        deadlines.remove(id);
+        if (repo.markTimedOut(id, now) == 1) {
+          meterRegistry.counter("signverify.validation.timeout").increment();
+          log.warn("job {} timed out: exceeded validation budget of {}", id, maxValidationTime);
+        }
+      }
+    }
+  }
+
+  // Test seam: register an in-flight deadline without going through the executor. Package-private
+  // on purpose; not part of the production API.
+  void registerDeadlineForTest(UUID id, Instant deadline) {
+    deadlines.put(id, deadline);
   }
 
   // Deliberately NOT @Transactional (and it would be dead anyway: poll() self-invokes, bypassing
