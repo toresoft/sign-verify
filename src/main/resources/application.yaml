@@ -81,6 +81,11 @@ app:
   dss:
     cache-dir: ${APP_DSS_CACHE_DIR:/var/lib/sign-verify/dss-cache}
     online-mode: true
+    http:
+      connect-timeout: 3s
+      connection-request-timeout: 3s
+      response-timeout: 10s
+      socket-timeout: 10s
   extraction:
     max-leaves: 1000
     max-total-bytes: 500MB

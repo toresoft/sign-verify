@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
 import org.toresoft.signverify.config.DssConfiguration;
+import org.toresoft.signverify.config.DssHttpProperties;
 import org.toresoft.signverify.domain.port.ReportType;
 import org.toresoft.signverify.domain.port.ValidationRequest;
 import org.toresoft.signverify.domain.port.ValidationResult;
@@ -46,8 +47,10 @@ class DssRevocationNetworkIT {
 
   @Test
   void validates_a_real_document_over_live_revocation_endpoints() throws Exception {
+    var cfg = new DssConfiguration();
     CertificateVerifier verifier =
-        new DssConfiguration().certificateVerifier(new TrustedListsCertificateSource());
+        cfg.certificateVerifier(
+            new TrustedListsCertificateSource(), cfg.revocationDataLoader(new DssHttpProperties()));
     DssValidatorAdapter adapter = new DssValidatorAdapter(verifier, new JsonMapper());
 
     byte[] pdf =
