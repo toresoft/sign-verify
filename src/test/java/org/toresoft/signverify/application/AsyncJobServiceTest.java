@@ -140,6 +140,10 @@ class AsyncJobServiceTest {
     assertThat(ex.getStatus()).isEqualTo(400);
     assertThat(ex.getDetail()).contains("callbackAlgorithm");
     verify(repo, never()).save(any());
+    // The allowlist check must run BEFORE secret generation, so a rejected request never draws
+    // from SecureRandom nor encrypts anything.
+    verify(secretGenerator, never()).generateCallbackSecret();
+    verify(cipher, never()).encrypt(anyString());
   }
 
   @Test

@@ -192,6 +192,40 @@ class AsyncVerificationControllerTest {
         .submit(any(AsyncJobService.SubmitRequest.class), any(Principal.class));
   }
 
+  // Regression for the form-field bypass: a callbackSecret sent as a plain form parameter
+  // (curl -F callbackSecret=shh, no filename) is NOT a MultipartFile and lands in the parameter
+  // map, not the file map. The rejection must catch this encoding too — checking only the file map
+  // would let it through with 202.
+  @Test
+  void postAsync_callbackSecretFormField_isRejected400() throws Exception {
+    mockMvc
+        .perform(
+            multipart("/api/v1/verifications/async")
+                .file(sampleFile())
+                .param("callbackSecret", "shh")
+                .with(authentication(authFor(owner, Role.STANDARD))))
+        .andExpect(status().isBadRequest());
+
+    verify(asyncService, never())
+        .submit(any(AsyncJobService.SubmitRequest.class), any(Principal.class));
+  }
+
+  // A blank callbackSecret form field is still the banned key being sent — reject it, do not treat
+  // blanks as "absent". Matches the contract that the client must not send the key at all.
+  @Test
+  void postAsync_callbackSecretFormFieldBlank_isRejected400() throws Exception {
+    mockMvc
+        .perform(
+            multipart("/api/v1/verifications/async")
+                .file(sampleFile())
+                .param("callbackSecret", "   ")
+                .with(authentication(authFor(owner, Role.STANDARD))))
+        .andExpect(status().isBadRequest());
+
+    verify(asyncService, never())
+        .submit(any(AsyncJobService.SubmitRequest.class), any(Principal.class));
+  }
+
   @Test
   void postAsync_callbackSecretInMetadata_isRejected400() throws Exception {
     String metadata =

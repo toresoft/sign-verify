@@ -132,17 +132,19 @@ public class AsyncJobService {
           "per-principal async backpressure",
           "per-principal async backpressure");
     }
+    // Enforce the HMAC algorithm allowlist at submit time: HmacSigner passes this value straight
+    // to Mac.getInstance, so an unvetted value would either weaken the callback signature (e.g.
+    // HmacMD5) or blow up only at dispatch time, after the validation work is done.
+    // Validated BEFORE generating the secret so an invalid request does not draw from SecureRandom
+    // (cheap to invert, avoids wasting entropy on a request that will be rejected anyway).
+    if (req.callbackAlgorithm() != null
+        && allowedAlgorithms.stream().noneMatch(a -> a.equalsIgnoreCase(req.callbackAlgorithm()))) {
+      throw AppException.badRequest("callbackAlgorithm must be one of " + allowedAlgorithms);
+    }
     String callbackSecret = null;
     if (req.callbackUrl() != null) {
       validateCallbackUrl(req.callbackUrl());
       callbackSecret = secretGenerator.generateCallbackSecret();
-    }
-    // Enforce the HMAC algorithm allowlist at submit time: HmacSigner passes this value straight
-    // to Mac.getInstance, so an unvetted value would either weaken the callback signature (e.g.
-    // HmacMD5) or blow up only at dispatch time, after the validation work is done.
-    if (req.callbackAlgorithm() != null
-        && allowedAlgorithms.stream().noneMatch(a -> a.equalsIgnoreCase(req.callbackAlgorithm()))) {
-      throw AppException.badRequest("callbackAlgorithm must be one of " + allowedAlgorithms);
     }
 
     UUID jobId = UUID.randomUUID();
