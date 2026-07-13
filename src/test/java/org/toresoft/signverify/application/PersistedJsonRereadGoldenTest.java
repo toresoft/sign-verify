@@ -104,7 +104,6 @@ class PersistedJsonRereadGoldenTest {
 
     assertThat(readBack.get("profileId")).isEqualTo("550e8400-e29b-41d4-a716-446655440001");
     assertThat(readBack.get("callbackUrl")).isEqualTo("https://example.com/callback");
-    assertThat(readBack.get("callbackSecret")).isEqualTo("super-secret");
     assertThat(readBack.get("callbackAlgorithm")).isEqualTo("HMAC-SHA256");
     assertThat(readBack.get("reports")).isEqualTo(List.of("simple", "etsi"));
 

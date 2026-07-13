@@ -11,7 +11,6 @@
     "profileId": "550e8400-e29b-41d4-a716-446655440001",
     "reports": ["simple", "etsi"],
     "callbackUrl": "https://example.com/callback",
-    "callbackSecret": "super-secret",
     "callbackAlgorithm": "HMAC-SHA256"
   },
   "result": {
