@@ -64,7 +64,7 @@ public class VerificationController {
 
     var parts =
         VerificationRequestParts.from(
-            om, metadataJson, profileId, profileOverrides, reports, null, null, null, profile);
+            om, metadataJson, profileId, profileOverrides, reports, null, null, profile);
 
     UUID pid = profileService.resolveId(parts.profileName(), parts.profileId());
     Map<String, Object> overrides =

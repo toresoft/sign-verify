@@ -38,7 +38,6 @@ class VerificationRequestPartsTest {
             "{\"x\":1}",
             "simple,etsi",
             "https://hook",
-            "shh",
             "HmacSHA256",
             null);
     assertThat(p.profileId()).isEqualTo("11111111-1111-1111-1111-111111111111");
@@ -46,13 +45,12 @@ class VerificationRequestPartsTest {
     assertThat(p.profileOverridesJson()).isEqualTo("{\"x\":1}");
     assertThat(p.reports()).containsExactly("simple", "etsi");
     assertThat(p.callbackUrl()).isEqualTo("https://hook");
-    assertThat(p.callbackSecret()).isEqualTo("shh");
     assertThat(p.callbackAlgorithm()).isEqualTo("HmacSHA256");
   }
 
   @Test
   void profileName_resolved() {
-    var p = VerificationRequestParts.from(om, null, null, null, null, null, null, null, " AGID ");
+    var p = VerificationRequestParts.from(om, null, null, null, null, null, null, " AGID ");
     assertThat(p.profileName()).isEqualTo("AGID");
     assertThat(p.profileId()).isNull();
   }
@@ -69,8 +67,19 @@ class VerificationRequestPartsTest {
                     null,
                     null,
                     null,
-                    null,
                     "AGID"))
+        .isInstanceOf(AppException.class);
+  }
+
+  @Test
+  void legacyMetadata_withCallbackSecret_isRejected400() {
+    String meta =
+        "{\"profileId\":\"22222222-2222-2222-2222-222222222222\","
+            + "\"reports\":[\"simple\",\"etsi\"],"
+            + "\"callbackUrl\":\"https://hook\",\"callbackSecret\":\"shh\","
+            + "\"callbackAlgorithm\":\"HmacSHA256\",\"profileOverrides\":{\"x\":1}}";
+    assertThatThrownBy(
+            () -> VerificationRequestParts.from(om, meta, null, null, null, null, null, null))
         .isInstanceOf(AppException.class);
   }
 
@@ -79,9 +88,9 @@ class VerificationRequestPartsTest {
     String meta =
         "{\"profileId\":\"22222222-2222-2222-2222-222222222222\","
             + "\"reports\":[\"simple\",\"etsi\"],"
-            + "\"callbackUrl\":\"https://hook\",\"callbackSecret\":\"shh\","
+            + "\"callbackUrl\":\"https://hook\","
             + "\"callbackAlgorithm\":\"HmacSHA256\",\"profileOverrides\":{\"x\":1}}";
-    var p = VerificationRequestParts.from(om, meta, null, null, null, null, null, null, null);
+    var p = VerificationRequestParts.from(om, meta, null, null, null, null, null, null);
     assertThat(p.profileId()).isEqualTo("22222222-2222-2222-2222-222222222222");
     assertThat(p.profileName()).isNull();
     assertThat(p.reports()).containsExactly("simple", "etsi");
@@ -94,7 +103,7 @@ class VerificationRequestPartsTest {
     assertThatThrownBy(
             () ->
                 VerificationRequestParts.from(
-                    om, "{\"profileId\":\"x\"}", null, null, null, null, null, null, "AGID"))
+                    om, "{\"profileId\":\"x\"}", null, null, null, null, null, "AGID"))
         .isInstanceOf(AppException.class);
   }
 
@@ -103,13 +112,13 @@ class VerificationRequestPartsTest {
     assertThatThrownBy(
             () ->
                 VerificationRequestParts.from(
-                    om, "{\"profileId\":\"x\"}", null, null, "simple", null, null, null, null))
+                    om, "{\"profileId\":\"x\"}", null, null, "simple", null, null, null))
         .isInstanceOf(AppException.class);
   }
 
   @Test
   void neither_yieldsNullsAndNullReports() {
-    var p = VerificationRequestParts.from(om, null, null, null, null, null, null, null, null);
+    var p = VerificationRequestParts.from(om, null, null, null, null, null, null, null);
     assertThat(p.profileId()).isNull();
     assertThat(p.profileName()).isNull();
     assertThat(p.reports()).isNull();
@@ -119,17 +128,14 @@ class VerificationRequestPartsTest {
   @Test
   void reportsCsv_trimsAndDropsBlanks() {
     var p =
-        VerificationRequestParts.from(
-            om, null, null, null, " simple , , etsi ", null, null, null, null);
+        VerificationRequestParts.from(om, null, null, null, " simple , , etsi ", null, null, null);
     assertThat(p.reports()).containsExactly("simple", "etsi");
   }
 
   @Test
   void invalidMetadataJson_throws400() {
     assertThatThrownBy(
-            () ->
-                VerificationRequestParts.from(
-                    om, "not-json", null, null, null, null, null, null, null))
+            () -> VerificationRequestParts.from(om, "not-json", null, null, null, null, null, null))
         .isInstanceOf(AppException.class);
   }
 
