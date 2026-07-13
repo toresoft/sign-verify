@@ -2,7 +2,7 @@
 type: concept
 domain: engineering
 created: 2026-06-27
-updated: 2026-07-11
+updated: 2026-07-13
 sources:
   - sources/SRC-2026-06-27-001
   - sources/SRC-2026-06-27-002
@@ -19,6 +19,25 @@ The webhook delivery mechanism for [[concepts/async-verification-jobs|async veri
 - **Response classification:** success (2xx) → `DELIVERED`; non-retryable (4xx excl. 408/425/429) → `DELIVERY_FAILED`; retryable/network error → `callback_attempts++` + exponential backoff up to `max-attempts` → then `DELIVERY_FAILED`.
 
 Dispatch polls `SELECT … FOR UPDATE SKIP LOCKED` (default 10s, [[concepts/shedlock|ShedLock]]-locked) so multiple instances don't double-deliver.
+
+## Server-generated secret (2026-07-13)
+The callback secret is no longer client-supplied — it is generated server-side
+(`SecureRandom`, 256-bit, `svcbk_`-prefixed base64url) and returned exactly once in the
+202 job-submission body, never re-exposed on `GET /jobs/{id}` or in audit logs. Legacy
+client-supplied `callbackSecret` is rejected with 400 on both input paths (dedicated
+multipart part and the deprecated `metadata` JSON envelope).
+
+**Form-field bypass (found in review, fixed same day)**: the initial rejection checked only
+`MultipartHttpServletRequest.getMultiFileMap().containsKey("callbackSecret")`, which catches
+parts sent WITH a `filename=` attribute but misses a `callbackSecret` sent as a plain form
+field (no filename, e.g. `curl -F callbackSecret=shh`) — that lands in the parameter map and
+returned 202. The smuggled value was inert (no longer bound anywhere), so this was a contract
+gap, not a secret-override risk. **Resolution** (`a2e2aae`): the check now covers both the
+file map and the parameter map, and the rejection message is centralized in
+`VerificationRequestParts.CALLBACK_SECRET_REJECTED_MSG`. The originally-suggested fix
+(`@RequestPart(required=false)`) was tested empirically and does NOT catch both encodings
+under Spring Boot 4.1 — the dual-map check is the robust solution. See
+[[raw/notes/2026-07-13-ll-callback-secret-review]] for the full analysis.
 
 ## Serialization-library migration risk
 Because the HMAC signature is computed over the exact serialized bytes, this is a **wire

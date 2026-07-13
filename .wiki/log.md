@@ -29,3 +29,4 @@
 ## [2026-07-11] plan | "Jackson 2 removal (phased, springdoc-blocked)" -> docs/superpowers/plans/2026-07-11-jackson2-removal.md (3 phases: logstash 9.0 + openApiNullable=false now, springdoc deferred); inventory INV-4 recorded (springdoc Jackson 3 watch, gates Phase 3)
 ## [2026-07-12] ll | "RFC 9457 invalid-params for field-level validation errors" -> raw/notes/2026-07-12-ll-rfc9457-invalid-params.md (4 lessons, 1 article updated: concepts/problemjson) [extended same session: +L4 param type-mismatch]
 ## [2026-07-12] ll | "Docker image entrypoint, healthcheck, and HTTP e2e in CI" -> raw/notes/2026-07-12-ll-docker-image-e2e-and-entrypoint.md (6 lessons, 0 articles updated — no compiled docker/CI article yet; pending next /wiki:compile)
+## [2026-07-13] ll | "server-generated callback secret — implementation review" -> raw/notes/2026-07-13-ll-callback-secret-review.md (5 lessons, 1 article updated: concepts/hmac-callback)
