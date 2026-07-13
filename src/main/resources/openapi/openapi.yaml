@@ -333,9 +333,6 @@ paths:
                 callbackUrl:
                   type: string
                   description: Optional signed callback delivery URL.
-                callbackSecret:
-                  type: string
-                  description: Shared secret for the callback signature.
                 callbackAlgorithm:
                   type: string
                   description: Callback signature algorithm (e.g. HmacSHA256).
@@ -344,7 +341,7 @@ paths:
                   deprecated: true
                   description: >-
                     DEPRECATED. Legacy JSON envelope with profileId?, profileOverrides?,
-                    reports[]?, callbackUrl?, callbackSecret?, callbackAlgorithm?.
+                    reports[]?, callbackUrl?, callbackAlgorithm?.
                     Mutually exclusive with the individual parts above.
       responses:
         '202':
@@ -787,6 +784,12 @@ components:
       properties:
         jobId: { type: string, format: uuid }
         status: { type: string, enum: [PENDING, RUNNING, COMPLETED, FAILED, DELIVERED, DELIVERY_FAILED, DELETED] }
+        callbackSecret:
+          type: string
+          description: >-
+            Server-generated HMAC shared secret for verifying callbacks. Present only when
+            callbackUrl was supplied. Returned exactly once at creation; never exposed again.
+          example: svcbk_<base64url>
 
     JobView:
       type: object
