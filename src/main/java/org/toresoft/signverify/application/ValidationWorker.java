@@ -159,10 +159,23 @@ public class ValidationWorker {
     for (Map.Entry<UUID, Instant> e : deadlines.entrySet()) {
       if (now.isAfter(e.getValue())) {
         UUID id = e.getKey();
-        deadlines.remove(id);
-        if (repo.markTimedOut(id, now) == 1) {
-          meterRegistry.counter("signverify.validation.timeout").increment();
-          log.warn("job {} timed out: exceeded validation budget of {}", id, maxValidationTime);
+        // Remove the deadline ONLY after confirming the DB outcome. If markTimedOut throws
+        // (transient
+        // DB blip / lock), the entry stays so the next tick retries the timeout — otherwise the job
+        // would hang until the 30m stale-RUNNING sweep (requeue, not the deterministic
+        // job.timeout).
+        // We also remove on 0 (job already finalized by another path) so a dead deadline is
+        // dropped.
+        try {
+          if (repo.markTimedOut(id, now) == 1) {
+            deadlines.remove(id);
+            meterRegistry.counter("signverify.validation.timeout").increment();
+            log.warn("job {} timed out: exceeded validation budget of {}", id, maxValidationTime);
+          } else {
+            deadlines.remove(id);
+          }
+        } catch (RuntimeException ex) {
+          log.warn("markTimedOut for job {} failed; deadline kept for next tick", id, ex);
         }
       }
     }
@@ -188,13 +201,14 @@ public class ValidationWorker {
     if (job == null) return;
 
     try {
+      long jobStart = System.nanoTime();
       long t0 = System.nanoTime();
-      enterPhase(id, ValidationPhase.STORAGE_READ);
+      enterPhase(id, ValidationPhase.STORAGE_READ, jobStart);
       byte[] file = storage.read(job.getDocumentPath());
       recordPhase(ValidationPhase.STORAGE_READ, t0);
 
       long t1 = System.nanoTime();
-      enterPhase(id, ValidationPhase.POLICY_RESOLVE);
+      enterPhase(id, ValidationPhase.POLICY_RESOLVE, jobStart);
       var profile = profileService.getOrDefault(job.getProfileId());
       String policy = profile.getPolicyXml();
       if (job.getProfileOverrides() != null && !job.getProfileOverrides().isBlank()) {
@@ -203,17 +217,25 @@ public class ValidationWorker {
       }
       Set<ReportType> reports = parseReports(job.getReportsRequested());
       recordPhase(ValidationPhase.POLICY_RESOLVE, t1);
+      // Capture the post-override policy into an effectively-final binding for the lambda below.
+      final String finalPolicy = policy;
+      final byte[] finalFile = file;
+      final Set<ReportType> finalReports = reports;
 
       long t2 = System.nanoTime();
-      enterPhase(id, ValidationPhase.DSS_VALIDATE);
+      enterPhase(id, ValidationPhase.DSS_VALIDATE, jobStart);
       log.info("job {} entering DSS validation", id);
       var result =
-          validator.validate(
-              new ValidationRequest(file, job.getDocumentFilename(), policy, reports));
-      recordPhase(ValidationPhase.DSS_VALIDATE, t2);
+          runTimed(
+              ValidationPhase.DSS_VALIDATE,
+              t2,
+              () ->
+                  validator.validate(
+                      new ValidationRequest(
+                          finalFile, job.getDocumentFilename(), finalPolicy, finalReports)));
 
       long t3 = System.nanoTime();
-      enterPhase(id, ValidationPhase.RESULT_STORE);
+      enterPhase(id, ValidationPhase.RESULT_STORE, jobStart);
       Map<String, Object> resultJson = new LinkedHashMap<>();
       resultJson.put("indication", result.indication());
       resultJson.put("subIndication", result.subIndication());
@@ -236,7 +258,12 @@ public class ValidationWorker {
       // outcome is intentionally dropped.
       int updated = repo.markCompleted(id, resultPath, Instant.now());
       if (updated == 0) {
-        log.info("job {} result dropped: no longer RUNNING at finalize", id);
+        // The job is no longer RUNNING (timed out by the watchdog, requeued by the stale sweep, or
+        // expired) while the validation drained. The result file was just written to disk; the DB
+        // row has result_path=null (this update was a no-op), so the cleanup scheduler's
+        // delete(resultPath) would receive null and leak the file forever. Delete it here.
+        storage.delete(resultPath);
+        log.info("job {} result dropped and file cleaned: no longer RUNNING at finalize", id);
       } else {
         log.info("job {} completed", id);
       }
@@ -270,16 +297,41 @@ public class ValidationWorker {
     }
   }
 
+  // Phase stamping is gated by a wall-clock threshold: fast jobs (sub-second) do not pay the 4
+  // extra round-trips, since the phase column only matters for diagnosing slow/stuck jobs. The
+  // threshold is measured from job claim, not per-phase.
+  private volatile long phaseStampThresholdNanos = TimeUnit.SECONDS.toNanos(1);
+
   // Stamps the current validation phase via the version-neutral conditional update so a stuck job
-  // is diagnosable through GET /jobs/{id} (and directly in the DB) without grepping logs.
-  private void enterPhase(UUID id, ValidationPhase phase) {
+  // is diagnosable through GET /jobs/{id} (and directly in the DB) without grepping logs. Skipped
+  // for fast jobs (below the threshold) to avoid write amplification where it has no diagnostic
+  // value.
+  private void enterPhase(UUID id, ValidationPhase phase, long jobStartNanos) {
+    if (System.nanoTime() - jobStartNanos < phaseStampThresholdNanos) return;
     repo.setPhase(id, phase, Instant.now());
+  }
+
+  // Test seam: see enterPhase. Package-private on purpose; not part of the production API.
+  void setPhaseStampThresholdForTest(long nanos) {
+    this.phaseStampThresholdNanos = nanos;
   }
 
   private void recordPhase(ValidationPhase phase, long startNanos) {
     meterRegistry
         .timer("signverify.validation.phase", "phase", phase.name())
         .record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
+  }
+
+  // Runs a phase's work and records its duration even when it throws, so the DSS_VALIDATE timer
+  // captures slow/failed/timeout validations (not just the successful ones) — otherwise p95/p99
+  // would be systematically understated and hide exactly the slow cases the metric exists to find.
+  private <T> T runTimed(
+      ValidationPhase phase, long startNanos, java.util.function.Supplier<T> work) {
+    try {
+      return work.get();
+    } finally {
+      recordPhase(phase, startNanos);
+    }
   }
 
   private Set<ReportType> parseReports(String csv) {

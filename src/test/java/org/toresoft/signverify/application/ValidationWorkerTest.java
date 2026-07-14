@@ -229,15 +229,49 @@ class ValidationWorkerTest {
     verify(repo, never()).markTimedOut(any(), any());
   }
 
+  @Test
+  void enforceBudgets_keepsDeadline_whenMarkTimedOutThrows_soNextTickRetries() {
+    ValidationWorker w = workerWithBudget(Duration.ofMinutes(5), Duration.ofMinutes(30));
+    UUID overdue = UUID.randomUUID();
+    w.registerDeadlineForTest(overdue, Instant.now().minusSeconds(1));
+    when(repo.markTimedOut(eq(overdue), any())).thenThrow(new RuntimeException("db blip"));
+
+    w.enforceBudgets(); // throws are swallowed inside
+
+    verify(repo, times(1)).markTimedOut(eq(overdue), any());
+    // The deadline is NOT removed on exception: the next tick must retry, or the job would hang
+    // until the 30m stale-RUNNING sweep (requeue) instead of failing deterministically.
+    w.enforceBudgets();
+    verify(repo, times(2)).markTimedOut(eq(overdue), any());
+  }
+
+  @Test
+  void enforceBudgets_forgetsDeadline_whenJobAlreadyFinalized() {
+    ValidationWorker w = workerWithBudget(Duration.ofMinutes(5), Duration.ofMinutes(30));
+    UUID overdue = UUID.randomUUID();
+    w.registerDeadlineForTest(overdue, Instant.now().minusSeconds(1));
+    // markTimedOut returns 0: the worker (or another path) already finalized the job.
+    when(repo.markTimedOut(eq(overdue), any())).thenReturn(0);
+
+    w.enforceBudgets();
+
+    // A dead deadline (job no longer RUNNING) is dropped so it is not retried forever.
+    w.enforceBudgets();
+    verify(repo, times(1)).markTimedOut(eq(overdue), any());
+    assertThat(meterRegistry.counter("signverify.validation.timeout").count()).isZero();
+  }
+
   // ---------------------------------------------------------------------
   // process(...) tests
   // ---------------------------------------------------------------------
 
   @Test
-  void process_stampsPhasesInOrder() {
+  void process_stampsPhasesInOrder_whenJobIsSlow() {
     ValidationJob job = newPendingJob();
     when(repo.findById(job.getId())).thenReturn(Optional.of(job));
     stubHappyPath();
+    // Lower the threshold so the in-test (instant) path is treated as "slow" and gets stamped.
+    worker.setPhaseStampThresholdForTest(0L);
 
     worker.process(job.getId());
 
@@ -246,6 +280,36 @@ class ValidationWorkerTest {
     ordered.verify(repo).setPhase(eq(job.getId()), eq(ValidationPhase.POLICY_RESOLVE), any());
     ordered.verify(repo).setPhase(eq(job.getId()), eq(ValidationPhase.DSS_VALIDATE), any());
     ordered.verify(repo).setPhase(eq(job.getId()), eq(ValidationPhase.RESULT_STORE), any());
+  }
+
+  @Test
+  void process_skipsPhaseStamping_whenJobIsFast() {
+    ValidationJob job = newPendingJob();
+    when(repo.findById(job.getId())).thenReturn(Optional.of(job));
+    stubHappyPath();
+    // Default 1s threshold: an in-test job finishes well under that, so no DB write for phase.
+    worker.process(job.getId());
+
+    verify(repo, never()).setPhase(any(), any(), any());
+  }
+
+  @Test
+  void process_recordsDssValidateTimer_evenWhenValidatorThrows() {
+    ValidationJob job = newPendingJob();
+    when(repo.findById(job.getId())).thenReturn(Optional.of(job));
+    when(storage.read(anyString())).thenReturn(new byte[] {0});
+    when(profileService.getOrDefault(PROFILE_ID)).thenReturn(profile());
+    when(validator.validate(any(ValidationRequest.class)))
+        .thenThrow(new RuntimeException("dss exploded"));
+
+    worker.process(job.getId());
+
+    // The timer must capture failed/timeout validations too, or p95 hides the slow cases.
+    assertThat(
+            meterRegistry
+                .timer("signverify.validation.phase", "phase", ValidationPhase.DSS_VALIDATE.name())
+                .count())
+        .isEqualTo(1L);
   }
 
   @Test
@@ -411,9 +475,10 @@ class ValidationWorkerTest {
   }
 
   @Test
-  void process_finalizeNoLongerRunning_isLoggedNoOp() {
-    // The job was requeued by the stale-RUNNING sweep (or expired) while the worker validated. The
-    // conditional bulk update affects 0 rows: the outcome is intentionally dropped, no exception.
+  void process_finalizeNoLongerRunning_isNoOp_andDeletesOrphanResultFile() {
+    // The job was requeued/timed out/expired while the worker validated. The conditional bulk
+    // update affects 0 rows, so result_path stays null in the DB. The result file just written to
+    // disk must be deleted here, or the cleanup scheduler's delete(null) would leak it forever.
     ValidationJob job = newPendingJob();
     when(repo.findById(job.getId())).thenReturn(Optional.of(job));
     when(storage.read(anyString())).thenReturn(new byte[] {1, 2, 3});
@@ -425,6 +490,7 @@ class ValidationWorkerTest {
     worker.process(job.getId());
 
     verify(repo).markCompleted(eq(job.getId()), anyString(), any());
+    verify(storage).delete("storage/result/path");
     verify(repo, never()).save(any());
     verify(repo, never()).markFailed(any(), anyString(), anyString(), any());
   }
