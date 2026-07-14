@@ -809,8 +809,8 @@ components:
           description: >
             Validation phase the job entered last while RUNNING, retained on terminal jobs for
             diagnosis (e.g. a FAILED/timed-out job shows the phase it was in when it stalled).
-            Null when no phase was recorded (fast jobs below the stamping threshold, or jobs that
-            predate this field). NOT a reliable terminality signal — use `status` for that.
+            Null before the job starts processing, or for jobs that predate this field. NOT a
+            reliable terminality signal — use `status` for that.
         phaseUpdatedAt: { type: string, format: date-time, nullable: true }
         result:
           type: object

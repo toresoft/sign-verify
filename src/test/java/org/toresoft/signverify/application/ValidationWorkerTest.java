@@ -266,31 +266,22 @@ class ValidationWorkerTest {
   // ---------------------------------------------------------------------
 
   @Test
-  void process_stampsPhasesInOrder_whenJobIsSlow() {
+  void process_stampsPhasesInOrder() {
     ValidationJob job = newPendingJob();
     when(repo.findById(job.getId())).thenReturn(Optional.of(job));
     stubHappyPath();
-    // Lower the threshold so the in-test (instant) path is treated as "slow" and gets stamped.
-    worker.setPhaseStampThresholdForTest(0L);
 
     worker.process(job.getId());
 
+    // Phases are stamped unconditionally at entry: a job that hangs inside a phase (e.g. stuck in
+    // DSS_VALIDATE on unreachable revocation) must expose that phase via GET /jobs/{id}, which a
+    // gate keyed on elapsed-time-at-entry could not guarantee (the slow phase's own duration is
+    // not yet counted when it is entered).
     InOrder ordered = inOrder(repo);
     ordered.verify(repo).setPhase(eq(job.getId()), eq(ValidationPhase.STORAGE_READ), any());
     ordered.verify(repo).setPhase(eq(job.getId()), eq(ValidationPhase.POLICY_RESOLVE), any());
     ordered.verify(repo).setPhase(eq(job.getId()), eq(ValidationPhase.DSS_VALIDATE), any());
     ordered.verify(repo).setPhase(eq(job.getId()), eq(ValidationPhase.RESULT_STORE), any());
-  }
-
-  @Test
-  void process_skipsPhaseStamping_whenJobIsFast() {
-    ValidationJob job = newPendingJob();
-    when(repo.findById(job.getId())).thenReturn(Optional.of(job));
-    stubHappyPath();
-    // Default 1s threshold: an in-test job finishes well under that, so no DB write for phase.
-    worker.process(job.getId());
-
-    verify(repo, never()).setPhase(any(), any(), any());
   }
 
   @Test

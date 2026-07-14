@@ -201,14 +201,13 @@ public class ValidationWorker {
     if (job == null) return;
 
     try {
-      long jobStart = System.nanoTime();
       long t0 = System.nanoTime();
-      enterPhase(id, ValidationPhase.STORAGE_READ, jobStart);
+      enterPhase(id, ValidationPhase.STORAGE_READ);
       byte[] file = storage.read(job.getDocumentPath());
       recordPhase(ValidationPhase.STORAGE_READ, t0);
 
       long t1 = System.nanoTime();
-      enterPhase(id, ValidationPhase.POLICY_RESOLVE, jobStart);
+      enterPhase(id, ValidationPhase.POLICY_RESOLVE);
       var profile = profileService.getOrDefault(job.getProfileId());
       String policy = profile.getPolicyXml();
       if (job.getProfileOverrides() != null && !job.getProfileOverrides().isBlank()) {
@@ -223,7 +222,7 @@ public class ValidationWorker {
       final Set<ReportType> finalReports = reports;
 
       long t2 = System.nanoTime();
-      enterPhase(id, ValidationPhase.DSS_VALIDATE, jobStart);
+      enterPhase(id, ValidationPhase.DSS_VALIDATE);
       log.info("job {} entering DSS validation", id);
       var result =
           runTimed(
@@ -235,7 +234,7 @@ public class ValidationWorker {
                           finalFile, job.getDocumentFilename(), finalPolicy, finalReports)));
 
       long t3 = System.nanoTime();
-      enterPhase(id, ValidationPhase.RESULT_STORE, jobStart);
+      enterPhase(id, ValidationPhase.RESULT_STORE);
       Map<String, Object> resultJson = new LinkedHashMap<>();
       resultJson.put("indication", result.indication());
       resultJson.put("subIndication", result.subIndication());
@@ -297,23 +296,15 @@ public class ValidationWorker {
     }
   }
 
-  // Phase stamping is gated by a wall-clock threshold: fast jobs (sub-second) do not pay the 4
-  // extra round-trips, since the phase column only matters for diagnosing slow/stuck jobs. The
-  // threshold is measured from job claim, not per-phase.
-  private volatile long phaseStampThresholdNanos = TimeUnit.SECONDS.toNanos(1);
-
   // Stamps the current validation phase via the version-neutral conditional update so a stuck job
-  // is diagnosable through GET /jobs/{id} (and directly in the DB) without grepping logs. Skipped
-  // for fast jobs (below the threshold) to avoid write amplification where it has no diagnostic
-  // value.
-  private void enterPhase(UUID id, ValidationPhase phase, long jobStartNanos) {
-    if (System.nanoTime() - jobStartNanos < phaseStampThresholdNanos) return;
+  // is diagnosable through GET /jobs/{id} (and directly in the DB) without grepping logs. Stamped
+  // unconditionally at phase entry: a gate keyed on elapsed-time-at-entry cannot help here, since a
+  // phase (STORAGE_READ on slow storage, DSS_VALIDATE on unreachable revocation) accrues its
+  // duration AFTER it is entered — exactly the stuck job we need to locate would never be stamped.
+  // The write is one small conditional UPDATE and the validation path is semaphore-gated to a
+  // handful of concurrent jobs, so the amplification is negligible.
+  private void enterPhase(UUID id, ValidationPhase phase) {
     repo.setPhase(id, phase, Instant.now());
-  }
-
-  // Test seam: see enterPhase. Package-private on purpose; not part of the production API.
-  void setPhaseStampThresholdForTest(long nanos) {
-    this.phaseStampThresholdNanos = nanos;
   }
 
   private void recordPhase(ValidationPhase phase, long startNanos) {
