@@ -53,6 +53,7 @@ import org.toresoft.signverify.domain.model.JobStatus;
 import org.toresoft.signverify.domain.model.PrincipalType;
 import org.toresoft.signverify.domain.model.Role;
 import org.toresoft.signverify.domain.model.ValidationJob;
+import org.toresoft.signverify.domain.model.ValidationPhase;
 import org.toresoft.signverify.domain.port.DocumentStoragePort;
 import org.toresoft.signverify.domain.port.ReportType;
 import org.toresoft.signverify.persistence.ValidationJobRepository;
@@ -584,5 +585,24 @@ class AsyncVerificationControllerTest {
     Instant stamped = whenCaptor.getValue();
     assertThat(stamped).isAfterOrEqualTo(before);
     verify(jobRepository, never()).save(any(ValidationJob.class));
+  }
+
+  @Test
+  void getJob_exposesPhaseForRunningJob() throws Exception {
+    UUID jobId = UUID.randomUUID();
+    ValidationJob job = baseJob(jobId, owner);
+    job.setStatus(JobStatus.RUNNING);
+    job.setStartedAt(Instant.parse("2024-01-01T00:01:00Z"));
+    job.setPhase(ValidationPhase.DSS_VALIDATE);
+    job.setPhaseUpdatedAt(Instant.parse("2024-01-01T00:02:00Z"));
+    when(jobRepository.findById(jobId)).thenReturn(Optional.of(job));
+
+    mockMvc
+        .perform(
+            get("/api/v1/verifications/jobs/{id}", jobId)
+                .with(authentication(authFor(owner, Role.STANDARD))))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.phase").value("DSS_VALIDATE"))
+        .andExpect(jsonPath("$.phaseUpdatedAt").exists());
   }
 }

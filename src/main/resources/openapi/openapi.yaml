@@ -802,6 +802,14 @@ components:
         deliveredAt: { type: string, format: date-time, nullable: true }
         expiresAt: { type: string, format: date-time, nullable: true }
         callbackAttempts: { type: integer }
+        phase:
+          type: string
+          enum: [STORAGE_READ, POLICY_RESOLVE, DSS_VALIDATE, RESULT_STORE]
+          nullable: true
+          description: >
+            Current validation phase while the job is RUNNING; lets callers see where an
+            in-flight job is spending time. Null once the job is terminal.
+        phaseUpdatedAt: { type: string, format: date-time, nullable: true }
         result:
           type: object
           additionalProperties: true

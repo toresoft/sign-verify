@@ -204,6 +204,9 @@ public class AsyncVerificationController {
       out.put("deliveredAt", job.getDeliveredAt().atOffset(ZoneOffset.UTC));
     out.put("expiresAt", job.getExpiresAt().atOffset(ZoneOffset.UTC));
     out.put("callbackAttempts", job.getCallbackAttempts());
+    if (job.getPhase() != null) out.put("phase", job.getPhase().name());
+    if (job.getPhaseUpdatedAt() != null)
+      out.put("phaseUpdatedAt", job.getPhaseUpdatedAt().atOffset(ZoneOffset.UTC));
     if (job.getResultPath() != null) {
       out.put("result", om.readTree(storage.read(job.getResultPath())));
     } else if (job.getErrorCode() != null || job.getErrorMessage() != null) {
