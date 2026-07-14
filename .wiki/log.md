@@ -30,3 +30,4 @@
 ## [2026-07-12] ll | "RFC 9457 invalid-params for field-level validation errors" -> raw/notes/2026-07-12-ll-rfc9457-invalid-params.md (4 lessons, 1 article updated: concepts/problemjson) [extended same session: +L4 param type-mismatch]
 ## [2026-07-12] ll | "Docker image entrypoint, healthcheck, and HTTP e2e in CI" -> raw/notes/2026-07-12-ll-docker-image-e2e-and-entrypoint.md (6 lessons, 0 articles updated — no compiled docker/CI article yet; pending next /wiki:compile)
 ## [2026-07-13] ll | "server-generated callback secret — implementation review" -> raw/notes/2026-07-13-ll-callback-secret-review.md (5 lessons, 1 article updated: concepts/hmac-callback)
+## [2026-07-14] ll | "async job optimistic-lock race + DSS timeouts / job budget / phase observability" -> raw/notes/2026-07-14-ll-async-job-race-budget-phase.md (6 lessons, 2 articles updated: concepts/async-verification-jobs, concepts/revocation-data)
