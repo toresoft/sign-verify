@@ -31,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.toresoft.signverify.domain.model.JobStatus;
 import org.toresoft.signverify.domain.model.PrincipalType;
 import org.toresoft.signverify.domain.model.ValidationJob;
+import org.toresoft.signverify.domain.model.ValidationPhase;
 
 public interface ValidationJobRepository extends JpaRepository<ValidationJob, UUID> {
 
@@ -54,6 +55,26 @@ public interface ValidationJobRepository extends JpaRepository<ValidationJob, UU
   @Transactional
   @Query("UPDATE ValidationJob j SET j.lastAccessedAt = :now WHERE j.id = :id")
   int touchLastAccessed(@Param("id") UUID id, @Param("now") Instant now);
+
+  /**
+   * Stamps the current validation {@code phase} with a version-neutral bulk UPDATE (same idiom as
+   * {@link #touchLastAccessed}): it must not bump {@code @Version} or it would invalidate the
+   * worker's in-flight outcome write. Conditional on {@code status = RUNNING} so a draining orphan
+   * cannot write a phase onto a job the watchdog already failed.
+   *
+   * @return number of rows updated (1 = stamped, 0 = no longer RUNNING)
+   */
+  @Modifying
+  @Transactional
+  @Query(
+      """
+      UPDATE ValidationJob j
+         SET j.phase = :phase, j.phaseUpdatedAt = :now
+       WHERE j.id = :id
+         AND j.status = org.toresoft.signverify.domain.model.JobStatus.RUNNING
+      """)
+  int setPhase(
+      @Param("id") UUID id, @Param("phase") ValidationPhase phase, @Param("now") Instant now);
 
   /**
    * Atomically claims a job for processing by flipping {@code PENDING -> RUNNING} and incrementing
