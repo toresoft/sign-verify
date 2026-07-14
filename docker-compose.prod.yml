@@ -24,6 +24,11 @@ services:
       SENTRY_DSN: ${SENTRY_DSN:-}
       SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
       SENTRY_RELEASE: ${SENTRY_RELEASE:-}
+      # OTLP metrics push (off by default; Prometheus scrape on /actuator/prometheus
+      # keeps working either way — see application.yaml `management.otlp`).
+      APP_METRICS_OTLP_ENABLED: ${APP_METRICS_OTLP_ENABLED:-false}
+      APP_METRICS_OTLP_URL: ${APP_METRICS_OTLP_URL:-http://otel-collector:4318/v1/metrics}
+      APP_METRICS_OTLP_STEP: ${APP_METRICS_OTLP_STEP:-60s}
       # --- Extraction spill (disk-backed, not tmpfs) ---
       APP_EXTRACTION_TEMP_DIR: /var/lib/sign-verify/extract-tmp
     ports:
