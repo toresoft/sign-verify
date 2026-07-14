@@ -320,6 +320,18 @@
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-otlp</artifactId>
+        </dependency>
+        <dependency>
+            <!-- Required by Boot 4's OtlpMetricsExportAutoConfiguration: it needs
+                 OpenTelemetryProperties from this module, which is an *optional*
+                 dependency of spring-boot-micrometer-metrics and is therefore not
+                 pulled in transitively. Without it the OTLP export silently backs off. -->
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-opentelemetry</artifactId>
+        </dependency>
+        <dependency>
             <groupId>net.logstash.logback</groupId>
             <artifactId>logstash-logback-encoder</artifactId>
             <version>7.4</version>
