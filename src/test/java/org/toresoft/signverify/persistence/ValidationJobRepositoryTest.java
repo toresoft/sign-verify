@@ -31,6 +31,7 @@ import org.toresoft.signverify.domain.exception.Errors;
 import org.toresoft.signverify.domain.model.JobStatus;
 import org.toresoft.signverify.domain.model.PrincipalType;
 import org.toresoft.signverify.domain.model.ValidationJob;
+import org.toresoft.signverify.domain.model.ValidationPhase;
 
 @DataJpaTest
 @ActiveProfiles("test")
@@ -98,6 +99,20 @@ class ValidationJobRepositoryTest {
         .isEqualTo(JobStatus.COMPLETED);
     assertThat(repo.findById(pendingFresh.getId()).orElseThrow().getStatus())
         .isEqualTo(JobStatus.PENDING);
+  }
+
+  @Test
+  void phase_isPersistedAndReadBack() {
+    ValidationJob j = newJob(JobStatus.RUNNING, "alice");
+    j.setPhase(ValidationPhase.DSS_VALIDATE);
+    j.setPhaseUpdatedAt(Instant.now());
+    repo.save(j);
+    em.flush();
+    em.clear();
+
+    ValidationJob read = repo.findById(j.getId()).orElseThrow();
+    assertThat(read.getPhase()).isEqualTo(ValidationPhase.DSS_VALIDATE);
+    assertThat(read.getPhaseUpdatedAt()).isNotNull();
   }
 
   @Test
