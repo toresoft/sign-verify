@@ -18,11 +18,13 @@
 package org.toresoft.signverify.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -31,20 +33,26 @@ import static org.mockito.Mockito.when;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.Executor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.toresoft.signverify.domain.exception.AppException;
 import org.toresoft.signverify.domain.exception.Errors;
 import org.toresoft.signverify.domain.model.JobStatus;
 import org.toresoft.signverify.domain.model.ValidationJob;
+import org.toresoft.signverify.domain.model.ValidationPhase;
 import org.toresoft.signverify.domain.model.VerificationProfile;
 import org.toresoft.signverify.domain.port.DocumentStoragePort;
 import org.toresoft.signverify.domain.port.ReportType;
@@ -75,10 +83,30 @@ class ValidationWorkerTest {
   @Mock private CircuitBreaker circuit;
 
   private final JsonMapper om = new JsonMapper();
+  private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
 
   private ValidationWorker worker;
 
   private static final int WORKERS = 4;
+
+  private ValidationWorker workerWithBudget(Duration maxValidationTime, Duration staleRunning) {
+    // Executor that runs submitted tasks inline so process() completes within the test.
+    Executor inline = Runnable::run;
+    return new ValidationWorker(
+        repo,
+        storage,
+        profileService,
+        applier,
+        validator,
+        om,
+        registry,
+        MAX_PICKUP_ATTEMPTS,
+        staleRunning,
+        maxValidationTime,
+        inline,
+        WORKERS,
+        meterRegistry);
+  }
 
   @BeforeEach
   void setUp() {
@@ -93,10 +121,12 @@ class ValidationWorkerTest {
             registry,
             MAX_PICKUP_ATTEMPTS,
             java.time.Duration.ofMinutes(30),
+            java.time.Duration.ofMinutes(5),
             // Inline executor: run submitted work synchronously so poll() behaves like the pre-
             // offload version under test (assertions can observe process() side effects at once).
             Runnable::run,
-            WORKERS);
+            WORKERS,
+            meterRegistry);
     lenient().when(registry.circuitBreaker("dssValidator")).thenReturn(circuit);
     // By default the worker wins the atomic claim; tests that exercise the lost-race / not-pending
     // path override this with 0.
@@ -163,8 +193,115 @@ class ValidationWorkerTest {
   }
 
   // ---------------------------------------------------------------------
+  // budget watchdog tests
+  // ---------------------------------------------------------------------
+
+  @Test
+  void constructor_rejectsBudgetNotSmallerThanStaleTimeout() {
+    assertThatThrownBy(() -> workerWithBudget(Duration.ofMinutes(30), Duration.ofMinutes(30)))
+        .isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  void enforceBudgets_timesOutPastDeadlineJobs_incrementsCounter_andForgetsThem() {
+    ValidationWorker w = workerWithBudget(Duration.ofMinutes(5), Duration.ofMinutes(30));
+    UUID overdue = UUID.randomUUID();
+    // Register a deadline already in the past for this instance's job.
+    w.registerDeadlineForTest(overdue, Instant.now().minusSeconds(1));
+    when(repo.markTimedOut(eq(overdue), any())).thenReturn(1);
+
+    w.enforceBudgets();
+
+    verify(repo).markTimedOut(eq(overdue), any());
+    assertThat(meterRegistry.counter("signverify.validation.timeout").count()).isEqualTo(1.0);
+    // Second run must not re-time-out the same job (entry was forgotten).
+    w.enforceBudgets();
+    verify(repo, times(1)).markTimedOut(eq(overdue), any());
+  }
+
+  @Test
+  void enforceBudgets_ignoresJobsWithinDeadline() {
+    ValidationWorker w = workerWithBudget(Duration.ofMinutes(5), Duration.ofMinutes(30));
+    w.registerDeadlineForTest(UUID.randomUUID(), Instant.now().plusSeconds(300));
+
+    w.enforceBudgets();
+
+    verify(repo, never()).markTimedOut(any(), any());
+  }
+
+  @Test
+  void enforceBudgets_keepsDeadline_whenMarkTimedOutThrows_soNextTickRetries() {
+    ValidationWorker w = workerWithBudget(Duration.ofMinutes(5), Duration.ofMinutes(30));
+    UUID overdue = UUID.randomUUID();
+    w.registerDeadlineForTest(overdue, Instant.now().minusSeconds(1));
+    when(repo.markTimedOut(eq(overdue), any())).thenThrow(new RuntimeException("db blip"));
+
+    w.enforceBudgets(); // throws are swallowed inside
+
+    verify(repo, times(1)).markTimedOut(eq(overdue), any());
+    // The deadline is NOT removed on exception: the next tick must retry, or the job would hang
+    // until the 30m stale-RUNNING sweep (requeue) instead of failing deterministically.
+    w.enforceBudgets();
+    verify(repo, times(2)).markTimedOut(eq(overdue), any());
+  }
+
+  @Test
+  void enforceBudgets_forgetsDeadline_whenJobAlreadyFinalized() {
+    ValidationWorker w = workerWithBudget(Duration.ofMinutes(5), Duration.ofMinutes(30));
+    UUID overdue = UUID.randomUUID();
+    w.registerDeadlineForTest(overdue, Instant.now().minusSeconds(1));
+    // markTimedOut returns 0: the worker (or another path) already finalized the job.
+    when(repo.markTimedOut(eq(overdue), any())).thenReturn(0);
+
+    w.enforceBudgets();
+
+    // A dead deadline (job no longer RUNNING) is dropped so it is not retried forever.
+    w.enforceBudgets();
+    verify(repo, times(1)).markTimedOut(eq(overdue), any());
+    assertThat(meterRegistry.counter("signverify.validation.timeout").count()).isZero();
+  }
+
+  // ---------------------------------------------------------------------
   // process(...) tests
   // ---------------------------------------------------------------------
+
+  @Test
+  void process_stampsPhasesInOrder() {
+    ValidationJob job = newPendingJob();
+    when(repo.findById(job.getId())).thenReturn(Optional.of(job));
+    stubHappyPath();
+
+    worker.process(job.getId());
+
+    // Phases are stamped unconditionally at entry: a job that hangs inside a phase (e.g. stuck in
+    // DSS_VALIDATE on unreachable revocation) must expose that phase via GET /jobs/{id}, which a
+    // gate keyed on elapsed-time-at-entry could not guarantee (the slow phase's own duration is
+    // not yet counted when it is entered).
+    InOrder ordered = inOrder(repo);
+    ordered.verify(repo).setPhase(eq(job.getId()), eq(ValidationPhase.STORAGE_READ), any());
+    ordered.verify(repo).setPhase(eq(job.getId()), eq(ValidationPhase.POLICY_RESOLVE), any());
+    ordered.verify(repo).setPhase(eq(job.getId()), eq(ValidationPhase.DSS_VALIDATE), any());
+    ordered.verify(repo).setPhase(eq(job.getId()), eq(ValidationPhase.RESULT_STORE), any());
+  }
+
+  @Test
+  void process_recordsDssValidateTimer_evenWhenValidatorThrows() {
+    ValidationJob job = newPendingJob();
+    when(repo.findById(job.getId())).thenReturn(Optional.of(job));
+    when(storage.read(anyString())).thenReturn(new byte[] {0});
+    when(profileService.getOrDefault(PROFILE_ID)).thenReturn(profile());
+    when(validator.validate(any(ValidationRequest.class)))
+        .thenThrow(new RuntimeException("dss exploded"));
+
+    worker.process(job.getId());
+
+    // The timer must capture failed/timeout validations too, or p95 hides the slow cases.
+    assertThat(
+            meterRegistry
+                .timer("signverify.validation.phase", "phase", ValidationPhase.DSS_VALIDATE.name())
+                .count())
+        .isEqualTo(1L);
+  }
 
   @Test
   void process_picksUpPendingJob_andCompletes() {
@@ -329,9 +466,10 @@ class ValidationWorkerTest {
   }
 
   @Test
-  void process_finalizeNoLongerRunning_isLoggedNoOp() {
-    // The job was requeued by the stale-RUNNING sweep (or expired) while the worker validated. The
-    // conditional bulk update affects 0 rows: the outcome is intentionally dropped, no exception.
+  void process_finalizeNoLongerRunning_isNoOp_andDeletesOrphanResultFile() {
+    // The job was requeued/timed out/expired while the worker validated. The conditional bulk
+    // update affects 0 rows, so result_path stays null in the DB. The result file just written to
+    // disk must be deleted here, or the cleanup scheduler's delete(null) would leak it forever.
     ValidationJob job = newPendingJob();
     when(repo.findById(job.getId())).thenReturn(Optional.of(job));
     when(storage.read(anyString())).thenReturn(new byte[] {1, 2, 3});
@@ -343,6 +481,7 @@ class ValidationWorkerTest {
     worker.process(job.getId());
 
     verify(repo).markCompleted(eq(job.getId()), anyString(), any());
+    verify(storage).delete("storage/result/path");
     verify(repo, never()).save(any());
     verify(repo, never()).markFailed(any(), anyString(), anyString(), any());
   }
@@ -408,8 +547,10 @@ class ValidationWorkerTest {
             registry,
             MAX_PICKUP_ATTEMPTS,
             java.time.Duration.ofMinutes(30),
+            java.time.Duration.ofMinutes(5),
             captured::add,
-            2);
+            2,
+            meterRegistry);
     when(circuit.getState()).thenReturn(CircuitBreaker.State.CLOSED);
     when(repo.findPickablePending(eq(MAX_PICKUP_ATTEMPTS), any(), any()))
         .thenReturn(List.of(newPendingJob(), newPendingJob()));

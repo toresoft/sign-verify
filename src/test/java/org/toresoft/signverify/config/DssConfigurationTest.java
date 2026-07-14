@@ -36,8 +36,10 @@ class DssConfigurationTest {
 
   @Test
   void production_verifier_wires_online_revocation_and_aia() {
+    var cfg = new DssConfiguration();
     CertificateVerifier cv =
-        new DssConfiguration().certificateVerifier(new TrustedListsCertificateSource());
+        cfg.certificateVerifier(
+            new TrustedListsCertificateSource(), cfg.revocationDataLoader(new DssHttpProperties()));
 
     assertThat(cv.getOcspSource()).isInstanceOf(OnlineOCSPSource.class);
     assertThat(cv.getCrlSource()).isInstanceOf(OnlineCRLSource.class);

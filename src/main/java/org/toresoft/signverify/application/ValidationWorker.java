@@ -19,12 +19,15 @@ package org.toresoft.signverify.application;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -54,8 +57,15 @@ public class ValidationWorker {
   private final CircuitBreakerRegistry circuitRegistry;
   private final int maxPickupAttempts;
   private final Duration staleRunningTimeout;
+  private final Duration maxValidationTime;
   private final Executor validationExecutor;
   private final Semaphore capacity;
+  private final MeterRegistry meterRegistry;
+  // Per-instance deadlines for jobs THIS instance is validating. A DB sweep cannot enforce the
+  // budget safely in a multi-instance deployment (it cannot tell "slow but alive on instance B"
+  // from "crashed on instance B"); each instance times out only its own in-flight jobs. Crash of
+  // this instance drops these deadlines, and the (longer) stale-RUNNING sweep requeues the job.
+  private final ConcurrentHashMap<UUID, Instant> deadlines = new ConcurrentHashMap<>();
 
   public ValidationWorker(
       ValidationJobRepository repo,
@@ -67,8 +77,20 @@ public class ValidationWorker {
       CircuitBreakerRegistry circuitRegistry,
       @Value("${app.async.max-pickup-attempts}") int maxPickupAttempts,
       @Value("${app.async.worker.stale-running-timeout}") Duration staleRunningTimeout,
+      @Value("${app.async.worker.max-validation-time}") Duration maxValidationTime,
       @Qualifier("validationExecutor") Executor validationExecutor,
-      @Value("${app.async.workers}") int workers) {
+      @Value("${app.async.workers}") int workers,
+      MeterRegistry meterRegistry) {
+    // The watchdog must fire before the stale-RUNNING sweep, or a slow-but-alive job would be
+    // requeued (crash-recovery path) instead of failing deterministically with job.timeout.
+    if (maxValidationTime.compareTo(staleRunningTimeout) >= 0) {
+      throw new IllegalStateException(
+          "app.async.worker.max-validation-time ("
+              + maxValidationTime
+              + ") must be < stale-running-timeout ("
+              + staleRunningTimeout
+              + ")");
+    }
     this.repo = repo;
     this.storage = storage;
     this.profileService = profileService;
@@ -78,8 +100,10 @@ public class ValidationWorker {
     this.circuitRegistry = circuitRegistry;
     this.maxPickupAttempts = maxPickupAttempts;
     this.staleRunningTimeout = staleRunningTimeout;
+    this.maxValidationTime = maxValidationTime;
     this.validationExecutor = validationExecutor;
     this.capacity = new Semaphore(workers);
+    this.meterRegistry = meterRegistry;
   }
 
   @Scheduled(fixedDelayString = "${app.async.worker.poll-interval}")
@@ -104,11 +128,13 @@ public class ValidationWorker {
         // shared @Scheduled thread returns immediately and other schedulers are not starved.
         validationExecutor.execute(
             () -> {
+              deadlines.put(id, Instant.now().plus(maxValidationTime));
               try {
                 process(id);
               } catch (Exception e) {
                 log.error("worker error on job {}", id, e);
               } finally {
+                deadlines.remove(id);
                 capacity.release();
               }
             });
@@ -118,6 +144,47 @@ public class ValidationWorker {
         break;
       }
     }
+  }
+
+  /**
+   * Times out jobs THIS instance has been validating past their budget. Runs on a short fixed
+   * delay. Each over-deadline job is failed with job.timeout via a conditional bulk update (no-op
+   * if it already finished) and then forgotten so it is not timed out twice. The orphaned
+   * validation thread keeps draining (bounded by the DSS HTTP timeouts) and its eventual
+   * markCompleted/ markFailed no-ops because the job is no longer RUNNING.
+   */
+  @Scheduled(fixedDelayString = "${app.async.worker.budget-check-interval}")
+  public void enforceBudgets() {
+    Instant now = Instant.now();
+    for (Map.Entry<UUID, Instant> e : deadlines.entrySet()) {
+      if (now.isAfter(e.getValue())) {
+        UUID id = e.getKey();
+        // Remove the deadline ONLY after confirming the DB outcome. If markTimedOut throws
+        // (transient
+        // DB blip / lock), the entry stays so the next tick retries the timeout — otherwise the job
+        // would hang until the 30m stale-RUNNING sweep (requeue, not the deterministic
+        // job.timeout).
+        // We also remove on 0 (job already finalized by another path) so a dead deadline is
+        // dropped.
+        try {
+          if (repo.markTimedOut(id, now) == 1) {
+            deadlines.remove(id);
+            meterRegistry.counter("signverify.validation.timeout").increment();
+            log.warn("job {} timed out: exceeded validation budget of {}", id, maxValidationTime);
+          } else {
+            deadlines.remove(id);
+          }
+        } catch (RuntimeException ex) {
+          log.warn("markTimedOut for job {} failed; deadline kept for next tick", id, ex);
+        }
+      }
+    }
+  }
+
+  // Test seam: register an in-flight deadline without going through the executor. Package-private
+  // on purpose; not part of the production API.
+  void registerDeadlineForTest(UUID id, Instant deadline) {
+    deadlines.put(id, deadline);
   }
 
   // Deliberately NOT @Transactional (and it would be dead anyway: poll() self-invokes, bypassing
@@ -134,7 +201,13 @@ public class ValidationWorker {
     if (job == null) return;
 
     try {
+      long t0 = System.nanoTime();
+      enterPhase(id, ValidationPhase.STORAGE_READ);
       byte[] file = storage.read(job.getDocumentPath());
+      recordPhase(ValidationPhase.STORAGE_READ, t0);
+
+      long t1 = System.nanoTime();
+      enterPhase(id, ValidationPhase.POLICY_RESOLVE);
       var profile = profileService.getOrDefault(job.getProfileId());
       String policy = profile.getPolicyXml();
       if (job.getProfileOverrides() != null && !job.getProfileOverrides().isBlank()) {
@@ -142,10 +215,26 @@ public class ValidationWorker {
         policy = overrideApplier.apply(policy, ov);
       }
       Set<ReportType> reports = parseReports(job.getReportsRequested());
-      var result =
-          validator.validate(
-              new ValidationRequest(file, job.getDocumentFilename(), policy, reports));
+      recordPhase(ValidationPhase.POLICY_RESOLVE, t1);
+      // Capture the post-override policy into an effectively-final binding for the lambda below.
+      final String finalPolicy = policy;
+      final byte[] finalFile = file;
+      final Set<ReportType> finalReports = reports;
 
+      long t2 = System.nanoTime();
+      enterPhase(id, ValidationPhase.DSS_VALIDATE);
+      log.info("job {} entering DSS validation", id);
+      var result =
+          runTimed(
+              ValidationPhase.DSS_VALIDATE,
+              t2,
+              () ->
+                  validator.validate(
+                      new ValidationRequest(
+                          finalFile, job.getDocumentFilename(), finalPolicy, finalReports)));
+
+      long t3 = System.nanoTime();
+      enterPhase(id, ValidationPhase.RESULT_STORE);
       Map<String, Object> resultJson = new LinkedHashMap<>();
       resultJson.put("indication", result.indication());
       resultJson.put("subIndication", result.subIndication());
@@ -157,9 +246,10 @@ public class ValidationWorker {
         rep.put(e.getKey().name().toLowerCase(), om.readTree(e.getValue()));
       }
       resultJson.put("reports", rep);
-
       String resultPath =
           storage.storeResult(job.getId().toString(), om.writeValueAsBytes(resultJson));
+      recordPhase(ValidationPhase.RESULT_STORE, t3);
+
       // Finalize via a conditional bulk UPDATE (status=RUNNING), not save() on the stale entity:
       // polling GETs and the cleanup scheduler mutate this row concurrently, and save() would throw
       // ObjectOptimisticLockingFailureException on a stale @Version — losing the result. If the job
@@ -167,7 +257,14 @@ public class ValidationWorker {
       // outcome is intentionally dropped.
       int updated = repo.markCompleted(id, resultPath, Instant.now());
       if (updated == 0) {
-        log.info("job {} result dropped: no longer RUNNING at finalize", id);
+        // The job is no longer RUNNING (timed out by the watchdog, requeued by the stale sweep, or
+        // expired) while the validation drained. The result file was just written to disk; the DB
+        // row has result_path=null (this update was a no-op), so the cleanup scheduler's
+        // delete(resultPath) would receive null and leak the file forever. Delete it here.
+        storage.delete(resultPath);
+        log.info("job {} result dropped and file cleaned: no longer RUNNING at finalize", id);
+      } else {
+        log.info("job {} completed", id);
       }
     } catch (AppException ae) {
       if (Errors.DSS_UNAVAILABLE.equals(ae.getCode())
@@ -196,6 +293,35 @@ public class ValidationWorker {
     int updated = repo.markFailed(id, code, detail, Instant.now());
     if (updated == 0) {
       log.info("job {} failure not recorded: no longer RUNNING at finalize", id);
+    }
+  }
+
+  // Stamps the current validation phase via the version-neutral conditional update so a stuck job
+  // is diagnosable through GET /jobs/{id} (and directly in the DB) without grepping logs. Stamped
+  // unconditionally at phase entry: a gate keyed on elapsed-time-at-entry cannot help here, since a
+  // phase (STORAGE_READ on slow storage, DSS_VALIDATE on unreachable revocation) accrues its
+  // duration AFTER it is entered — exactly the stuck job we need to locate would never be stamped.
+  // The write is one small conditional UPDATE and the validation path is semaphore-gated to a
+  // handful of concurrent jobs, so the amplification is negligible.
+  private void enterPhase(UUID id, ValidationPhase phase) {
+    repo.setPhase(id, phase, Instant.now());
+  }
+
+  private void recordPhase(ValidationPhase phase, long startNanos) {
+    meterRegistry
+        .timer("signverify.validation.phase", "phase", phase.name())
+        .record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
+  }
+
+  // Runs a phase's work and records its duration even when it throws, so the DSS_VALIDATE timer
+  // captures slow/failed/timeout validations (not just the successful ones) — otherwise p95/p99
+  // would be systematically understated and hide exactly the slow cases the metric exists to find.
+  private <T> T runTimed(
+      ValidationPhase phase, long startNanos, java.util.function.Supplier<T> work) {
+    try {
+      return work.get();
+    } finally {
+      recordPhase(phase, startNanos);
     }
   }
 

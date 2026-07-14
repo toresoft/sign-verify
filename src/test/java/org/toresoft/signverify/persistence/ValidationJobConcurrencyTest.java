@@ -30,6 +30,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.toresoft.signverify.domain.model.JobStatus;
 import org.toresoft.signverify.domain.model.PrincipalType;
 import org.toresoft.signverify.domain.model.ValidationJob;
+import org.toresoft.signverify.domain.model.ValidationPhase;
 
 /**
  * Guards the optimistic-lock contract that keeps the worker's final outcome from being lost to a
@@ -165,6 +166,39 @@ class ValidationJobConcurrencyTest {
 
     ValidationJob finalized = repo.findById(seed.getId()).orElseThrow();
     assertThat(finalized.getStatus()).isEqualTo(JobStatus.COMPLETED);
+  }
+
+  @Test
+  void setPhase_updatesRunningJob_withoutBumpingVersion() {
+    ValidationJob seed = newRunningJob();
+    repo.save(seed);
+    em.flush();
+    em.clear();
+
+    // A copy loaded before the phase update (as the worker holds) must stay valid: setPhase must
+    // not bump @Version, so a later conditional finalize still lands.
+    ValidationJob workerCopy = repo.findById(seed.getId()).orElseThrow();
+    em.detach(workerCopy);
+
+    assertThat(repo.setPhase(seed.getId(), ValidationPhase.DSS_VALIDATE, Instant.now()))
+        .isEqualTo(1);
+    em.clear();
+
+    ValidationJob read = repo.findById(seed.getId()).orElseThrow();
+    assertThat(read.getPhase()).isEqualTo(ValidationPhase.DSS_VALIDATE);
+    assertThat(repo.markCompleted(workerCopy.getId(), "result.json", Instant.now())).isEqualTo(1);
+  }
+
+  @Test
+  void setPhase_isNoOp_whenJobNotRunning() {
+    ValidationJob seed = newRunningJob();
+    seed.setStatus(JobStatus.COMPLETED);
+    repo.save(seed);
+    em.flush();
+    em.clear();
+
+    assertThat(repo.setPhase(seed.getId(), ValidationPhase.DSS_VALIDATE, Instant.now())).isZero();
+    assertThat(repo.findById(seed.getId()).orElseThrow().getPhase()).isNull();
   }
 
   private ValidationJob newRunningJob() {

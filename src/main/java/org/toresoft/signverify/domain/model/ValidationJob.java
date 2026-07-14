@@ -114,6 +114,13 @@ public class ValidationJob {
   @Column(name = "last_accessed_at")
   private Instant lastAccessedAt;
 
+  @Enumerated(EnumType.STRING)
+  @Column(name = "phase", length = 20)
+  private ValidationPhase phase;
+
+  @Column(name = "phase_updated_at")
+  private Instant phaseUpdatedAt;
+
   public UUID getId() {
     return id;
   }
@@ -328,5 +335,21 @@ public class ValidationJob {
 
   public void setLastAccessedAt(Instant t) {
     this.lastAccessedAt = t;
+  }
+
+  public ValidationPhase getPhase() {
+    return phase;
+  }
+
+  public void setPhase(ValidationPhase phase) {
+    this.phase = phase;
+  }
+
+  public Instant getPhaseUpdatedAt() {
+    return phaseUpdatedAt;
+  }
+
+  public void setPhaseUpdatedAt(Instant phaseUpdatedAt) {
+    this.phaseUpdatedAt = phaseUpdatedAt;
   }
 }

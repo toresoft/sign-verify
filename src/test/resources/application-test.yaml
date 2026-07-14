@@ -56,6 +56,8 @@ app:
     worker:
       poll-interval: PT60S
       stale-running-timeout: PT30M
+      max-validation-time: PT5M
+      budget-check-interval: PT60S
   callback:
     timeout: PT5S
     allow-http: true

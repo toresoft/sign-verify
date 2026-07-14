@@ -43,11 +43,36 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ResourceLoader;
 
 @Configuration
-@EnableConfigurationProperties({TslProperties.class, ExtractionProperties.class})
+@EnableConfigurationProperties({
+  TslProperties.class,
+  ExtractionProperties.class,
+  DssHttpProperties.class
+})
 public class DssConfiguration {
 
   private static final org.slf4j.Logger log =
       org.slf4j.LoggerFactory.getLogger(DssConfiguration.class);
+
+  /** Clamps a Duration to a positive int millisecond value for the DSS loader setters. */
+  private static int toMillis(java.time.Duration d) {
+    long ms = d.toMillis();
+    if (ms <= 0) throw new IllegalArgumentException("DSS http timeout must be positive: " + d);
+    return (int) Math.min(ms, Integer.MAX_VALUE);
+  }
+
+  private static CommonsDataLoader timeoutBoundedLoader(DssHttpProperties props) {
+    CommonsDataLoader loader = new CommonsDataLoader();
+    loader.setTimeoutConnection(toMillis(props.getConnectTimeout()));
+    loader.setTimeoutConnectionRequest(toMillis(props.getConnectionRequestTimeout()));
+    loader.setTimeoutResponse(toMillis(props.getResponseTimeout()));
+    loader.setTimeoutSocket(toMillis(props.getSocketTimeout()));
+    return loader;
+  }
+
+  @Bean
+  public CommonsDataLoader revocationDataLoader(DssHttpProperties props) {
+    return timeoutBoundedLoader(props);
+  }
 
   @Bean
   public TrustedListsCertificateSource trustedListsCertificateSource() {
@@ -55,23 +80,24 @@ public class DssConfiguration {
   }
 
   @Bean
-  public CertificateVerifier certificateVerifier(TrustedListsCertificateSource tsl) {
+  public CertificateVerifier certificateVerifier(
+      TrustedListsCertificateSource tsl, CommonsDataLoader revocationDataLoader) {
     CommonCertificateVerifier cv = new CommonCertificateVerifier();
     cv.setTrustedCertSources(tsl);
-    cv.setAIASource(new DefaultAIASource());
-    cv.setOcspSource(new OnlineOCSPSource());
-    cv.setCrlSource(new OnlineCRLSource());
+    cv.setAIASource(new DefaultAIASource(revocationDataLoader));
+    cv.setOcspSource(new OnlineOCSPSource(revocationDataLoader));
+    cv.setCrlSource(new OnlineCRLSource(revocationDataLoader));
     cv.setRevocationFallback(true);
     return cv;
   }
 
   @Bean
-  public FileCacheDataLoader fileCacheDataLoader(@Value("${app.dss.cache-dir}") String cacheDir)
-      throws IOException {
+  public FileCacheDataLoader fileCacheDataLoader(
+      @Value("${app.dss.cache-dir}") String cacheDir, DssHttpProperties props) throws IOException {
     Path dir = Path.of(cacheDir);
     Files.createDirectories(dir);
     FileCacheDataLoader loader = new FileCacheDataLoader();
-    loader.setDataLoader(new CommonsDataLoader());
+    loader.setDataLoader(timeoutBoundedLoader(props));
     loader.setFileCacheDirectory(dir.toFile());
     loader.setCacheExpirationTime(0); // refresh sempre online quando chiamato
     return loader;
