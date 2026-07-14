@@ -2,7 +2,7 @@
 type: concept
 domain: engineering
 created: 2026-06-27
-updated: 2026-07-03
+updated: 2026-07-14
 sources:
   - sources/SRC-2026-06-27-002
   - sources/SRC-2026-06-27-003
@@ -24,6 +24,17 @@ PENDING ──► RUNNING ──► COMPLETED ──► DELIVERED ──► DELE
 ## Workers
 - **ValidationWorker** polls (default 5s) for `PENDING` jobs; **skips the cycle if the DSS [[concepts/circuit-breaker]] is OPEN**.
 - **Callback dispatch** polls `FOR UPDATE SKIP LOCKED` (default 10s, ShedLock-locked) for `COMPLETED`/`FAILED` jobs with a `callback_url`; HMAC-signs the body (default `HmacSHA256`); classifies responses into success (2xx) / non-retryable (4xx excl. 408/425/429) / retryable, with exponential backoff up to `max-attempts`.
+
+## Concurrency (bounded parallelism, not sequential)
+Jobs are **not** processed one at a time — each stage has its own bounded worker pool, sized by config, gated by a same-size `Semaphore` so in-flight work never exceeds pool capacity:
+
+| Path | Concurrency | Config key (default) | Source |
+|---|---|---|---|
+| Sync verification (`POST /api/v1/verifications`) | `Semaphore(maxConcurrent)`, no dedicated pool (runs on the request thread; `tryAcquire(2s)` else `429`) | `app.verify.max-concurrent` (**8**) | `VerificationService` |
+| Async validation (`ValidationWorker`) | Dedicated `ThreadPoolTaskExecutor` (`core=max=queue=workers`) + `Semaphore(workers)` gating submission | `app.async.workers` (**4**) | `ValidationExecutorConfig`, `ValidationWorker` |
+| Callback dispatch (`CallbackWorker`) | Same pattern: dedicated executor + `Semaphore(workers)` | `app.callback.workers` (**4**, env `APP_CALLBACK_WORKERS`) | `CallbackWorker`, `CallbackExecutorConfig` |
+
+The dedicated executor for validation exists specifically so a (potentially minutes-long) DSS validation never runs inline on the shared `@Scheduled` thread — that would starve every other scheduled task (callback dispatch, TSL refresh, cleanup sweeps). The executor's queue is only a small slack buffer for the release/submit race; the semaphore is the real concurrency gate, so the pool should never actually reject.
 
 ## Hardening (2026-07-03, tag 0.12.3)
 - `ValidationJob` has an **optimistic lock** (`@Version`, migration V4); bulk JPQL updates must bump it explicitly (`version = version + 1`) or the lock protects nothing.

@@ -1,5 +1,6 @@
 # Activity Log
 
+## 2026-07-14 research (code, not web) | "job processing: sequential or parallel?" → 0 sources ingested (question required reading local source, not web research — see below), 1 article updated (concepts/async-verification-jobs: new Concurrency section with exact pool/semaphore sizes from VerificationService, ValidationExecutorConfig, ValidationWorker, CallbackWorker, CallbackExecutorConfig, application.yaml)
 ## 2026-06-30 ll | "GitLab/GitHub CI release + vuln-scan pipeline hardening" → raw/notes/2026-06-30-ll-ci-release-pipeline-hardening.md (5 lessons, 0 articles updated)
 ## 2026-06-28 ingest | Quadro normativo firma digitale: eIDAS, CAD, DPCM 2013, ETSI, IETF (raw/notes/2026-06-28-quadro-normativo-firma-digitale-eidas.md)
 ## 2026-06-28 research | "European regulatory references for digital signatures" → 5 sources ingested, 4 articles compiled/updated
