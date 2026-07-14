@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -187,7 +188,13 @@ public class ValidationWorker {
     if (job == null) return;
 
     try {
+      long t0 = System.nanoTime();
+      enterPhase(id, ValidationPhase.STORAGE_READ);
       byte[] file = storage.read(job.getDocumentPath());
+      recordPhase(ValidationPhase.STORAGE_READ, t0);
+
+      long t1 = System.nanoTime();
+      enterPhase(id, ValidationPhase.POLICY_RESOLVE);
       var profile = profileService.getOrDefault(job.getProfileId());
       String policy = profile.getPolicyXml();
       if (job.getProfileOverrides() != null && !job.getProfileOverrides().isBlank()) {
@@ -195,10 +202,18 @@ public class ValidationWorker {
         policy = overrideApplier.apply(policy, ov);
       }
       Set<ReportType> reports = parseReports(job.getReportsRequested());
+      recordPhase(ValidationPhase.POLICY_RESOLVE, t1);
+
+      long t2 = System.nanoTime();
+      enterPhase(id, ValidationPhase.DSS_VALIDATE);
+      log.info("job {} entering DSS validation", id);
       var result =
           validator.validate(
               new ValidationRequest(file, job.getDocumentFilename(), policy, reports));
+      recordPhase(ValidationPhase.DSS_VALIDATE, t2);
 
+      long t3 = System.nanoTime();
+      enterPhase(id, ValidationPhase.RESULT_STORE);
       Map<String, Object> resultJson = new LinkedHashMap<>();
       resultJson.put("indication", result.indication());
       resultJson.put("subIndication", result.subIndication());
@@ -210,9 +225,10 @@ public class ValidationWorker {
         rep.put(e.getKey().name().toLowerCase(), om.readTree(e.getValue()));
       }
       resultJson.put("reports", rep);
-
       String resultPath =
           storage.storeResult(job.getId().toString(), om.writeValueAsBytes(resultJson));
+      recordPhase(ValidationPhase.RESULT_STORE, t3);
+
       // Finalize via a conditional bulk UPDATE (status=RUNNING), not save() on the stale entity:
       // polling GETs and the cleanup scheduler mutate this row concurrently, and save() would throw
       // ObjectOptimisticLockingFailureException on a stale @Version — losing the result. If the job
@@ -221,6 +237,8 @@ public class ValidationWorker {
       int updated = repo.markCompleted(id, resultPath, Instant.now());
       if (updated == 0) {
         log.info("job {} result dropped: no longer RUNNING at finalize", id);
+      } else {
+        log.info("job {} completed", id);
       }
     } catch (AppException ae) {
       if (Errors.DSS_UNAVAILABLE.equals(ae.getCode())
@@ -250,6 +268,18 @@ public class ValidationWorker {
     if (updated == 0) {
       log.info("job {} failure not recorded: no longer RUNNING at finalize", id);
     }
+  }
+
+  // Stamps the current validation phase via the version-neutral conditional update so a stuck job
+  // is diagnosable through GET /jobs/{id} (and directly in the DB) without grepping logs.
+  private void enterPhase(UUID id, ValidationPhase phase) {
+    repo.setPhase(id, phase, Instant.now());
+  }
+
+  private void recordPhase(ValidationPhase phase, long startNanos) {
+    meterRegistry
+        .timer("signverify.validation.phase", "phase", phase.name())
+        .record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
   }
 
   private Set<ReportType> parseReports(String csv) {

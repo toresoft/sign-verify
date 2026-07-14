@@ -24,6 +24,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -44,12 +45,14 @@ import java.util.concurrent.Executor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.toresoft.signverify.domain.exception.AppException;
 import org.toresoft.signverify.domain.exception.Errors;
 import org.toresoft.signverify.domain.model.JobStatus;
 import org.toresoft.signverify.domain.model.ValidationJob;
+import org.toresoft.signverify.domain.model.ValidationPhase;
 import org.toresoft.signverify.domain.model.VerificationProfile;
 import org.toresoft.signverify.domain.port.DocumentStoragePort;
 import org.toresoft.signverify.domain.port.ReportType;
@@ -229,6 +232,21 @@ class ValidationWorkerTest {
   // ---------------------------------------------------------------------
   // process(...) tests
   // ---------------------------------------------------------------------
+
+  @Test
+  void process_stampsPhasesInOrder() {
+    ValidationJob job = newPendingJob();
+    when(repo.findById(job.getId())).thenReturn(Optional.of(job));
+    stubHappyPath();
+
+    worker.process(job.getId());
+
+    InOrder ordered = inOrder(repo);
+    ordered.verify(repo).setPhase(eq(job.getId()), eq(ValidationPhase.STORAGE_READ), any());
+    ordered.verify(repo).setPhase(eq(job.getId()), eq(ValidationPhase.POLICY_RESOLVE), any());
+    ordered.verify(repo).setPhase(eq(job.getId()), eq(ValidationPhase.DSS_VALIDATE), any());
+    ordered.verify(repo).setPhase(eq(job.getId()), eq(ValidationPhase.RESULT_STORE), any());
+  }
 
   @Test
   void process_picksUpPendingJob_andCompletes() {
