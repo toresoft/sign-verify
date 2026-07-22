@@ -22,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.toresoft.signverify.domain.port.DocumentStoragePort;
 
@@ -36,6 +37,7 @@ import org.toresoft.signverify.domain.port.DocumentStoragePort;
  * </pre>
  */
 @Component
+@ConditionalOnProperty(name = "app.storage.type", havingValue = "filesystem", matchIfMissing = true)
 public class FilesystemDocumentStorageAdapter implements DocumentStoragePort {
 
   private static final String INPUT_PREFIX = "input-";

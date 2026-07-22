@@ -86,7 +86,13 @@ app:
     bootstrap-key-file: ${APP_SECURITY_BOOTSTRAP_KEY_FILE:/var/lib/sign-verify/bootstrap-api-key.txt}
     master-key: ${APP_SECRET_MASTER_KEY:}
   storage:
-    jobs-dir: ${APP_STORAGE_JOBS_DIR:/var/lib/sign-verify/jobs}
+    type: ${APP_STORAGE_TYPE:filesystem}          # filesystem | s3
+    jobs-dir: ${APP_STORAGE_JOBS_DIR:/var/lib/sign-verify/jobs}   # filesystem only
+    s3:
+      endpoint: ${APP_STORAGE_S3_ENDPOINT:}       # empty = native AWS endpoint
+      region: ${APP_STORAGE_S3_REGION:eu-south-1}
+      bucket: ${APP_STORAGE_S3_BUCKET:sign-verify-jobs}
+      path-style-access: ${APP_STORAGE_S3_PATH_STYLE:true}   # MinIO/Ceph require true
   dss:
     cache-dir: ${APP_DSS_CACHE_DIR:/var/lib/sign-verify/dss-cache}
     online-mode: true
