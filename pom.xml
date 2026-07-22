@@ -72,6 +72,9 @@
              higher-privileged view) is fixed in 3.1.5. The Jackson 2.x family carries the same fix
              and is pinned separately to 2.22.1 via the com.fasterxml jackson-bom import below. -->
         <jackson-bom.version>3.1.5</jackson-bom.version>
+        <!-- AWS SDK v2 is NOT managed by the Spring Boot parent; pin the BOM explicitly. Used by
+             the S3 DocumentStoragePort adapter (see app.storage.type=s3). -->
+        <awssdk.version>2.49.0</awssdk.version>
     </properties>
 
     <dependencyManagement>
@@ -108,6 +111,13 @@
                 <groupId>io.sentry</groupId>
                 <artifactId>sentry-bom</artifactId>
                 <version>${sentry.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>${awssdk.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -211,6 +221,12 @@
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <scope>runtime</scope>
+        </dependency>
+
+        <!-- S3-compatible object storage backing DocumentStoragePort (app.storage.type=s3). -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
         </dependency>
 
         <!-- DSS -->
@@ -423,6 +439,11 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>minio</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
