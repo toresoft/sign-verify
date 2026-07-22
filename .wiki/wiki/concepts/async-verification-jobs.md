@@ -51,6 +51,9 @@ The dedicated executor for validation exists specifically so a (potentially minu
 - Callback secret encrypted at rest (**AES-256-GCM**) with the master key.
 - Result retrieval `GET /api/v1/verifications/jobs/{jobId}` — owner or PRIVILEGED only (else `404`); `DELETED` → `410 Gone`.
 
+## Horizontal scaling (readiness, 2026-07-22)
+- **The pipeline is already multi-replica safe; the only blocker is shared storage.** The DB-CAS claim (`claimForProcessing`, `PENDING→RUNNING` conditional UPDATE — winner gets 1 row, losers 0) prevents double validation / duplicate callbacks across instances; ShedLock singletons the scheduled sweeps; trust is DB-mirrored ([[concepts/trusted-lists-certificate-source]]); the stale-RUNNING sweep recovers crash orphans. The one non-shared state is `FilesystemDocumentStorageAdapter` (local `/var/lib/sign-verify/jobs`), so a payload written by instance A is invisible to instance B that claims the job. Fix: an S3-compatible `DocumentStoragePort` adapter (see [[concepts/hexagonal-architecture]]). Autoscale on **queue depth** (`signverify.async.jobs.pending`), not CPU — DSS workers are network-I/O-bound. (From [[raw/notes/2026-07-22-ll-cve-bumps-scaling-s3-adapter]].)
+
 ## Related
 - [[entities/sign-verify-2]] · [[concepts/circuit-breaker]] · [[concepts/shedlock]]
 - [[concepts/validation-profiles]] · [[concepts/signature-validation]]
