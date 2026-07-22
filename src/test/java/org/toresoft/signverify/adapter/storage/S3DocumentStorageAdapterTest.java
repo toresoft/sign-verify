@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.core.ResponseBytes;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
@@ -156,7 +158,7 @@ class S3DocumentStorageAdapterTest {
   @Test
   void delete_nullPath_isNoOp() {
     adapter.delete(null);
-    verify(s3, org.mockito.Mockito.never()).deleteObject(any(DeleteObjectRequest.class));
+    verify(s3, never()).deleteObject(any(DeleteObjectRequest.class));
   }
 
   @Test
@@ -166,5 +168,38 @@ class S3DocumentStorageAdapterTest {
 
     // best-effort: must not throw
     adapter.delete("job-123/result.json");
+    assertThat(
+            meters
+                .get("signverify.storage.s3.operation")
+                .tags("operation", "delete", "outcome", "error")
+                .timer()
+                .count())
+        .isEqualTo(1);
+  }
+
+  @Test
+  void delete_networkError_isSwallowed() {
+    when(s3.deleteObject(any(DeleteObjectRequest.class)))
+        .thenThrow(SdkClientException.builder().message("connection reset").build());
+
+    // best-effort: network blips must not abort JobCleanupScheduler
+    adapter.delete("job-123/result.json");
+    assertThat(
+            meters
+                .get("signverify.storage.s3.operation")
+                .tags("operation", "delete", "outcome", "error")
+                .timer()
+                .count())
+        .isEqualTo(1);
+  }
+
+  @Test
+  void read_networkError_throwsIllegalStateWithParityMessage() {
+    when(s3.getObjectAsBytes(any(GetObjectRequest.class)))
+        .thenThrow(SdkClientException.builder().message("timeout").build());
+
+    assertThatThrownBy(() -> adapter.read("job-123/result.json"))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("read fail: job-123/result.json");
   }
 }

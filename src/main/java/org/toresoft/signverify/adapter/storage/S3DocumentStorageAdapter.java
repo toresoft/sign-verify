@@ -26,6 +26,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.toresoft.signverify.domain.port.DocumentStoragePort;
 import software.amazon.awssdk.core.ResponseBytes;
+import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
@@ -33,7 +34,6 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.S3Exception;
 
 /**
  * S3-compatible implementation of {@link DocumentStoragePort}. Keys mirror the filesystem layout:
@@ -100,7 +100,8 @@ public class S3DocumentStorageAdapter implements DocumentStoragePort {
       stop(sample, "read", "success");
       meters.summary(METRIC_BYTES, "direction", "download").record(bytes.length);
       return bytes;
-    } catch (S3Exception e) {
+    } catch (SdkException e) {
+      // S3Exception (service) and SdkClientException (network/timeout) both extend SdkException.
       stop(sample, "read", "error");
       throw new IllegalStateException("read fail: " + path, e);
     }
@@ -115,9 +116,10 @@ public class S3DocumentStorageAdapter implements DocumentStoragePort {
     try {
       s3.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(path).build());
       stop(sample, "delete", "success");
-    } catch (S3Exception e) {
+    } catch (SdkException e) {
       stop(sample, "delete", "error");
-      // best-effort delete; nothing actionable for the caller
+      // best-effort delete; nothing actionable for the caller. Catch SdkException (not only
+      // S3Exception) so network blips cannot abort JobCleanupScheduler mid-page.
       log.warn("s3 delete failed for key {}: {}", path, e.getMessage());
     }
   }
@@ -130,7 +132,7 @@ public class S3DocumentStorageAdapter implements DocumentStoragePort {
           RequestBody.fromBytes(content));
       stop(sample, operation, "success");
       meters.summary(METRIC_BYTES, "direction", "upload").record(content.length);
-    } catch (S3Exception e) {
+    } catch (SdkException e) {
       stop(sample, operation, "error");
       throw new IllegalStateException(operation + " fail", e);
     }
