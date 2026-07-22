@@ -93,6 +93,8 @@ app:
       region: ${APP_STORAGE_S3_REGION:eu-south-1}
       bucket: ${APP_STORAGE_S3_BUCKET:sign-verify-jobs}
       path-style-access: ${APP_STORAGE_S3_PATH_STYLE:true}   # MinIO/Ceph require true
+      access-key-id: ${APP_STORAGE_S3_ACCESS_KEY_ID:}        # empty = SDK default chain
+      secret-access-key: ${APP_STORAGE_S3_SECRET_ACCESS_KEY:} # empty = SDK default chain
   dss:
     cache-dir: ${APP_DSS_CACHE_DIR:/var/lib/sign-verify/dss-cache}
     online-mode: true
