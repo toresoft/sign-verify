@@ -30,6 +30,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.MinIOContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 import org.toresoft.signverify.domain.port.DocumentStoragePort;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -45,6 +47,7 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
  * (S3StorageConfiguration → S3DocumentStorageAdapter). Uses the maintained {@code pgsty/minio}
  * fork: upstream {@code minio/minio} was archived (Feb 2026) and is no longer CVE-patched.
  */
+@Testcontainers
 @SpringBootTest
 @ActiveProfiles("test")
 class S3DocumentStorageAdapterIT {
@@ -52,6 +55,7 @@ class S3DocumentStorageAdapterIT {
   private static final String BUCKET = "sign-verify-jobs";
   private static final String JOB_ID = "job-it-1";
 
+  @Container
   private static final MinIOContainer MINIO =
       new MinIOContainer(
           DockerImageName.parse("pgsty/minio:RELEASE.2026-06-18T00-00-00Z")
@@ -59,9 +63,9 @@ class S3DocumentStorageAdapterIT {
 
   @DynamicPropertySource
   static void storageProperties(DynamicPropertyRegistry registry) {
-    MINIO.start();
-    // Provision the bucket before Spring constructs S3DocumentStorageAdapter, whose constructor
-    // performs a fail-fast headBucket.
+    // @Container has already started MINIO by the time this runs. Provision the bucket before
+    // Spring
+    // constructs S3DocumentStorageAdapter, whose constructor performs a fail-fast headBucket.
     try (S3Client bootstrap =
         S3Client.builder()
             .endpointOverride(URI.create(MINIO.getS3URL()))
@@ -73,20 +77,24 @@ class S3DocumentStorageAdapterIT {
             .build()) {
       bootstrap.createBucket(CreateBucketRequest.builder().bucket(BUCKET).build());
     }
+    // Feed the MinIO credentials to the SDK default chain (SystemPropertyCredentialsProvider)
+    // rather
+    // than to app.storage.s3.* properties: production must never carry credentials in app config,
+    // so
+    // S3StorageConfiguration only reads the default chain. Cleared in tearDown().
+    System.setProperty("aws.accessKeyId", MINIO.getUserName());
+    System.setProperty("aws.secretAccessKey", MINIO.getPassword());
     registry.add("app.storage.type", () -> "s3");
     registry.add("app.storage.s3.endpoint", MINIO::getS3URL);
     registry.add("app.storage.s3.region", () -> "us-east-1");
     registry.add("app.storage.s3.bucket", () -> BUCKET);
     registry.add("app.storage.s3.path-style-access", () -> "true");
-    registry.add("app.storage.s3.access-key-id", MINIO::getUserName);
-    registry.add("app.storage.s3.secret-access-key", MINIO::getPassword);
   }
 
   @AfterAll
-  static void stopMinio() {
-    if (MINIO.isRunning()) {
-      MINIO.stop();
-    }
+  static void tearDown() {
+    System.clearProperty("aws.accessKeyId");
+    System.clearProperty("aws.secretAccessKey");
   }
 
   @Autowired private DocumentStoragePort storage;

@@ -92,9 +92,10 @@ app:
       endpoint: ${APP_STORAGE_S3_ENDPOINT:}       # empty = native AWS endpoint
       region: ${APP_STORAGE_S3_REGION:eu-south-1}
       bucket: ${APP_STORAGE_S3_BUCKET:sign-verify-jobs}
-      path-style-access: ${APP_STORAGE_S3_PATH_STYLE:true}   # MinIO/Ceph require true
-      access-key-id: ${APP_STORAGE_S3_ACCESS_KEY_ID:}        # empty = SDK default chain
-      secret-access-key: ${APP_STORAGE_S3_SECRET_ACCESS_KEY:} # empty = SDK default chain
+      # false = virtual-hosted style (required by native AWS S3). Set true for MinIO/Ceph.
+      path-style-access: ${APP_STORAGE_S3_PATH_STYLE:false}
+      # Credentials come from the SDK default chain (env AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY,
+      # IAM roles/IRSA, profiles) — never from app config, so no secret lives in committed YAML.
   dss:
     cache-dir: ${APP_DSS_CACHE_DIR:/var/lib/sign-verify/dss-cache}
     online-mode: true

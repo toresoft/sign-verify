@@ -40,11 +40,6 @@ import org.toresoft.signverify.domain.port.DocumentStoragePort;
 @ConditionalOnProperty(name = "app.storage.type", havingValue = "filesystem", matchIfMissing = true)
 public class FilesystemDocumentStorageAdapter implements DocumentStoragePort {
 
-  private static final String INPUT_PREFIX = "input-";
-  private static final String RESULT_NAME = "result.json";
-  private static final String DEFAULT_INPUT_NAME = "file";
-  private static final String SAFE_NAME_REGEX = "[^a-zA-Z0-9._-]";
-
   private final Path baseDir;
 
   public FilesystemDocumentStorageAdapter(@Value("${app.storage.jobs-dir}") String dir)
@@ -55,13 +50,12 @@ public class FilesystemDocumentStorageAdapter implements DocumentStoragePort {
 
   @Override
   public String storeInput(String jobId, String filename, byte[] content) {
-    String name = (filename == null) ? DEFAULT_INPUT_NAME : safeName(filename);
-    return write(jobId, INPUT_PREFIX + name, content);
+    return write(jobId, StorageKeys.inputLeaf(filename), content);
   }
 
   @Override
   public String storeResult(String jobId, byte[] content) {
-    return write(jobId, RESULT_NAME, content);
+    return write(jobId, StorageKeys.RESULT_NAME, content);
   }
 
   @Override
@@ -108,9 +102,5 @@ public class FilesystemDocumentStorageAdapter implements DocumentStoragePort {
     } catch (IOException e) {
       throw new IllegalStateException("write fail", e);
     }
-  }
-
-  private static String safeName(String filename) {
-    return filename.replaceAll(SAFE_NAME_REGEX, "_");
   }
 }

@@ -52,11 +52,6 @@ public class S3DocumentStorageAdapter implements DocumentStoragePort {
 
   private static final Logger log = LoggerFactory.getLogger(S3DocumentStorageAdapter.class);
 
-  private static final String INPUT_PREFIX = "input-";
-  private static final String RESULT_NAME = "result.json";
-  private static final String DEFAULT_INPUT_NAME = "file";
-  private static final String SAFE_NAME_REGEX = "[^a-zA-Z0-9._-]";
-
   private static final String METRIC_OP = "signverify.storage.s3.operation";
   private static final String METRIC_BYTES = "signverify.storage.s3.bytes";
 
@@ -76,15 +71,14 @@ public class S3DocumentStorageAdapter implements DocumentStoragePort {
 
   @Override
   public String storeInput(String jobId, String filename, byte[] content) {
-    String name = (filename == null) ? DEFAULT_INPUT_NAME : safeName(filename);
-    String key = jobId + "/" + INPUT_PREFIX + name;
+    String key = jobId + "/" + StorageKeys.inputLeaf(filename);
     put("put_input", key, content);
     return key;
   }
 
   @Override
   public String storeResult(String jobId, byte[] content) {
-    String key = jobId + "/" + RESULT_NAME;
+    String key = jobId + "/" + StorageKeys.RESULT_NAME;
     put("put_result", key, content);
     return key;
   }
@@ -146,9 +140,5 @@ public class S3DocumentStorageAdapter implements DocumentStoragePort {
     if (key == null || key.isBlank() || key.startsWith("/")) {
       throw new IllegalArgumentException("invalid storage key: " + key);
     }
-  }
-
-  private static String safeName(String filename) {
-    return filename.replaceAll(SAFE_NAME_REGEX, "_");
   }
 }
