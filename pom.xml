@@ -60,6 +60,18 @@
              the current actively-developed release. Safe to bump here because logback-spring.xml
              uses no Janino-based conditional (<if>/<then>/<else>) processing, which 1.5.37 removed. -->
         <logback.version>1.5.38</logback.version>
+        <!-- pgjdbc is managed by the Spring Boot parent (postgresql.version=42.7.11). Override the
+             property to a patched release: CVE-2026-54291 (silent SCRAM channel-binding downgrade —
+             channelBinding=require is not enforced, defeating the MITM protection it promises)
+             affects 42.7.4–42.7.11 and is fixed in 42.7.12. Bumped to 42.7.13, the current release. -->
+        <postgresql.version>42.7.13</postgresql.version>
+        <!-- Jackson 3 (tools.jackson) is managed by the Spring Boot parent, which imports
+             tools.jackson:jackson-bom at jackson-bom.version=3.1.4. Override the property to a
+             patched release: CVE-2026-59889 (@JsonView bypassed for @JsonUnwrapped container
+             properties on deserialization, letting crafted input write fields restricted to a
+             higher-privileged view) is fixed in 3.1.5. The Jackson 2.x family carries the same fix
+             and is pinned separately to 2.22.1 via the com.fasterxml jackson-bom import below. -->
+        <jackson-bom.version>3.1.5</jackson-bom.version>
     </properties>
 
     <dependencyManagement>
