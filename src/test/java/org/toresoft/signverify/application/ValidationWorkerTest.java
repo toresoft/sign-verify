@@ -45,9 +45,11 @@ import java.util.concurrent.Executor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
 import org.toresoft.signverify.domain.exception.AppException;
 import org.toresoft.signverify.domain.exception.Errors;
 import org.toresoft.signverify.domain.model.JobStatus;
@@ -560,5 +562,87 @@ class ValidationWorkerTest {
 
     assertThat(captured).hasSize(2);
     verify(repo, times(1)).findPickablePending(eq(MAX_PICKUP_ATTEMPTS), any(), any());
+  }
+
+  @Test
+  void poll_selectsMoreCandidatesThanFreeSlots() {
+    // Selecting exactly `free` rows makes every instance race for the identical head of the queue
+    // (same ORDER BY, same limit). A wider window is what gives the shuffle something to spread.
+    when(circuit.getState()).thenReturn(CircuitBreaker.State.CLOSED);
+    when(repo.findPickablePending(eq(MAX_PICKUP_ATTEMPTS), any(), any())).thenReturn(List.of());
+    ArgumentCaptor<Pageable> page = ArgumentCaptor.forClass(Pageable.class);
+
+    worker.poll();
+
+    verify(repo).findPickablePending(eq(MAX_PICKUP_ATTEMPTS), any(), page.capture());
+    assertThat(page.getValue().getPageSize()).isGreaterThan(WORKERS);
+  }
+
+  @Test
+  void poll_triesAnotherCandidate_whenClaimIsLost() {
+    // A single worker slot, two candidates, and every claim lost to another instance: the worker
+    // must walk the candidate list within this poll instead of giving up after the first loss and
+    // idling until the next poll-interval.
+    ValidationWorker singleSlot =
+        new ValidationWorker(
+            repo,
+            storage,
+            profileService,
+            applier,
+            validator,
+            om,
+            registry,
+            MAX_PICKUP_ATTEMPTS,
+            java.time.Duration.ofMinutes(30),
+            java.time.Duration.ofMinutes(5),
+            Runnable::run,
+            1,
+            meterRegistry);
+    when(circuit.getState()).thenReturn(CircuitBreaker.State.CLOSED);
+    when(repo.findPickablePending(eq(MAX_PICKUP_ATTEMPTS), any(), any()))
+        .thenReturn(List.of(newPendingJob(), newPendingJob()));
+    when(repo.claimForProcessing(any(), any())).thenReturn(0);
+
+    singleSlot.poll();
+
+    verify(repo, times(2)).claimForProcessing(any(), any());
+    verify(validator, never()).validate(any(ValidationRequest.class));
+  }
+
+  @Test
+  void poll_processesTheSecondCandidate_whenTheFirstClaimIsLost() {
+    ValidationJob lost = newPendingJob();
+    ValidationJob won = newPendingJob();
+    ValidationWorker singleSlot =
+        new ValidationWorker(
+            repo,
+            storage,
+            profileService,
+            applier,
+            validator,
+            om,
+            registry,
+            MAX_PICKUP_ATTEMPTS,
+            java.time.Duration.ofMinutes(30),
+            java.time.Duration.ofMinutes(5),
+            Runnable::run,
+            1,
+            meterRegistry);
+    when(circuit.getState()).thenReturn(CircuitBreaker.State.CLOSED);
+    when(repo.findPickablePending(eq(MAX_PICKUP_ATTEMPTS), any(), any()))
+        .thenReturn(List.of(lost, won));
+    // The candidate order is randomised on purpose, so the outcome must hold either way: the job
+    // whose claim can be won is the one that gets validated, exactly once. When the shuffle puts
+    // the winnable job first the losing stub is simply never reached, hence lenient().
+    lenient().when(repo.claimForProcessing(eq(lost.getId()), any())).thenReturn(0);
+    when(repo.claimForProcessing(eq(won.getId()), any())).thenReturn(1);
+    when(repo.findById(won.getId())).thenReturn(Optional.of(won));
+    stubHappyPath();
+
+    singleSlot.poll();
+
+    verify(repo).findById(won.getId());
+    verify(repo, never()).findById(lost.getId());
+    verify(validator, times(1)).validate(any(ValidationRequest.class));
   }
 }

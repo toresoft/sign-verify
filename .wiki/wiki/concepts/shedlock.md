@@ -15,7 +15,7 @@ A library providing **distributed scheduler locking** so that scheduled tasks ru
 
 ## Uses in sign-verify-2
 - **TSL refresh scheduler** — only one instance performs a [[concepts/tsl-hot-swap-refresh]] (`@SchedulerLock`).
-- **Callback dispatch worker** — single dispatcher polls `FOR UPDATE SKIP LOCKED` for callback delivery.
+- **Callback dispatch worker** — `@SchedulerLock(name = "callbackDispatch")` makes a single instance poll for due callbacks; each one is then taken with a conditional claim (`claimCallback` parks `next_callback_at` into the future) so the dispatch itself can be offloaded to an executor without holding the lock for the whole HTTP call. **Correction (2026-07-23): this is not `FOR UPDATE SKIP LOCKED`** — that phrase was wrong in an earlier revision of this page; `SKIP LOCKED` appears nowhere in the codebase.
 - **Cleanup/retention schedulers** — single execution of expired-job cleanup.
 
 Backed by the `shedlock` table (managed by the library), which lives in the shared PostgreSQL
