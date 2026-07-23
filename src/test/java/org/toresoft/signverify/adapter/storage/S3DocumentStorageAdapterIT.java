@@ -46,8 +46,15 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
  * Round-trip against a real S3-compatible server through the full Spring wiring
  * (S3StorageConfiguration → S3DocumentStorageAdapter). Uses the maintained {@code pgsty/minio}
  * fork: upstream {@code minio/minio} was archived (Feb 2026) and is no longer CVE-patched.
+ *
+ * <p>{@code disabledWithoutDocker = true}: the whole class needs a live Docker daemon for the MinIO
+ * container. The CI {@code test} stage runs {@code mvn verify} without a Docker service (only
+ * {@code package:docker} has dind), so without this guard JUnit would error the build there instead
+ * of skipping. The S3 adapter's logic is still exercised in CI by the mocked {@code
+ * S3DocumentStorageAdapterTest} and {@code StorageAdapterWiringTest}; this IT adds the real
+ * round-trip wherever Docker is available (developer machines, dind runners).
  */
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest
 @ActiveProfiles("test")
 class S3DocumentStorageAdapterIT {
