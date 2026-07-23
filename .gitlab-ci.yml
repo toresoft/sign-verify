@@ -217,8 +217,13 @@ security:fs-scan:
   variables:
     TRIVY_CACHE_DIR: "$CI_PROJECT_DIR/.trivy-cache"
   script:
+    # --offline-scan: don't resolve pom.xml versions against Maven Central. The shared
+    # SaaS runner IP gets rate-limited (HTTP 429) doing that, which crashed the scan;
+    # BOM-managed (version-less) deps aren't resolvable offline anyway, and Java SCA is
+    # already covered by security:dependency-scan (OSV over the SBOM). What remains here
+    # — misconfig scanning of the Dockerfile/config — is unaffected.
     - trivy fs --no-progress --scanners vuln,misconfig --severity HIGH,CRITICAL
-      --ignore-unfixed --exit-code 1 --output trivy-fs-report.txt .
+      --offline-scan --ignore-unfixed --exit-code 1 --output trivy-fs-report.txt .
   after_script:
     - cat trivy-fs-report.txt 2>/dev/null || true
   artifacts:
