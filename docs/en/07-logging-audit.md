@@ -1,6 +1,6 @@
 # 6. Logging and audit
 
-← [6. File extraction](06-file-extraction.md) · [Index](README.md)
+← [5. File extraction](06-file-extraction.md) · [Index](README.md) · → [7. Horizontal scaling](08-horizontal-scaling.md)
 
 Service observability rests on three pillars: **structured application logs**,
 **metrics** (Actuator/Prometheus) and a persistent **audit log** queryable via

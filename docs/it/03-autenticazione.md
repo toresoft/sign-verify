@@ -1,6 +1,6 @@
 # 2. Autenticazione e autorizzazione
 
-← [2. Docker](02-docker.md) · [Indice](README.md) · → [4. Trusted Certificates](04-trusted-certificates.md)
+← [1b. Docker e configurazione](02-docker.md) · [Indice](README.md) · → [3. API dei certificati di fiducia](04-trusted-certificates.md)
 
 - [2.1 Panoramica](#21-panoramica)
 - [2.2 Uso delle API key](#22-uso-delle-api-key)
@@ -8,9 +8,10 @@
 
 ## 2.1 Panoramica
 
-Il servizio è **stateless** (nessuna sessione, CSRF disabilitato perché è una
-API pura). Supporta **due meccanismi di autenticazione**, applicati nello stesso
-filter chain:
+Il servizio non conserva stato tra una richiesta e l'altra: non ci sono sessioni
+e la protezione CSRF è disabilitata perché si tratta di una API pura. I
+**meccanismi di autenticazione** sono due e vengono applicati nella stessa
+catena di filtri:
 
 1. **API key**: header `X-API-Key: sv_<prefix>_<body>` (sempre attiva).
 2. **OAuth2 JWT**: header `Authorization: Bearer <jwt>` (attivabile con
@@ -18,13 +19,13 @@ filter chain:
 
 ```mermaid
 flowchart TD
-    R[Richiesta HTTP] --> AK{Header X-API-Key\npresente?}
-    AK -- sì --> V[ApiKeyAuthenticationFilter\nverifica prefix + bcrypt]
-    V -- valida --> CTX[SecurityContext\nPrincipal API_KEY]
-    V -- non valida --> U401[401 problem+json]
-    AK -- no --> O{OAuth abilitato\ne Bearer presente?}
-    O -- sì --> J[Resource Server\nvalida JWT + issuer]
-    J -- valido --> CTX2[SecurityContext\nPrincipal OAUTH_USER]
+    R[Richiesta HTTP] --> AK{"Header X-API-Key\npresente?"}
+    AK -- sì --> V["ApiKeyAuthenticationFilter\nverifica prefisso e hash bcrypt"]
+    V -- valida --> CTX["SecurityContext\nPrincipal API_KEY"]
+    V -- non valida --> U401["401 problem+json"]
+    AK -- no --> O{"OAuth abilitato\ne Bearer presente?"}
+    O -- sì --> J["Resource Server\nvalida JWT e issuer"]
+    J -- valido --> CTX2["SecurityContext\nPrincipal OAUTH_USER"]
     J -- non valido --> U401
     O -- no --> ANON{Endpoint pubblico?}
     ANON -- sì --> OK[Consentito]
@@ -49,22 +50,23 @@ flowchart TD
 - `/actuator/health/**`, `/actuator/prometheus`
 - `/v3/api-docs/**`, `/swagger-ui/**`
 
-`/actuator/info` (dettagli build + git) ora **richiede autenticazione**.
-`/actuator/health` è pubblico ma agli anonimi mostra solo lo `status` aggregato;
-i dettagli per-componente (conteggi TSL, coda job, DB, disco) sono visibili solo
-a un chiamante autenticato **PRIVILEGED** (`show-details: when-authorized`).
+`/actuator/info`, che espone i dettagli della compilazione e di git,
+**richiede autenticazione**. `/actuator/health` è pubblico, ma ai chiamanti
+anonimi mostra solo lo `status` complessivo: i dettagli dei singoli componenti
+(conteggi delle liste di fiducia, coda dei job, database, disco) sono visibili
+solo a un chiamante autenticato **PRIVILEGED** (`show-details: when-authorized`).
 
 Tutto il resto richiede autenticazione (`anyRequest().authenticated()`).
 Un fallimento produce **401** con corpo `application/problem+json`. Una
-`X-API-Key` non valida è rifiutata direttamente dal filtro (senza
-`detail`/`instance`):
+`X-API-Key` non valida viene rifiutata direttamente dal filtro, senza `detail`
+né `instance`:
 
 ```json
 { "type": "urn:signverify:error:auth.invalid-token", "title": "Unauthorized", "status": 401 }
 ```
 
-Un `Authorization: Bearer` assente/non valido (percorso OAuth) passa invece
-dal gestore generico, che aggiunge `detail` e `instance`:
+Un `Authorization: Bearer` assente o non valido, cioè sul percorso OAuth, passa
+invece dal gestore generico, che aggiunge `detail` e `instance`:
 
 ```json
 {
@@ -82,11 +84,11 @@ Ogni richiesta autenticata produce un `Principal` con un ruolo:
 
 | Ruolo | Authority Spring | Significato |
 |-------|------------------|-------------|
-| `PRIVILEGED` | `ROLE_PRIVILEGED` | Accesso amministrativo (gestione chiavi, audit, refresh TSL) |
-| `STANDARD` | `ROLE_STANDARD` | Operazioni di verifica/estrazione |
+| `PRIVILEGED` | `ROLE_PRIVILEGED` | Accesso amministrativo: gestione delle chiavi, audit, aggiornamento delle liste di fiducia |
+| `STANDARD` | `ROLE_STANDARD` | Operazioni di verifica ed estrazione |
 
-Gli endpoint amministrativi sono protetti via `@EnableMethodSecurity` +
-`@PreAuthorize("hasRole('PRIVILEGED')")`. Esempi: `/api/v1/audit-log`,
+Gli endpoint amministrativi sono protetti con `@EnableMethodSecurity` e
+`@PreAuthorize("hasRole('PRIVILEGED')")`. Per esempio `/api/v1/audit-log` e
 `POST /api/v1/tsl/refresh`.
 
 Tipi di `Principal` (`PrincipalType`): `API_KEY`, `OAUTH_USER`, `SYSTEM`.
@@ -108,37 +110,39 @@ Tipi di `Principal` (`PrincipalType`): `API_KEY`, `OAUTH_USER`, `SYSTEM`.
 ### Formato
 
 ```
-sv_<prefix>_<body>
-   └─8 char─┘ └─ corpo casuale (base64url, 36 byte) ─┘
+sv_<prefisso>_<corpo>
+   └─8 caratteri─┘ └─ corpo casuale (base64url, 36 byte) ─┘
 ```
 
-- Il **prefix** (8 caratteri) è indicizzato e **univoco**: serve a individuare
+- Il **prefisso**, 8 caratteri, è indicizzato e **univoco**: serve a individuare
   la chiave senza scorrere tutta la tabella.
-- Il **body** completo è verificato con **bcrypt**: nel database è memorizzato
-  solo l'hash, mai il valore in chiaro.
-- Una chiave può avere una **scadenza** (`expiresAt`) opzionale.
+- Il **corpo** completo viene verificato con **bcrypt**: nel database resta solo
+  l'hash, mai il valore in chiaro.
+- Una chiave può avere una **scadenza** facoltativa (`expiresAt`).
 
-### Chiave di bootstrap (primo avvio)
+### Chiave iniziale (primo avvio)
 
-Al primo avvio, se non esiste alcuna chiave `PRIVILEGED` **abilitata**, viene
-generata una chiave di bootstrap (`name = bootstrap-<epoch>`, `role = PRIVILEGED`,
-`bootstrap = true`) e scritta nel file `APP_SECURITY_BOOTSTRAP_KEY_FILE`
-(permessi `0600`).
+Al primo avvio, se non esiste alcuna chiave `PRIVILEGED` **abilitata**, ne viene
+generata una iniziale (`name = bootstrap-<epoch>`, `role = PRIVILEGED`,
+`bootstrap = true`), scritta nel file indicato da
+`APP_SECURITY_BOOTSTRAP_KEY_FILE` con permessi `0600`.
 
 ```bash
-# In container compose di sviluppo:
+# Nel container dell'ambiente di sviluppo:
 docker compose exec app cat /var/lib/sign-verify/bootstrap-api-key.txt
 ```
 
 Recuperare la chiave, creare le proprie chiavi operative, poi **eliminare il
-file** di bootstrap.
+file**.
 
-### Invariante "ultima chiave privilegiata"
+### La regola dell'ultima chiave privilegiata
 
-Non è possibile eliminare **né disabilitare** l'ultima chiave `PRIVILEGED`
-abilitata: l'operazione fallisce con **409 Conflict**
-(`cannot remove last enabled privileged api key`). Questo previene il lock-out.
-Il controllo usa un lock pessimistico per evitare race condition (TOCTOU).
+L'ultima chiave `PRIVILEGED` abilitata non si può eliminare **né disabilitare**:
+l'operazione fallisce con **409 Conflict**
+(`cannot remove last enabled privileged api key`). Serve a non restare chiusi
+fuori dal servizio. Il controllo usa un blocco pessimistico sulla riga, così due
+richieste contemporanee non possono aggirarlo passando entrambe dal controllo
+prima che l'altra scriva.
 
 ```json
 {
@@ -154,11 +158,11 @@ Il controllo usa un lock pessimistico per evitare race condition (TOCTOU).
 
 Tutti gli endpoint sotto `/api/v1/api-keys` richiedono ruolo `PRIVILEGED`.
 
-| Metodo | Path | Operazione |
-|--------|------|-----------|
-| `GET` | `/api/v1/api-keys?page=&size=` | Elenco (paginato, vedi [Convenzioni](README.md#paginazione)) |
+| Metodo | Percorso | Operazione |
+|--------|----------|-----------|
+| `GET` | `/api/v1/api-keys?page=&size=` | Elenco paginato (vedi [Convenzioni](README.md#paginazione)) |
 | `POST` | `/api/v1/api-keys` | Crea una chiave |
-| `PATCH` | `/api/v1/api-keys/{id}` | Abilita/disabilita (`{"enabled": false}`) |
+| `PATCH` | `/api/v1/api-keys/{id}` | Abilita o disabilita (`{"enabled": false}`) |
 | `DELETE` | `/api/v1/api-keys/{id}` | Elimina |
 
 **Creazione:**
@@ -181,8 +185,8 @@ Risposta `201`: il valore in chiaro `plaintextKey` è restituito una sola volta.
 }
 ```
 
-Campi di `ApiKeyCreateRequest`: `name` (1-120 char, univoco), `role`
-(`PRIVILEGED`/`STANDARD`), `expiresAt` (opzionale).
+Campi di `ApiKeyCreateRequest`: `name` (da 1 a 120 caratteri, univoco), `role`
+(`PRIVILEGED` o `STANDARD`), `expiresAt` (facoltativo).
 
 ### Uso di una chiave in una richiesta
 
@@ -192,20 +196,21 @@ curl -sS -X POST http://localhost:8080/api/v1/verifications \
   -F file=@documento.pdf.p7m
 ```
 
-Il filtro rifiuta la chiave (401, `auth.invalid-token`) se: formato non valido,
-prefix sconosciuto, chiave disabilitata, chiave scaduta, o hash non
-corrispondente.
+Il filtro rifiuta la chiave con 401 (`auth.invalid-token`) se il formato non è
+valido, se il prefisso è sconosciuto, se la chiave è disabilitata o scaduta,
+oppure se l'hash non corrisponde.
 
 ## 2.3 Configurazione e uso di OAuth
 
-> OAuth2 (resource server JWT) è implementato. È controllato dal flag
-> `app.security.oauth.enabled` (default `true` nel profilo di produzione,
-> `false` nei profili `dev`/`docker`).
+> OAuth2 con JWT è implementato e si attiva con
+> `app.security.oauth.enabled`: `true` nel profilo di produzione, `false` nei
+> profili `dev` e `docker`.
 
 ### Come funziona
 
-Quando abilitato, il servizio agisce da **OAuth2 Resource Server**: valida i JWT
-in ingresso contro l'**issuer** configurato e ne deriva il `Principal`.
+Quando è abilitato, il servizio si comporta da **OAuth2 Resource Server**:
+convalida i JWT in arrivo rispetto all'**issuer** configurato e ne ricava il
+`Principal`.
 
 ```mermaid
 sequenceDiagram
@@ -217,25 +222,25 @@ sequenceDiagram
     box rgb(238,241,245) sign-verify
     participant S as sign-verify
     end
-    C->>IdP: ottiene access token (JWT)
+    C->>IdP: ottiene un token di accesso (JWT)
     IdP-->>C: JWT firmato
     C->>S: GET /api/v1/...<br/>Authorization: Bearer <JWT>
-    S->>IdP: scarica JWKS (issuer-uri/.well-known)
-    S->>S: valida firma, scadenza, issuer
-    S->>S: OAuthPrincipalConverter<br/>estrae sub + ruoli dal claim
+    S->>IdP: scarica le chiavi JWKS (issuer-uri/.well-known)
+    S->>S: convalida firma, scadenza e issuer
+    S->>S: OAuthPrincipalConverter<br/>estrae sub e ruoli dal claim
     S-->>C: 200 / 401 / 403
 ```
 
 ### Configurazione
 
-| Parametro | Env | Default | Descrizione |
-|-----------|-----|---------|-------------|
+| Parametro | Variabile d'ambiente | Predefinito | Descrizione |
+|-----------|----------------------|-------------|-------------|
 | `app.security.oauth.enabled` | `APP_SECURITY_OAUTH_ENABLED` | `true` | Attiva il resource server |
-| `spring…jwt.issuer-uri` | `APP_SECURITY_OAUTH_ISSUER_URI` | _(vuoto)_ | URI dell'issuer (per scoprire JWKS/metadata) |
-| `app.security.oauth.role-claim` | `APP_SECURITY_OAUTH_ROLE_CLAIM` | `roles` | Claim del JWT contenente i ruoli |
+| `spring…jwt.issuer-uri` | `APP_SECURITY_OAUTH_ISSUER_URI` | _(vuoto)_ | URI dell'issuer, da cui si ricavano chiavi JWKS e metadati |
+| `app.security.oauth.role-claim` | `APP_SECURITY_OAUTH_ROLE_CLAIM` | `roles` | Claim del JWT che contiene i ruoli |
 | `app.security.oauth.privileged-values` | `APP_SECURITY_OAUTH_PRIVILEGED_VALUES` | `admin,privileged` | Valori del claim che concedono `PRIVILEGED` |
 
-Esempio (Keycloak/generico OIDC):
+Esempio con Keycloak o un generico provider OIDC:
 
 ```bash
 APP_SECURITY_OAUTH_ENABLED=true
@@ -251,11 +256,12 @@ APP_SECURITY_OAUTH_PRIVILEGED_VALUES=admin,sign-admin
 | Campo del principal | Origine |
 |----------------------|---------|
 | `id` | `sub` del token |
-| `displayName` | claim `preferred_username` (fallback su `sub`) |
-| `ruolo` | `PRIVILEGED` se il claim `role-claim` contiene almeno uno dei `privileged-values`, altrimenti `STANDARD` |
+| `displayName` | claim `preferred_username`; se manca, si ripiega su `sub` |
+| `ruolo` | `PRIVILEGED` se il claim indicato da `role-claim` contiene almeno uno dei `privileged-values`, altrimenti `STANDARD` |
 
-Il claim dei ruoli può essere una lista (es. `["admin","user"]`) oppure una
-stringa separata da spazi/virgole (es. `"admin user"`).
+Il claim dei ruoli può essere un elenco, per esempio `["admin","user"]`, oppure
+una stringa con i valori separati da spazi o virgole, per esempio
+`"admin user"`.
 
 ### Uso
 
@@ -267,8 +273,8 @@ curl -sS -X POST http://localhost:8080/api/v1/verifications \
 
 ### API key e OAuth insieme
 
-Entrambi i meccanismi coesistono. Il filtro API key è valutato **prima** della
-catena OAuth: se è presente un `X-API-Key` valido, il principal è di tipo
+I due meccanismi convivono. Il filtro delle API key viene valutato **prima**
+della catena OAuth: se arriva un `X-API-Key` valido il principal è di tipo
 `API_KEY`; altrimenti, se OAuth è abilitato e arriva un Bearer valido, il
-principal è `OAUTH_USER`. Le verifiche di ruolo (`PRIVILEGED`/`STANDARD`)
-funzionano in modo identico per entrambi.
+principal è `OAUTH_USER`. I controlli di ruolo (`PRIVILEGED` e `STANDARD`)
+funzionano allo stesso modo in entrambi i casi.

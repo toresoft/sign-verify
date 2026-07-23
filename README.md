@@ -8,7 +8,7 @@
 
 > 🇬🇧 **English** · 🇮🇹 [Leggi in italiano](README.it.md)
 
-> REST service for **eIDAS electronic-signature verification** (PAdES, CAdES, XAdES, JAdES, ASiC), built on Spring Boot 3.5 and the EU **DSS 6.4** library, with EU Trusted List (LOTL/TSL) management.
+> REST service for **eIDAS electronic-signature verification** (PAdES, CAdES, XAdES, JAdES, ASiC), built on Spring Boot 4.1 and the EU **DSS 6.4** library, with EU Trusted List (LOTL/TSL) management.
 
 ---
 
@@ -291,11 +291,13 @@ Italian (`docs/it/`), with Mermaid diagrams. Indexes:
 |-------|------------|-------------|
 | Build & configuration | [01](docs/en/01-build-configuration.md) | [01](docs/it/01-build-configurazione.md) |
 | Docker & configuration | [02](docs/en/02-docker.md) | [02](docs/it/02-docker.md) |
+| Docker step-by-step operational guide | [02b](docs/en/02b-docker-operational-guide.md) | [02b](docs/it/02b-guida-operativa-docker.md) |
 | Authentication (API keys, OAuth) | [03](docs/en/03-authentication.md) | [03](docs/it/03-autenticazione.md) |
 | Trusted Certificates (TSL) | [04](docs/en/04-trusted-certificates.md) | [04](docs/it/04-trusted-certificates.md) |
 | Signature verification (sync/async) | [05](docs/en/05-signature-verification.md) | [05](docs/it/05-verifica-firme.md) |
 | File extraction | [06](docs/en/06-file-extraction.md) | [06](docs/it/06-estrazione-file.md) |
 | Logging & audit | [07](docs/en/07-logging-audit.md) | [07](docs/it/07-log-audit.md) |
+| Horizontal scaling | [08](docs/en/08-horizontal-scaling.md) | [08](docs/it/08-scalabilita-orizzontale.md) |
 
 ## 8. References
 

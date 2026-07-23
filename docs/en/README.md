@@ -62,7 +62,7 @@ window.
 
 ## Architecture at a glance
 
-The service is a **Spring Boot 3.5 / Java 21** application with a **hexagonal**
+The service is a **Spring Boot 4.1 / Java 21** application with a **hexagonal**
 (ports & adapters) architecture, enforced by ArchUnit. Root package
 `org.toresoft.signverify`:
 

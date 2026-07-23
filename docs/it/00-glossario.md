@@ -10,11 +10,11 @@ serve ricostruirli saltando tra cinque pagine diverse.
 
 | Termine | Significato |
 |---------|-------------|
-| **eIDAS** | Regolamento UE 910/2014 su identificazione elettronica e servizi fiduciari. Definisce i livelli legali delle firme elettroniche e il framework di fiducia transfrontaliero contro cui questo servizio valida. |
+| **eIDAS** | Regolamento UE 910/2014 su identificazione elettronica e servizi fiduciari. Definisce i livelli legali delle firme elettroniche e il quadro di fiducia transfrontaliero rispetto al quale questo servizio valida. |
 | **TSP** (Trust Service Provider) | Un soggetto (autorità di certificazione, autorità di marcatura temporale, ecc.) autorizzato secondo eIDAS a emettere certificati qualificati, marche temporali o altri servizi fiduciari. |
-| **LOTL** (List Of Trusted Lists) | La lista madre UE delle Trusted List nazionali, pubblicata dalla Commissione Europea. Il punto di partenza dell'intera catena di fiducia; vedi [4. Trusted Certificates](04-trusted-certificates.md). |
-| **TSL** (Trusted (service status) List) | Una lista nazionale, firmata da uno Stato membro, che elenca i TSP da esso vigilati e i loro servizi. Il servizio le scarica e le tiene in mirror. |
-| **OJ** (Gazzetta Ufficiale UE) | Pubblica i certificati usati per validare la firma della LOTL stessa (l'ancora di fiducia dell'ancora di fiducia). Vedi [3.7 OJ keystore](04-trusted-certificates.md#37-oj-keystore-lotl-trust-anchor). |
+| **LOTL** (List Of Trusted Lists) | La lista madre UE delle Trusted List nazionali, pubblicata dalla Commissione Europea. Il punto di partenza dell'intera catena di fiducia; vedi [3. API dei certificati di fiducia](04-trusted-certificates.md). |
+| **TSL** (Trusted (service status) List) | Una lista nazionale, firmata da uno Stato membro, che elenca i TSP da esso vigilati e i loro servizi. Il servizio le scarica e ne mantiene una copia locale. |
+| **OJ** (Gazzetta Ufficiale UE) | Pubblica i certificati usati per validare la firma della LOTL stessa (l'ancora di fiducia dell'ancora di fiducia). Vedi [3.7 Keystore OJ](04-trusted-certificates.md#37-keystore-oj-ancora-di-fiducia-della-lotl). |
 
 ## Formati di firma
 
@@ -51,8 +51,8 @@ livello. Vedi [Valori degli enum](05-verifica-firme.md#valori-degli-enum).
 
 | Termine | Significato |
 |---------|-------------|
-| **Validation policy** | Un documento XML che elenca ogni vincolo controllato da DSS (integrità della firma, catena dei certificati, revoca, marche temporali, robustezza crittografica…) e con quanto rigore ciascuno viene applicato. |
-| **Profilo** | Il wrapper di questo servizio attorno a una validation policy, selezionabile per singola richiesta (`BASIC` / `STANDARD` / `STRICT` / `CUSTOM`). Vedi [4.2 Profili di validazione](05-verifica-firme.md#42-profili-di-validazione). |
+| **Policy di validazione** | Un documento XML che elenca ogni vincolo controllato da DSS (integrità della firma, catena dei certificati, revoca, marche temporali, robustezza crittografica…) e con quanto rigore ciascuno viene applicato. |
+| **Profilo** | Il modo in cui questo servizio incapsula una policy di validazione, selezionabile per singola richiesta (`BASIC` / `STANDARD` / `STRICT` / `CUSTOM`). Vedi [4.2 Profili di validazione](05-verifica-firme.md#42-profili-di-validazione). |
 | **Level** (`FAIL` / `WARN` / `INFORM` / `IGNORE`) | La severità assegnata a un singolo vincolo: se il suo fallimento blocca l'esito, viene solo riportato, o non viene proprio controllato. |
 
 ## Marche temporali e validazione a lungo termine
@@ -68,7 +68,7 @@ livello. Vedi [Valori degli enum](05-verifica-firme.md#valori-degli-enum).
 | Termine | Significato |
 |---------|-------------|
 | **DSS** (Digital Signature Services) | La libreria open-source mantenuta dalla UE ([github.com/esig/dss](https://github.com/esig/dss)) che questo servizio utilizza per eseguire la validazione conforme a eIDAS. |
-| **Simple report** | Il riepilogo conciso di DSS, pass/fail per ciascuna firma. |
+| **Simple report** | Il riepilogo conciso di DSS, con esito positivo o negativo per ciascuna firma. |
 | **Detailed report** | Il report dettagliato di DSS, vincolo per vincolo (quali controlli sono stati eseguiti e perché ciascuno è passato o fallito). |
-| **Diagnostic data** | I dati grezzi raccolti da DSS durante la validazione (certificati, dati di revoca, marche temporali…), utili per il debug. |
+| **Diagnostic data** | I dati grezzi raccolti da DSS durante la validazione (certificati, dati di revoca, marche temporali…), utili per la diagnosi dei problemi. |
 | **ETSI report** | Un report di validazione secondo lo schema XML standard ETSI TS 119 102-2, per l'interoperabilità con altri strumenti eIDAS. |
