@@ -223,10 +223,24 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- S3-compatible object storage backing DocumentStoragePort (app.storage.type=s3). -->
+        <!-- S3-compatible object storage backing DocumentStoragePort (app.storage.type=s3).
+             netty-nio-client is the SDK's ASYNC transport, dragged in at runtime scope by the s3
+             module. S3StorageConfiguration builds the SYNCHRONOUS S3Client only (backed by
+             apache5-client), so the whole Netty stack is dead weight on the runtime classpath —
+             and it was the sole source of 9 known vulnerabilities flagged by OSV against
+             4.2.15.Final (the version Spring Boot 4.1 manages). Excluding it removes the CVEs at
+             the source instead of chasing Netty releases for code that is never executed.
+             If an S3AsyncClient or the S3 Transfer Manager is ever needed, drop this exclusion
+             (the async client fails at startup without an async HTTP transport on the classpath). -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>s3</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>software.amazon.awssdk</groupId>
+                    <artifactId>netty-nio-client</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- DSS -->
