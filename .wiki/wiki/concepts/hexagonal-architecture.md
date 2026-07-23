@@ -33,7 +33,7 @@ config       → beans, DSS beans, async pool, scheduler
 | `ExtractionPort` | `DssExtractionAdapter` |
 | `TslRefresherPort` | `DssTslAdapter` (TLValidationJob) |
 | `CallbackDispatcherPort` | `HmacCallbackDispatcherAdapter` |
-| `DocumentStoragePort` | `FilesystemDocumentStorageAdapter` |
+| `DocumentStoragePort` | `FilesystemDocumentStorageAdapter` (default) / `S3DocumentStorageAdapter` — swapped by `app.storage.type`, see [[concepts/document-storage-backends]] |
 | `PasswordHasherPort` | `BcryptPasswordHasherAdapter` |
 | `SecretCipherPort` | `AesGcmSecretCipherAdapter` |
 | `TrustedListMirrorPort` | `TrustedCertificateMirror` (DB mirror of TSL certs) |

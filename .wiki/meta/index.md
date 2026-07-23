@@ -21,6 +21,7 @@
 - [[concepts/cades-counter-signatures]] — cades-counter-signatures *(created: 2026-06-27)*
 - [[concepts/circuit-breaker]] — circuit-breaker *(created: 2026-06-27)*
 - [[concepts/design-first-openapi]] — design-first-openapi *(created: 2026-06-27)*
+- [[concepts/document-storage-backends]] — Document storage backends (filesystem vs S3) *(created: 2026-07-23)*
 - [[concepts/dss-format-detection]] — dss-format-detection *(created: 2026-06-27)*
 - [[concepts/dss-policy-xml]] — dss-policy-xml *(created: 2026-06-27)*
 - [[concepts/dss-timestamp-api]] — dss-timestamp-api *(created: 2026-06-27)*
@@ -106,4 +107,4 @@
 - [[syntheses/validation-time-and-the-timestamp-best-signature-time]] — validation-time-and-the-timestamp-best-signature-time *(created: 2026-06-27)*
 
 ---
-*Last updated: 2026-06-30T00:30:00.000Z* | *Total pages: 88* | *Last lint: 2026-06-30*
+*Last updated: 2026-07-23T00:00:00.000Z* | *Total pages: 89* | *Last lint: 2026-06-30*

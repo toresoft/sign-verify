@@ -2,10 +2,11 @@
 type: concept
 domain: engineering
 created: 2026-06-27
-updated: 2026-07-14
+updated: 2026-07-23
 sources:
   - sources/SRC-2026-06-27-002
   - sources/SRC-2026-06-27-003
+  - notes/2026-07-23-docs-storage-s3-horizontal-scaling
 volatility: warm
 ---
 
@@ -53,6 +54,7 @@ The dedicated executor for validation exists specifically so a (potentially minu
 
 ## Horizontal scaling (readiness, 2026-07-22)
 - **The pipeline is already multi-replica safe; the only blocker is shared storage.** The DB-CAS claim (`claimForProcessing`, `PENDING→RUNNING` conditional UPDATE — winner gets 1 row, losers 0) prevents double validation / duplicate callbacks across instances; ShedLock singletons the scheduled sweeps; trust is DB-mirrored ([[concepts/trusted-lists-certificate-source]]); the stale-RUNNING sweep recovers crash orphans. The one non-shared state is `FilesystemDocumentStorageAdapter` (local `/var/lib/sign-verify/jobs`), so a payload written by instance A is invisible to instance B that claims the job. Fix: an S3-compatible `DocumentStoragePort` adapter (see [[concepts/hexagonal-architecture]]). Autoscale on **queue depth** (`signverify.async.jobs.pending`), not CPU — DSS workers are network-I/O-bound. (From [[raw/notes/2026-07-22-ll-cve-bumps-scaling-s3-adapter]].)
+- **Blocker removed (2026-07-23)**: the S3 backend exists and is documented — set `app.storage.type=s3` ([[concepts/document-storage-backends]]). What replicates and what does not: `verify.max-concurrent` and `async.workers` are **per pod**, while `async.max-pending-per-principal` / `async.max-pending-global` stay **global** (DB-backed), so adding replicas multiplies throughput but not the queue ceiling. Readiness (`/actuator/health/readiness`, incl. `TslReadinessIndicator`) must be the LB probe so a pod without a first TSL load never receives traffic; the DSS cache stays per-pod, so a fresh pod pays a warm-up penalty (correctness is unaffected — each replica can fetch TSL/CRL/OCSP on its own). Scale-out prerequisites include an external PostgreSQL and the **same `APP_SECRET_MASTER_KEY` on every pod**. (Docs `docs/{en,it}/08`, from [[raw/notes/2026-07-23-docs-storage-s3-horizontal-scaling]].)
 
 ## Related
 - [[entities/sign-verify-2]] · [[concepts/circuit-breaker]] · [[concepts/shedlock]]

@@ -2,7 +2,7 @@
 type: entity
 category: project
 created: 2026-06-27
-updated: 2026-06-27
+updated: 2026-07-23
 sources:
   - sources/SRC-2026-06-27-002
   - sources/SRC-2026-06-27-008
@@ -29,6 +29,7 @@ Domain ports: `SignatureValidatorPort`, `ExtractionPort`, `TslRefresherPort`, `C
 - **TSL:** [[concepts/tsl-hot-swap-refresh]] via `TrustedListsCertificateSource`, ShedLock-coordinated, OJ keystore as LOTL anchor.
 - **Load protection:** sync semaphore (429), async back-pressure, DSS [[concepts/circuit-breaker]], [[concepts/shedlock]] scheduler.
 - **Errors:** `application/problem+json` (RFC 9457) with stable `urn:signverify:error:<code>` codes.
+- **Storage:** `DocumentStoragePort` with two adapters selected by `app.storage.type` — pod-local filesystem (default) or S3-compatible object store; the S3 one is what makes multi-replica deployment possible ([[concepts/document-storage-backends]]).
 
 ## Source of truth
 - Design & architecture: [[sources/SRC-2026-06-27-002]]
