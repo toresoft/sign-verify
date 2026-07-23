@@ -24,6 +24,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
@@ -47,6 +48,13 @@ import tools.jackson.databind.json.JsonMapper;
 public class ValidationWorker {
 
   private static final Logger log = LoggerFactory.getLogger(ValidationWorker.class);
+
+  /**
+   * How many candidates to select per free worker slot. Selecting exactly as many rows as there are
+   * free slots makes every instance race for the identical head of the queue; a wider, shuffled
+   * window spreads the instances out and leaves a loser something else to claim.
+   */
+  private static final int CANDIDATE_OVERFETCH = 4;
 
   private final ValidationJobRepository repo;
   private final DocumentStoragePort storage;
@@ -119,29 +127,60 @@ public class ValidationWorker {
     // claims a job it cannot immediately start (which would strand it in RUNNING until the sweep).
     int free = capacity.availablePermits();
     if (free == 0) return;
-    var jobs = repo.findPickablePending(maxPickupAttempts, Instant.now(), PageRequest.of(0, free));
-    for (ValidationJob j : jobs) {
+
+    // Every instance runs the same deterministic picker (ORDER BY created_at) with the same limit,
+    // so instances whose polls fall in the same window select the identical head of the queue and
+    // all but one lose the atomic claim. Losing is cheap (a no-op UPDATE by primary key, no
+    // pickup_attempts burnt), but a loser used to have nothing left to do and idled until the next
+    // poll-interval: a burst arriving at N idle instances got only `workers` jobs claimed per
+    // round instead of N * workers. Over-fetching and shuffling gives each worker thread a
+    // different candidate to try first, and a shared queue lets a loser move straight to the next
+    // candidate instead of waiting. The claim stays the single source of truth for ownership.
+    var candidates =
+        repo.findPickablePending(
+            maxPickupAttempts, Instant.now(), PageRequest.of(0, free * CANDIDATE_OVERFETCH));
+    if (candidates.isEmpty()) return;
+    List<UUID> ids = new ArrayList<>(candidates.size());
+    for (ValidationJob j : candidates) ids.add(j.getId());
+    Collections.shuffle(ids);
+    Queue<UUID> queue = new ConcurrentLinkedQueue<>(ids);
+
+    int tasks = Math.min(free, ids.size());
+    for (int i = 0; i < tasks; i++) {
       if (!capacity.tryAcquire()) break;
-      UUID id = j.getId();
       try {
         // Offload the (potentially minutes-long) DSS validation to the dedicated executor so the
         // shared @Scheduled thread returns immediately and other schedulers are not starved.
         validationExecutor.execute(
             () -> {
-              deadlines.put(id, Instant.now().plus(maxValidationTime));
               try {
-                process(id);
-              } catch (Exception e) {
-                log.error("worker error on job {}", id, e);
+                claimAndProcessOne(queue);
               } finally {
-                deadlines.remove(id);
                 capacity.release();
               }
             });
       } catch (RejectedExecutionException rex) {
         capacity.release();
-        log.warn("validation executor saturated; deferring job {} to next poll", id);
+        log.warn(
+            "validation executor saturated; deferring {} candidate(s) to next poll", tasks - i);
         break;
+      }
+    }
+  }
+
+  /**
+   * Walks the shared candidate queue until this thread wins one claim, then processes that job and
+   * stops: one permit is one job. Candidates left in the queue when every worker is busy are simply
+   * dropped and re-selected by the next poll.
+   */
+  private void claimAndProcessOne(Queue<UUID> candidates) {
+    UUID id;
+    while ((id = candidates.poll()) != null) {
+      try {
+        if (tryProcess(id)) return;
+      } catch (Exception e) {
+        log.error("worker error on job {}", id, e);
+        return;
       }
     }
   }
@@ -193,10 +232,34 @@ public class ValidationWorker {
   // DB transaction open across a potentially minutes-long DSS validation. Crash recovery between
   // claim and outcome is handled by the stale-RUNNING sweep in poll().
   public void process(UUID id) {
+    tryProcess(id);
+  }
+
+  /**
+   * Same as {@link #process(UUID)} but reports whether this instance won the claim, so the poll
+   * loop can fall through to another candidate instead of idling until the next poll.
+   *
+   * @return {@code false} only when the atomic claim was lost to another worker (the job was no
+   *     longer PENDING); {@code true} once this instance owns the job, whatever the validation
+   *     outcome
+   */
+  boolean tryProcess(UUID id) {
     // Atomic claim: only the worker whose conditional update affects a row proceeds. In a
     // multi-instance deployment this guarantees a single owner per job, avoiding duplicate
     // validation and duplicate callbacks. The status flip and attempt increment happen in the DB.
-    if (repo.claimForProcessing(id, Instant.now()) == 0) return;
+    if (repo.claimForProcessing(id, Instant.now()) == 0) return false;
+    // The budget deadline is registered only once the claim is won: a losing worker must never
+    // arm a watchdog for a job another instance owns.
+    deadlines.put(id, Instant.now().plus(maxValidationTime));
+    try {
+      processClaimed(id);
+    } finally {
+      deadlines.remove(id);
+    }
+    return true;
+  }
+
+  private void processClaimed(UUID id) {
     ValidationJob job = repo.findById(id).orElse(null);
     if (job == null) return;
 
