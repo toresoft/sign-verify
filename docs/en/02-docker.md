@@ -114,7 +114,58 @@ APP_OJ_KEYSTORE_PASSWORD=<OJ keystore password>
 > Note: `compose.prod` does not set `SPRING_PROFILES_ACTIVE`, so the **default**
 > profile applies (OAuth enabled, TSL refresh in `BACKGROUND`).
 
-## 2.4 Health and readiness
+## 2.4 Document storage: local volume, MinIO or managed S3
+
+Job documents can be stored in three ways:
+
+1. **Local `svdata` volume** (default): suitable only for single-replica deployments;
+   files live under `/var/lib/sign-verify/jobs`.
+2. **S3-compatible object store**: for multi-replica deployments; documents are
+   accessible from every instance. Requires `APP_STORAGE_TYPE=s3` and the connection
+   variables (see [1.4](01-build-configuration.md#storage-and-dss)).
+3. **MinIO as a Docker container**: when a managed S3 is not available (local
+   development of the S3 code path, CI/demo environments, on-prem/edge deployments
+   without a cloud object store, air-gapped installs). Do not use at production
+   scale: prefer a managed S3 service (durability, operations, HA) or a properly
+   operated MinIO cluster, not a single compose container.
+
+Example MinIO service added to `docker-compose.yml`:
+
+```yaml
+  minio:
+    image: pgsty/minio:RELEASE.2026-06-18T00-00-00Z
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - miniodata:/data
+    command: server /data --console-address ":9001"
+
+volumes:
+  miniodata:
+```
+
+App-side wiring (add to the `environment` of the `app` service):
+
+```yaml
+      APP_STORAGE_TYPE: s3
+      APP_STORAGE_S3_ENDPOINT: http://minio:9000
+      APP_STORAGE_S3_REGION: us-east-1
+      APP_STORAGE_S3_BUCKET: sign-verify-jobs
+      APP_STORAGE_S3_PATH_STYLE: "true"
+      # Credentials via the SDK default chain (no app.storage.s3.* property holds secrets)
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+```
+
+> The `sign-verify-jobs` bucket must be created once (for example with the `mc`
+> client or a one-off `create-bucket` job) because the application performs a
+> `headBucket` check at startup and refuses to start if the bucket is missing.
+
+## 2.5 Health and readiness
 
 ```mermaid
 sequenceDiagram
@@ -134,7 +185,7 @@ sequenceDiagram
 Exposed `actuator` endpoints: `health`, `info`, `metrics`, `prometheus`.
 Only `health/**`, `info`, `prometheus` are public (no authentication).
 
-## 2.5 First boot
+## 2.6 First boot
 
 ```mermaid
 flowchart TD

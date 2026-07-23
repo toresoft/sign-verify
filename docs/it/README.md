@@ -23,6 +23,7 @@ Guida operativa al servizio **sign-verify**: verifica di firme digitali eIDAS
 | 4 | Verifica firme: introduzione, profili, sync, async | [05-verifica-firme.md](05-verifica-firme.md) |
 | 5 | Estrazione file originali | [06-estrazione-file.md](06-estrazione-file.md) |
 | 6 | Log e audit | [07-log-audit.md](07-log-audit.md) |
+| 7 | Scalabilità orizzontale | [08-scalabilita-orizzontale.md](08-scalabilita-orizzontale.md) |
 
 ## Mappa dei componenti
 

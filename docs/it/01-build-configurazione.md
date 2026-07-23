@@ -105,12 +105,30 @@ Issuer JWT (resource server):
 
 ### Storage e DSS
 
-| Chiave | Env | Default |
-|--------|-----|---------|
-| `storage.jobs-dir` | `APP_STORAGE_JOBS_DIR` | `/var/lib/sign-verify/jobs` |
-| `dss.cache-dir` | `APP_DSS_CACHE_DIR` | `/var/lib/sign-verify/dss-cache` |
-| `dss.online-mode` | — | `true` |
-| `upload.max-size` | — | `50MB` (multipart: file 50MB / richiesta 60MB) |
+| Chiave | Env | Default | Descrizione |
+|--------|-----|---------|-------------|
+| `storage.type` | `APP_STORAGE_TYPE` | `filesystem` | `filesystem` o `s3`. Con `filesystem` i documenti restano in `jobs-dir`; con `s3` vengono salvati in un object store compatibile S3 (abilita lo scaling orizzontale, vedi [08-scalabilita-orizzontale.md](08-scalabilita-orizzontale.md)) |
+| `storage.jobs-dir` | `APP_STORAGE_JOBS_DIR` | `/var/lib/sign-verify/jobs` | Solo per `filesystem` |
+| `storage.s3.endpoint` | `APP_STORAGE_S3_ENDPOINT` | _(vuoto)_ | Vuoto = endpoint AWS nativo; impostare per MinIO/Ceph/etc. |
+| `storage.s3.region` | `APP_STORAGE_S3_REGION` | `eu-south-1` | |
+| `storage.s3.bucket` | `APP_STORAGE_S3_BUCKET` | `sign-verify-jobs` | Il bucket deve esistere; l'adapter esegue `headBucket` all'avvio e il servizio si arresta se manca o non è raggiungibile |
+| `storage.s3.path-style-access` | `APP_STORAGE_S3_PATH_STYLE` | `false` | `false` = virtual-hosted (AWS nativo); `true` richiesto da MinIO/Ceph |
+| `dss.cache-dir` | `APP_DSS_CACHE_DIR` | `/var/lib/sign-verify/dss-cache` | |
+| `dss.online-mode` | — | `true` | |
+| `upload.max-size` | — | `50MB` | Multipart: file 50MB / richiesta 60MB |
+
+Le chiavi oggetto sono relative (`{jobId}/input-{safeName}`, `{jobId}/result.json`) e
+persistono nel DB al posto dei path assoluti del filesystem.
+
+Le credenziali S3 **non** sono una proprietà applicativa: il client usa sempre la
+default credentials chain di AWS SDK v2 (variabili `AWS_ACCESS_KEY_ID` /
+`AWS_SECRET_ACCESS_KEY`, IAM role/IRSA, profili), così nessun segreto finisce nel
+file di configurazione.
+
+> **Cambio backend**: `filesystem` memorizza path assoluti, `s3` memorizza chiavi
+> relative — i due backend non si interscambiano. Per cambiare backend svuotare le
+> code (i job hanno retention breve e vengono puliti automaticamente); non è
+> prevista migrazione dei dati. Vedi la sezione 08 per il runbook operativo.
 
 ### Trusted Lists (`app.tsl`)
 

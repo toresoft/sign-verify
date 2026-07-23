@@ -114,7 +114,58 @@ APP_OJ_KEYSTORE_PASSWORD=<password keystore OJ>
 > Nota: il `compose.prod` non imposta `SPRING_PROFILES_ACTIVE`, quindi vale il
 > profilo **default** (OAuth abilitato, refresh TSL in `BACKGROUND`).
 
-## 2.4 Health e prontezza
+## 2.4 Storage dei documenti: volume locale, MinIO o S3 gestito
+
+I documenti dei job possono essere memorizzati in tre modi:
+
+1. **Volume locale `svdata`** (default): adatto solo a deployment con una singola
+   replica; i file risiedono in `/var/lib/sign-verify/jobs`.
+2. **Object store S3-compatibile**: per deployment multi-replica; i documenti sono
+   accessibili da tutte le istanze. Richiede `APP_STORAGE_TYPE=s3` e le variabili
+   di connessione (vedi [1.4](01-build-configurazione.md#storage-e-dss)).
+3. **MinIO come container Docker**: quando un S3 gestito non è disponibile
+   (sviluppo locale del code path S3, ambienti CI/demo, deployment on-prem/edge
+   senza object store cloud, installazioni air-gapped). Non usare in produzione
+   a scala: preferire un servizio S3 gestito (durabilità, operatività, HA) o un
+   cluster MinIO operato correttamente, non un singolo container compose.
+
+Esempio di servizio MinIO aggiunto a `docker-compose.yml`:
+
+```yaml
+  minio:
+    image: pgsty/minio:RELEASE.2026-06-18T00-00-00Z
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - miniodata:/data
+    command: server /data --console-address ":9001"
+
+volumes:
+  miniodata:
+```
+
+Wiring lato applicazione (da aggiungere all'`environment` del servizio `app`):
+
+```yaml
+      APP_STORAGE_TYPE: s3
+      APP_STORAGE_S3_ENDPOINT: http://minio:9000
+      APP_STORAGE_S3_REGION: us-east-1
+      APP_STORAGE_S3_BUCKET: sign-verify-jobs
+      APP_STORAGE_S3_PATH_STYLE: "true"
+      # Credenziali via default chain dell'SDK (nessuna proprietà app.storage.s3.* per i segreti)
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+```
+
+> Il bucket `sign-verify-jobs` deve essere creato una volta (ad esempio con il
+> client `mc` o un job one-off `create-bucket`) perché l'applicazione esegue
+> `headBucket` all'avvio e si arresta in caso di bucket mancante.
+
+## 2.5 Health e prontezza
 
 ```mermaid
 sequenceDiagram
@@ -137,7 +188,7 @@ Sono pubblici (senza autenticazione) solo `health/**` e `prometheus`; `info`
 richiede autenticazione. Su `health` gli anonimi vedono solo lo `status`
 aggregato, mentre i dettagli per-componente richiedono un chiamante PRIVILEGED.
 
-## 2.5 Primo avvio
+## 2.6 Primo avvio
 
 ```mermaid
 flowchart TD

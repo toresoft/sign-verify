@@ -80,10 +80,20 @@ Attivazione: `-Dspring.profiles.active=dev` (host) oppure `SPRING_PROFILES_ACTIV
 | `APP_SECURITY_OAUTH_PRIVILEGED_VALUES` | Valori del claim che danno ruolo `PRIVILEGED` | `admin,privileged` |
 | `APP_SECURITY_BOOTSTRAP_KEY_FILE` | Path dove scrivere la bootstrap key al primo avvio | `/var/lib/sign-verify/bootstrap-api-key.txt` |
 | `APP_STORAGE_JOBS_DIR` | Directory dei job asincroni | `/var/lib/sign-verify/jobs` |
+| `APP_STORAGE_TYPE` | Backend di storage per i documenti (`filesystem` o `s3`) | `filesystem` |
+| `APP_STORAGE_S3_ENDPOINT` | Endpoint S3 (vuoto = AWS nativo) | _(vuoto)_ |
+| `APP_STORAGE_S3_REGION` | Regione S3 | `eu-south-1` |
+| `APP_STORAGE_S3_BUCKET` | Nome del bucket S3 | `sign-verify-jobs` |
+| `APP_STORAGE_S3_PATH_STYLE` | Accesso path-style (`true` per MinIO/Ceph) | `false` |
 | `APP_DSS_CACHE_DIR` | Cache DSS (TSL, CRL/OCSP) | `/var/lib/sign-verify/dss-cache` |
 | `APP_OJ_KEYSTORE_PASSWORD` | Password del keystore della Gazzetta Ufficiale UE (verifica LOTL) | *(vuoto)* |
 | `SERVER_PORT` | Porta HTTP | `8080` |
 | `JAVA_TOOL_OPTIONS` | Flag JVM aggiuntivi | ergonomia container |
+
+> Con `APP_STORAGE_TYPE=s3` le credenziali arrivano dalla default chain di AWS SDK
+> (`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`, IAM role/IRSA, profili): nessuna
+> proprietà applicativa contiene segreti. Il bucket deve esistere: all'avvio
+> l'adapter esegue un `headBucket` fail-fast.
 
 > **Generare la master key**
 > ```bash
