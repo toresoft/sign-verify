@@ -105,12 +105,30 @@ JWT issuer (resource server):
 
 ### Storage and DSS
 
-| Key | Env | Default |
-|-----|-----|---------|
-| `storage.jobs-dir` | `APP_STORAGE_JOBS_DIR` | `/var/lib/sign-verify/jobs` |
-| `dss.cache-dir` | `APP_DSS_CACHE_DIR` | `/var/lib/sign-verify/dss-cache` |
-| `dss.online-mode` | — | `true` |
-| `upload.max-size` | — | `50MB` (multipart: 50MB file / 60MB request) |
+| Key | Env | Default | Description |
+|-----|-----|---------|-------------|
+| `storage.type` | `APP_STORAGE_TYPE` | `filesystem` | `filesystem` or `s3`. `filesystem` keeps documents under `jobs-dir`; `s3` stores job documents in an S3-compatible object store (enables horizontal scaling, see [08-horizontal-scaling.md](08-horizontal-scaling.md)) |
+| `storage.jobs-dir` | `APP_STORAGE_JOBS_DIR` | `/var/lib/sign-verify/jobs` | `filesystem` only |
+| `storage.s3.endpoint` | `APP_STORAGE_S3_ENDPOINT` | _(empty)_ | Empty = native AWS endpoint; set for MinIO/Ceph/etc. |
+| `storage.s3.region` | `APP_STORAGE_S3_REGION` | `eu-south-1` | |
+| `storage.s3.bucket` | `APP_STORAGE_S3_BUCKET` | `sign-verify-jobs` | The bucket must exist; the adapter performs a fail-fast `headBucket` at startup and the service refuses to start if it is missing or unreachable |
+| `storage.s3.path-style-access` | `APP_STORAGE_S3_PATH_STYLE` | `false` | `false` = virtual-hosted (native AWS); `true` required by MinIO/Ceph |
+| `dss.cache-dir` | `APP_DSS_CACHE_DIR` | `/var/lib/sign-verify/dss-cache` | |
+| `dss.online-mode` | — | `true` | |
+| `upload.max-size` | — | `50MB` | Multipart: 50MB file / 60MB request |
+
+Object keys are relative (`{jobId}/input-{safeName}`, `{jobId}/result.json`) and
+persisted in the DB instead of absolute filesystem paths.
+
+S3 credentials are **not** an application property: the client always uses the
+AWS SDK v2 default credentials chain (`AWS_ACCESS_KEY_ID` /
+`AWS_SECRET_ACCESS_KEY` environment variables, IAM roles/IRSA, profiles), so no
+secret ever lands in the configuration file.
+
+> **Backend switch**: `filesystem` stores absolute paths, `s3` stores relative keys —
+> the two backends never cross. Switch backends with drained queues (jobs have short
+> retention and are cleaned up automatically); no data migration. See section 08 for
+> the operational runbook.
 
 ### Trusted Lists (`app.tsl`)
 

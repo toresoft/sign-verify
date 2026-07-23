@@ -1,20 +1,20 @@
-# 3. API Trusted Certificates (TSL)
+# 3. API dei certificati di fiducia (TSL)
 
-← [3. Autenticazione](03-autenticazione.md) · [Indice](README.md) · → [5. Verifica firme](05-verifica-firme.md)
+← [2. Autenticazione](03-autenticazione.md) · [Indice](README.md) · → [4. Verifica delle firme](05-verifica-firme.md)
 
-La fiducia nei certificati si basa sulle **EU Trusted Lists**: il servizio carica
-la **LOTL** (List of the Lists) europea e le TSL nazionali tramite la libreria
-DSS, e ne **specchia** (mirror) i certificati di ancoraggio nel proprio database
-per renderli interrogabili via API.
+La fiducia nei certificati si basa sulle **liste di fiducia europee**: il
+servizio carica la **LOTL** (la lista delle liste) e le TSL nazionali tramite la
+libreria DSS, e ne copia i certificati di ancoraggio nel proprio database, così
+da renderli interrogabili tramite API.
 
-## 3.1 Modello di refresh
+## 3.1 Come funziona l'aggiornamento
 
 ```mermaid
 sequenceDiagram
     autonumber
-    box rgb(219,238,255) Trigger
-    participant Sched as Scheduler (cron 02:00)
-    participant Adm as Admin (PRIVILEGED)
+    box rgb(219,238,255) Innesco
+    participant Sched as Pianificatore (cron 02:00)
+    participant Adm as Amministratore (PRIVILEGED)
     end
     box rgb(238,241,245) sign-verify
     participant T as TslService
@@ -23,36 +23,36 @@ sequenceDiagram
     participant DSS as DSS TLValidationJob
     end
     box rgb(255,241,214) Esterno
-    participant EU as EU LOTL/TSL
+    participant EU as LOTL e TSL europee
     end
-    box rgb(225,245,233) Store
-    participant DB as DB (trusted_certificate)
+    box rgb(225,245,233) Archivio
+    participant DB as Database (trusted_certificate)
     end
 
-    alt refresh schedulato o manuale
+    alt aggiornamento pianificato o manuale
         Sched->>T: refresh(SCHEDULED)
         Adm->>T: POST /tsl/refresh (MANUAL)
     end
     T->>DB: crea TslRefresh (RUNNING)
     T->>DSS: job.onlineRefresh()
-    DSS->>EU: scarica LOTL + pivot + TSL nazionali
+    DSS->>EU: scarica LOTL, pivot e TSL nazionali
     DSS-->>T: TrustedListsCertificateSource
-    T->>DB: mirror.sync() → diff (added/removed/unchanged)
-    T->>DB: TslRefresh (SUCCESS/FAILED) + ready=true
+    T->>DB: mirror.sync() e calcolo delle differenze
+    T->>DB: TslRefresh (SUCCESS o FAILED) e ready=true
 ```
 
-| Trigger | Dettaglio |
+| Innesco | Dettaglio |
 |---------|-----------|
-| Schedulato | cron `0 0 2 * * *` (timezone `Europe/Rome`) |
-| Avvio | `app.tsl.refresh.startup-mode` = `BACKGROUND` (carica all'avvio, senza bloccare) o `SKIP` (per dev/offline) |
-| Manuale | `POST /api/v1/tsl/refresh` (solo `PRIVILEGED`) |
+| Pianificato | cron `0 0 2 * * *`, fuso orario `Europe/Rome` |
+| All'avvio | `app.tsl.refresh.startup-mode` = `BACKGROUND` (carica all'avvio senza bloccare) oppure `SKIP` (per lo sviluppo o senza rete) |
+| Manuale | `POST /api/v1/tsl/refresh`, solo `PRIVILEGED` |
 
-Ogni refresh registra un record `TslRefresh` con esito e differenziale
-(certificati aggiunti / rimossi / invariati). I certificati non più presenti
-nelle liste non vengono cancellati ma **marcati come rimossi** (`removedAt`):
-restano consultabili con `includeRemoved=true`.
+Ogni aggiornamento registra un record `TslRefresh` con l'esito e il conteggio
+delle differenze: certificati aggiunti, rimossi e invariati. I certificati non
+più presenti nelle liste non vengono cancellati, ma **contrassegnati come
+rimossi** (`removedAt`), e restano consultabili con `includeRemoved=true`.
 
-## 3.2 Stato della TSL
+## 3.2 Stato delle liste di fiducia
 
 `GET /api/v1/tsl/status` è pubblico per gli utenti autenticati.
 
@@ -72,10 +72,11 @@ curl -sS http://localhost:8080/api/v1/tsl/status -H "X-API-Key: $KEY"
 }
 ```
 
-Il campo `ready` riflette se le Trusted Lists sono state caricate con successo
-almeno una volta; alimenta anche `/actuator/health/readiness`.
+Il campo `ready` dice se le liste di fiducia sono state caricate con successo
+almeno una volta ed è la stessa informazione che alimenta
+`/actuator/health/readiness`.
 
-## 3.3 Forzare un refresh
+## 3.3 Forzare un aggiornamento
 
 `POST /api/v1/tsl/refresh` richiede il ruolo `PRIVILEGED`.
 
@@ -89,30 +90,30 @@ curl -sS -X POST http://localhost:8080/api/v1/tsl/refresh -H "X-API-Key: $ADMIN_
 
 ## 3.4 Elenco dei certificati di fiducia
 
-`GET /api/v1/tsl/certificates` supporta numerosi filtri e la paginazione
-(busta descritta in [Convenzioni](README.md#paginazione)).
+`GET /api/v1/tsl/certificates` accetta numerosi filtri e restituisce risultati
+paginati (la busta è descritta in [Convenzioni](README.md#paginazione)).
 
 | Parametro | Tipo | Descrizione |
 |-----------|------|-------------|
-| `ski` | string | Subject Key Identifier (match esatto) |
-| `aki` | string | Authority Key Identifier (match esatto) |
-| `subjectCn` / `subjectDn` | string | Subject CN/DN (match parziale, case-insensitive) |
-| `issuerCn` / `issuerDn` | string | Issuer CN/DN (match parziale) |
-| `country` | string | Codice paese (match esatto) |
-| `tspName` | string | Nome del Trust Service Provider (match parziale) |
-| `tspServiceType` | string | Tipo di servizio TSP (match esatto) |
-| `tspServiceStatus` | string | Stato del servizio TSP (match esatto) |
-| `serialNumber` | string | Numero di serie (match esatto) |
-| `validAt` | date-time | Solo certificati validi a quella data |
-| `includeRemoved` | boolean | Includi i certificati rimossi (default `false`) |
-| `page` / `size` | integer | Paginazione (default `0` / `50`) |
+| `ski` | string | Subject Key Identifier, corrispondenza esatta |
+| `aki` | string | Authority Key Identifier, corrispondenza esatta |
+| `subjectCn` / `subjectDn` | string | CN o DN del soggetto, corrispondenza parziale senza distinzione tra maiuscole e minuscole |
+| `issuerCn` / `issuerDn` | string | CN o DN dell'emittente, corrispondenza parziale |
+| `country` | string | Codice paese, corrispondenza esatta |
+| `tspName` | string | Nome del prestatore di servizi fiduciari, corrispondenza parziale |
+| `tspServiceType` | string | Tipo di servizio del prestatore, corrispondenza esatta |
+| `tspServiceStatus` | string | Stato del servizio del prestatore, corrispondenza esatta |
+| `serialNumber` | string | Numero di serie, corrispondenza esatta |
+| `validAt` | date-time | Solo i certificati validi a quella data |
+| `includeRemoved` | boolean | Include anche i certificati rimossi (predefinito `false`) |
+| `page` / `size` | integer | Paginazione (predefiniti `0` e `50`) |
 
 ```bash
 curl -sS "http://localhost:8080/api/v1/tsl/certificates?country=IT&tspName=Aruba&size=20" \
   -H "X-API-Key: $KEY"
 ```
 
-Ogni elemento contiene (`certToMap`): `id`, `ski`, `aki`, `subjectDn`,
+Ogni elemento contiene, secondo la mappatura `certToMap`: `id`, `ski`, `aki`, `subjectDn`,
 `subjectCn`, `issuerDn`, `issuerCn`, `serialNumber`, `country`, `tspName`,
 `tspServiceType`, `tspServiceStatus`, `validFrom`, `validTo`, `lastSeenAt`,
 `removedAt`, `certificateDerB64` (certificato DER in base64), `tslUrl`.
@@ -127,7 +128,7 @@ Ogni elemento contiene (`certToMap`): `id`, `ski`, `aki`, `subjectDn`,
 | `QTimestamp` | Marca temporale elettronica qualificata |
 | `QWAC` | Certificato qualificato di autenticazione sito web |
 | `QPreservation` | Servizio qualificato di conservazione di firme/sigilli elettronici qualificati |
-| `QeIDASLogin` | Servizio di login eIDAS |
+| `QeIDASLogin` | Servizio di autenticazione eIDAS |
 | `QeIDASNotify` | Servizio di notifica eIDAS |
 | `QeIDASSignature` | Servizio di firma eIDAS |
 | `QeIDASVerification` | Servizio di verifica eIDAS |
@@ -139,7 +140,7 @@ Ogni elemento contiene (`certToMap`): `id`, `ski`, `aki`, `subjectDn`,
 | Valore | Significato |
 |--------|-------------|
 | `GRANTED` | Servizio attivamente autorizzato e in esercizio |
-| `WITHDRAWN` | Servizio ritirato dal TSP o dall'organismo di supervisione |
+| `WITHDRAWN` | Servizio ritirato dal prestatore o dall'organismo di vigilanza |
 | `SUPERSEDED` | Servizio sostituito da un altro servizio |
 | `NOT_GRANTED` | Servizio non (o più) autorizzato |
 
@@ -161,7 +162,7 @@ curl -sS http://localhost:8080/api/v1/tsl/certificates/<uuid> -H "X-API-Key: $KE
 | `GET /api/v1/tsl/certificates/{id}` | autenticato |
 | `POST /api/v1/tsl/refresh` | **PRIVILEGED** |
 
-## 3.7 OJ keystore (ancora di fiducia della LOTL)
+## 3.7 Keystore OJ (ancora di fiducia della LOTL)
 
 Per validare la **firma della LOTL**, DSS ha bisogno dei certificati di firma
 **annunciati nella Gazzetta Ufficiale UE (Official Journal, OJ)**. Questi
@@ -179,12 +180,12 @@ app:
         oj-url: https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv:OJ.C_.2019.276.01.0001.01.ENG
 ```
 
-> **Sintomo di keystore mancante/placeholder**: se il keystore non contiene
-> certificati OJ reali, ogni pivot fallisce con
+> **Come si riconosce un keystore mancante o solo di prova**: se il keystore non
+> contiene certificati OJ reali, ogni pivot fallisce con
 > `INDETERMINATE/NO_CERTIFICATE_CHAIN_FOUND` e **nessuna TSL viene caricata**.
-> All'avvio il servizio logga un WARN esplicito:
+> All'avvio il servizio scrive un avviso esplicito nel log:
 > `OJ keystore '...' contains no X.509 certificate ...`. In condizioni normali
-> logga invece `Loaded N OJ signing certificate(s) ...`.
+> scrive invece `Loaded N OJ signing certificate(s) ...`.
 
 ### Rigenerare il keystore
 
@@ -194,50 +195,55 @@ app:
    che elenca i certificati OJ correnti con il loro **SHA256** e l'OJ di
    sincronizzazione (attualmente `OJ C/2026/1944`). I byte si estraggono dalla
    catena dei **pivot LOTL** (`eu-lotl.xml` + `eu-lotl-pivot-*.xml`, campo
-   `<ds:X509Certificate>`) tenendo solo quelli il cui SHA256 **combacia** con i
-   fingerprint pubblicati su quella pagina (verifica anti-manomissione).
-   > Il keystore versionato nel repo è già stato popolato così (6 certificati,
-   > OJ C/2026/1944); va ripetuto quando l'OJ pubblica un aggiornamento.
-2. Metterli in una cartella (default `./oj-certs`) e lanciare lo script:
+   `<ds:X509Certificate>`) tenendo solo quelli la cui impronta SHA256 **combacia**
+   con quelle pubblicate su quella pagina: è il controllo che protegge da
+   manomissioni.
+   > Il keystore versionato nel repository è già stato popolato così (6
+   > certificati, OJ C/2026/1944); l'operazione va ripetuta quando la Gazzetta
+   > Ufficiale pubblica un aggiornamento.
+2. Metterli in una cartella (per impostazione predefinita `./oj-certs`) ed
+   eseguire lo script:
 
    ```bash
    OJ_KEYSTORE_PASSWORD=changeit \
    scripts/update-oj-keystore.sh ./oj-certs src/main/resources/keystore/oj-keystore.p12
    ```
 
-   Lo script importa tutti i certificati in `oj-keystore.p12` (come
-   `TrustedCertificateEntry`) e stampa il contenuto finale. La password deve
-   coincidere con `APP_OJ_KEYSTORE_PASSWORD` usata a runtime.
-3. **Ricostruire l'immagine / riavviare** il servizio e forzare un refresh
-   (`POST /api/v1/tsl/refresh`); verificare in `GET /api/v1/tsl/status` che
-   `ready=true`.
+   Lo script importa tutti i certificati in `oj-keystore.p12` come
+   `TrustedCertificateEntry` e stampa il contenuto finale. La password deve
+   coincidere con l'`APP_OJ_KEYSTORE_PASSWORD` usata in esecuzione.
+3. **Ricostruire l'immagine e riavviare** il servizio, poi forzare un
+   aggiornamento (`POST /api/v1/tsl/refresh`) e verificare in
+   `GET /api/v1/tsl/status` che `ready` sia `true`.
 
-> Nota: i certificati **A-Trust legacy** con encoding RSA non standard vengono
-> caricati grazie al provider **BouncyCastle**, registrato automaticamente
-> all'avvio.
+> Nota: i vecchi certificati **A-Trust**, con codifica RSA non standard, si
+> riescono a caricare grazie al provider **BouncyCastle**, registrato
+> automaticamente all'avvio.
 
 ### TSL nazionali che falliscono con `PKIX path building failed`
 
-Alcuni endpoint TSL nazionali (es. `eidas.gov.ie`) servono in HTTPS **solo il
-certificato foglia**, senza l'intermedio: la JVM non riesce a costruire la
-catena di fiducia e DSS non scarica quella lista. Il **root** è già nel
-truststore (es. *DigiCert Global Root G2*); manca solo l'**intermedio**.
+Alcuni endpoint TSL nazionali, per esempio `eidas.gov.ie`, in HTTPS presentano
+**solo il certificato foglia**, senza quello intermedio: la JVM non riesce a
+costruire la catena di fiducia e DSS non scarica quella lista. Il certificato
+radice è già nell'archivio dei certificati fidati (per esempio *DigiCert Global
+Root G2*), manca solo l'**intermedio**.
 
-La soluzione è importare gli intermedi pubblici mancanti nel truststore della
-JRE. Quelli noti sono versionati in **`docker/tls-certs/`** e importati nel
-`cacerts` a build time dal `Dockerfile`. Per aggiungerne uno nuovo:
+La soluzione è importare gli intermedi pubblici mancanti nell'archivio dei
+certificati fidati della JRE. Quelli già noti sono versionati in
+**`docker/tls-certs/`** e vengono importati in `cacerts` dal `Dockerfile` in
+fase di costruzione dell'immagine. Per aggiungerne uno nuovo:
 
 ```bash
 host=nuovo.host.tsl
-# 1. trova l'URL "CA Issuers" (AIA) del foglia
+# 1. trova l'URL "CA Issuers" (AIA) del certificato foglia
 openssl s_client -connect $host:443 -servername $host </dev/null 2>/dev/null \
   | openssl x509 -noout -ext authorityInfoAccess
-# 2. scarica l'intermedio e salvalo come PEM in docker/tls-certs/
+# 2. scarica l'intermedio e salvalo in formato PEM in docker/tls-certs/
 curl -s http://.../intermediate.crt | openssl x509 -inform DER \
   -out docker/tls-certs/<nome>.pem
 # 3. ricostruisci l'immagine
 ```
 
-> Il flag JVM `-Dcom.sun.security.enableAIAcaIssuers=true` **non** è affidabile
-> per questo caso: non si attiva nel TrustManager TLS durante l'handshake, per
-> cui si preferisce l'import esplicito dell'intermedio.
+> L'opzione JVM `-Dcom.sun.security.enableAIAcaIssuers=true` **non** è
+> affidabile in questo caso, perché non entra in gioco nel TrustManager TLS
+> durante la negoziazione: meglio importare esplicitamente l'intermedio.

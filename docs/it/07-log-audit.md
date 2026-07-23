@@ -1,18 +1,18 @@
 # 6. Log e audit
 
-← [6. Estrazione file](06-estrazione-file.md) · [Indice](README.md)
+← [5. Estrazione file](06-estrazione-file.md) · [Indice](README.md) · → [7. Scalabilità orizzontale](08-scalabilita-orizzontale.md)
 
-L'osservabilità del servizio poggia su tre pilastri: **log applicativi
-strutturati**, **metriche** (Actuator/Prometheus) e un **audit log** persistente
-interrogabile via API.
+Per capire cosa sta facendo il servizio ci sono tre strumenti: i **log
+applicativi strutturati**, le **metriche** esposte da Actuator per Prometheus e
+un **registro di audit** persistente, interrogabile tramite API.
 
 ```mermaid
 flowchart LR
-    APP[Applicazione] -->|JSON su STDOUT| LOG[Log strutturati\nlogback + MDC]
+    APP[Applicazione] -->|JSON su standard output| LOG["Log strutturati\nlogback e MDC"]
     APP -->|micrometer| MET[/actuator/prometheus/]
     APP --> DB[(audit_log)]
-    DB -->|GET /api/v1/audit-log| ADM[Admin PRIVILEGED]
-    LOG --> COLL[Collector\nLoki/ELK/...]
+    DB -->|GET /api/v1/audit-log| ADM["Amministratore PRIVILEGED"]
+    LOG --> COLL["Sistema di raccolta\nLoki, ELK e simili"]
     MET --> PROM[Prometheus]
 
     classDef app fill:#eef1f5,stroke:#5b6b7c,color:#1f2733
@@ -27,12 +27,13 @@ flowchart LR
 
 ## 6.1 Log applicativi
 
-I log sono emessi in **JSON** su STDOUT tramite Logback
-(`logback-spring.xml`, encoder `LoggingEventCompositeJsonEncoder` di
-logstash). Ogni evento include timestamp, livello, thread, logger, messaggio,
-stacktrace, il campo `app` (nome applicazione) e il contenuto **MDC**.
+I log escono in **JSON** sullo standard output tramite Logback
+(`logback-spring.xml`, con il codificatore `LoggingEventCompositeJsonEncoder` di
+logstash). Ogni evento riporta l'istante, il livello, il thread, il logger, il
+messaggio, l'eventuale traccia dell'eccezione, il campo `app` con il nome
+dell'applicazione e il contenuto dell'**MDC**.
 
-Livelli di default (`application.yaml`):
+Livelli predefiniti (`application.yaml`):
 
 | Logger | Livello |
 |--------|---------|
@@ -48,37 +49,37 @@ correlabile:
 | Chiave MDC | Contenuto |
 |------------|-----------|
 | `requestId` | UUID generato per la richiesta |
-| `clientIp` | indirizzo IP remoto |
-| `principalType` | `API_KEY` / `OAUTH_USER` / `SYSTEM` (se autenticato) |
-| `principalId` | id del principal (se autenticato) |
+| `clientIp` | indirizzo IP del chiamante |
+| `principalType` | `API_KEY`, `OAUTH_USER` o `SYSTEM`, se la richiesta è autenticata |
+| `principalId` | identificativo del principal, se la richiesta è autenticata |
 
-L'MDC viene **azzerato** al termine della richiesta (`MDC.clear()`).
+Al termine della richiesta l'MDC viene **azzerato** (`MDC.clear()`).
 
 ### Rotazione
 
-L'app scrive su STDOUT; la **rotazione** è demandata al runtime container. Nel
-`docker-compose.prod.yml` il driver `json-file` ruota a `max-size: 10m` con
-`max-file: 3`.
+L'applicazione scrive sullo standard output, quindi la **rotazione** spetta a
+chi esegue il container. In `docker-compose.prod.yml` il driver `json-file`
+ruota a `max-size: 10m` conservando `max-file: 3` file.
 
 ## 6.2 Gestione degli errori (problem+json)
 
-Gli errori applicativi derivano da `AppException` e sono serializzati come
-**RFC 9457** `application/problem+json` dal `GlobalExceptionHandler`. Il `type`
-ha forma `urn:signverify:error:<codice>`.
+Gli errori applicativi derivano da `AppException` e il `GlobalExceptionHandler`
+li restituisce come `application/problem+json` secondo la **RFC 9457**. Il campo
+`type` ha la forma `urn:signverify:error:<codice>`.
 
 | Codice errore | HTTP | Quando |
 |---------------|------|--------|
-| `validation.invalid-input` | 400 | input non valido (bean validation, JSON malformato, parametro errato) |
-| `auth.invalid-token` | 401 | API key assente/malformata/sconosciuta/disabilitata/scaduta, o JWT non valido |
-| `authz.forbidden` | 403 | ruolo insufficiente (es. `STANDARD` su endpoint `PRIVILEGED`) |
-| `resource.not-found` | 404 | risorsa inesistente (o non visibile) |
-| `resource.conflict` | 409 | conflitto (es. ultima chiave privilegiata) |
-| `payload.too-large` | 413 | upload oltre i limiti |
-| `signature.parse-error` | 422 | documento non firmato/illeggibile |
-| `excessive-load.async-backpressure` | 429 | backpressure dei job asincroni |
-| `excessive-load.concurrency` | 503 | semaforo di verifica sincrona esaurito |
-| `tsl.not-ready` | 503 | Trusted Lists non ancora caricate |
-| `dss.unavailable` | 503 | circuit breaker DSS aperto |
+| `validation.invalid-input` | 400 | dati in ingresso non validi: vincoli di validazione, JSON malformato, parametro errato |
+| `auth.invalid-token` | 401 | API key assente, malformata, sconosciuta, disabilitata o scaduta, oppure JWT non valido |
+| `authz.forbidden` | 403 | ruolo insufficiente, per esempio `STANDARD` su un endpoint riservato ai `PRIVILEGED` |
+| `resource.not-found` | 404 | risorsa inesistente o non visibile al chiamante |
+| `resource.conflict` | 409 | conflitto, per esempio la rimozione dell'ultima chiave privilegiata |
+| `payload.too-large` | 413 | caricamento oltre i limiti |
+| `signature.parse-error` | 422 | documento non firmato o illeggibile |
+| `excessive-load.async-backpressure` | 429 | coda dei job asincroni piena |
+| `excessive-load.concurrency` | 503 | semaforo delle verifiche sincrone esaurito |
+| `tsl.not-ready` | 503 | liste di fiducia non ancora caricate |
+| `dss.unavailable` | 503 | interruttore di protezione di DSS aperto |
 | `internal-error` | 500 | errore non previsto |
 
 > **Riservati, non ancora emessi**: `validation.invalid-profile-overrides`,
@@ -89,10 +90,10 @@ ha forma `urn:signverify:error:<codice>`.
 > generico `internal-error` (500) invece che in un 400. È una lacuna nota, non
 > ancora corretta.
 
-Ogni risposta condivide la stessa busta; cambiano solo `type`, `status`,
-`title` e `detail`. È sempre presente anche un `code` stabile e machine-readable
-(lo stesso valore incapsulato nell'URN `type`), così i client non devono
-interpretare l'URN:
+Tutte le risposte condividono la stessa busta e cambiano solo `type`, `status`,
+`title` e `detail`. C'è sempre anche un campo `code` stabile e pensato per essere
+letto da un programma, con lo stesso valore contenuto nell'URN di `type`, così i
+client non devono interpretare l'URN:
 
 ```json
 {
@@ -107,14 +108,14 @@ interpretare l'URN:
 
 ### Validazione a livello di campo (`invalid-params`)
 
-Le risposte `validation.invalid-input` (400) includono inoltre un array
-`invalid-params` — il membro di estensione RFC 9457 §3.1 — con **una voce per
-ciascun input respinto**, così il client può associare l'errore a un campo
-specifico invece di interpretare `detail`. Viene popolato per la bean validation
-del body, per campi del body malformati o di tipo errato (enum non valida, tipo
-sbagliato) e per i parametri di path/query che falliscono la coercizione o la
-validazione (`page` non numerico, `{id}` UUID malformato, parametro obbligatorio
-mancante).
+Le risposte `validation.invalid-input` (400) contengono anche l'elenco
+`invalid-params`, il membro di estensione previsto dalla RFC 9457 §3.1, con
+**una voce per ogni dato respinto**: il client può così collegare l'errore a un
+campo preciso invece di interpretare `detail`. Viene valorizzato per i vincoli di
+validazione sul corpo della richiesta, per i campi del corpo malformati o di tipo
+sbagliato (valore non ammesso in un'enumerazione, tipo errato) e per i parametri
+di percorso o di query che non superano la conversione o la validazione: `page`
+non numerico, `{id}` con UUID malformato, parametro obbligatorio mancante.
 
 ```json
 {
@@ -131,10 +132,10 @@ mancante).
 }
 ```
 
-Ogni voce ha un `name` (il campo o il parametro, es. `name`, `page`,
-`items[2].role`) e un `reason` leggibile. Un puro errore di sintassi JSON non ha
-un campo localizzabile: `invalid-params` viene omesso e `detail` è
-`"malformed request body"`.
+Ogni voce ha un `name`, cioè il campo o il parametro (`name`, `page`,
+`items[2].role`), e un `reason` leggibile. Un errore di pura sintassi JSON non è
+riconducibile a un campo: in quel caso `invalid-params` viene omesso e `detail`
+vale `"malformed request body"`.
 
 | Codice errore | Esempio `detail` |
 |---------------|-------------------|
@@ -151,24 +152,24 @@ un campo localizzabile: `invalid-params` viene omesso e `detail` è
 | `dss.unavailable` | `"dss circuit breaker open: ..."` |
 | `internal-error` | `"unexpected error"` |
 
-> Per default `server.error.include-message: never` e
-> `include-stacktrace: never`: i dettagli interni non trapelano nelle risposte.
+> `server.error.include-message` e `include-stacktrace` valgono entrambi
+> `never`: i dettagli interni non trapelano nelle risposte.
 
-## 6.3 Audit log
+## 6.3 Registro di audit
 
-Esiste una tabella **`audit_log`** e un'API di consultazione riservata agli
+Esistono una tabella **`audit_log`** e un'API di consultazione riservata agli
 amministratori. Struttura del record (`AuditLog`):
 
 | Campo | Descrizione |
 |-------|-------------|
 | `id` | UUID |
 | `occurredAt` | istante dell'evento |
-| `principalType` / `principalId` | autore (o `SYSTEM`) |
-| `action` | azione (stringa) |
+| `principalType` / `principalId` | chi ha eseguito l'azione, oppure `SYSTEM` |
+| `action` | azione svolta |
 | `targetType` / `targetId` | risorsa interessata |
-| `success` | esito booleano |
+| `success` | esito, vero o falso |
 | `details` | JSON libero |
-| `ipAddress` | IP del chiamante |
+| `ipAddress` | indirizzo IP del chiamante |
 
 ### Consultazione
 
@@ -183,7 +184,7 @@ disponibili:
 | `from` / `to` | date-time |
 | `targetType` / `targetId` | string |
 | `success` | boolean |
-| `page` / `size` | integer (default `0` / `50`) |
+| `page` / `size` | integer (predefiniti `0` e `50`) |
 
 I risultati sono ordinati per `occurredAt` decrescente.
 
@@ -201,26 +202,26 @@ curl -sS "http://localhost:8080/api/v1/audit-log?action=verify&success=false&siz
 
 > **Stato attuale dell'implementazione.** La tabella `audit_log`, il
 > componente `AuditService` (scrittura) e l'API di lettura sono presenti e
-> indicizzati (`occurred_at`, `principal_id`, `action`). Nel codice corrente
+> indicizzati (`occurred_at`, `principal_id`, `action`). Nel codice attuale
 > `AuditService` **non è ancora collegato** ai percorsi operativi (verifica,
-> gestione chiavi, refresh TSL), quindi la tabella può risultare vuota: la
-> tracciabilità operativa è oggi garantita dai **log strutturati** con MDC
-> (§6.1). L'infrastruttura di audit persistente esiste già e può essere
-> collegata a quelle operazioni quando serve.
+> gestione delle chiavi, aggiornamento delle liste di fiducia), quindi la tabella
+> può risultare vuota: la tracciabilità operativa è oggi affidata ai **log
+> strutturati** con MDC (§6.1). L'infrastruttura di audit persistente esiste già
+> e si può collegare a quelle operazioni quando serve.
 
 ## 6.4 Metriche
 
 Endpoint Actuator esposti: `health`, `info`, `metrics`, `prometheus`.
 
-- `GET /actuator/prometheus`: metriche in formato Prometheus (Micrometer),
-  pubblico.
-- Il circuit breaker `dssValidator` (Resilience4j) pubblica un health indicator
-  ed espone metriche sullo stato (`CLOSED`/`OPEN`/`HALF_OPEN`), utili per
-  monitorare la disponibilità della validazione DSS.
+- `GET /actuator/prometheus`: metriche Micrometer in formato Prometheus,
+  raggiungibile senza autenticazione.
+- L'interruttore di protezione `dssValidator` (Resilience4j) pubblica un
+  indicatore di salute ed espone metriche sul proprio stato (`CLOSED`, `OPEN`,
+  `HALF_OPEN`), utili per tenere d'occhio la disponibilità della validazione DSS.
 
 ```mermaid
 flowchart LR
-    R4J[Resilience4j\ndssValidator] --> H[/actuator/health/]
+    R4J["Resilience4j\ndssValidator"] --> H[/actuator/health/]
     MM[Micrometer] --> P[/actuator/prometheus/]
     P --> PR[(Prometheus)]
     PR --> GR[Grafana]
