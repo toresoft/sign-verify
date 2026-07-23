@@ -8,7 +8,7 @@
 
 > 🇬🇧 **English** · 🇮🇹 [Leggi in italiano](README.it.md)
 
-> REST service for **eIDAS electronic-signature verification** (PAdES, CAdES, XAdES, JAdES, ASiC), built on Spring Boot 3.5 and the EU **DSS 6.4** library, with EU Trusted List (LOTL/TSL) management.
+> REST service for **eIDAS electronic-signature verification** (PAdES, CAdES, XAdES, JAdES, ASiC), built on Spring Boot 4.1 and the EU **DSS 6.4** library, with EU Trusted List (LOTL/TSL) management.
 
 ---
 
@@ -81,10 +81,20 @@ Activation: `-Dspring.profiles.active=dev` (host) or `SPRING_PROFILES_ACTIVE=doc
 | `APP_SECURITY_OAUTH_PRIVILEGED_VALUES` | Claim values that grant the `PRIVILEGED` role | `admin,privileged` |
 | `APP_SECURITY_BOOTSTRAP_KEY_FILE` | Path where the bootstrap key is written at first start | `/var/lib/sign-verify/bootstrap-api-key.txt` |
 | `APP_STORAGE_JOBS_DIR` | Async jobs directory | `/var/lib/sign-verify/jobs` |
+| `APP_STORAGE_TYPE` | Storage backend for job documents (`filesystem` or `s3`) | `filesystem` |
+| `APP_STORAGE_S3_ENDPOINT` | S3 endpoint (empty = native AWS) | _(empty)_ |
+| `APP_STORAGE_S3_REGION` | S3 region | `eu-south-1` |
+| `APP_STORAGE_S3_BUCKET` | S3 bucket name | `sign-verify-jobs` |
+| `APP_STORAGE_S3_PATH_STYLE` | Path-style access (`true` for MinIO/Ceph) | `false` |
 | `APP_DSS_CACHE_DIR` | DSS cache (TSL, CRL/OCSP) | `/var/lib/sign-verify/dss-cache` |
 | `APP_OJ_KEYSTORE_PASSWORD` | EU Official Journal keystore password (LOTL verification) | *(empty)* |
 | `SERVER_PORT` | HTTP port | `8080` |
 | `JAVA_TOOL_OPTIONS` | Extra JVM flags | container ergonomics |
+
+> With `APP_STORAGE_TYPE=s3`, credentials come from the AWS SDK default chain
+> (`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`, IAM roles/IRSA, profiles): no
+> application property holds secrets. The bucket must exist: at startup the
+> adapter performs a fail-fast `headBucket`.
 
 > **Generate the master key**
 > ```bash
@@ -281,11 +291,13 @@ Italian (`docs/it/`), with Mermaid diagrams. Indexes:
 |-------|------------|-------------|
 | Build & configuration | [01](docs/en/01-build-configuration.md) | [01](docs/it/01-build-configurazione.md) |
 | Docker & configuration | [02](docs/en/02-docker.md) | [02](docs/it/02-docker.md) |
+| Docker step-by-step operational guide | [02b](docs/en/02b-docker-operational-guide.md) | [02b](docs/it/02b-guida-operativa-docker.md) |
 | Authentication (API keys, OAuth) | [03](docs/en/03-authentication.md) | [03](docs/it/03-autenticazione.md) |
 | Trusted Certificates (TSL) | [04](docs/en/04-trusted-certificates.md) | [04](docs/it/04-trusted-certificates.md) |
 | Signature verification (sync/async) | [05](docs/en/05-signature-verification.md) | [05](docs/it/05-verifica-firme.md) |
 | File extraction | [06](docs/en/06-file-extraction.md) | [06](docs/it/06-estrazione-file.md) |
 | Logging & audit | [07](docs/en/07-logging-audit.md) | [07](docs/it/07-log-audit.md) |
+| Horizontal scaling | [08](docs/en/08-horizontal-scaling.md) | [08](docs/it/08-scalabilita-orizzontale.md) |
 
 ## 8. References
 

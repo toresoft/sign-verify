@@ -1,0 +1,58 @@
+/**
+ * sign-verify Copyright (C) 2026 toresoft
+ *
+ * <p>This file is part of the "sign-verify" project.
+ *
+ * <p>This library is free software; you can redistribute it and/or modify it under the terms of the
+ * GNU Lesser General Public License as published by the Free Software Foundation; either version 3
+ * of the License, or (at your option) any later version.
+ *
+ * <p>This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * <p>You should have received a copy of the GNU Lesser General Public License along with this
+ * library; if not, write to the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ * Boston, MA 02110-1301 USA
+ */
+package org.toresoft.signverify.adapter.storage;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.nio.file.Path;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.toresoft.signverify.domain.port.DocumentStoragePort;
+
+/**
+ * Verifies adapter selection via {@code app.storage.type}. Only the filesystem branch is asserted
+ * here (its {@link ConditionalOnProperty} carries {@code matchIfMissing = true}); the s3 branch is
+ * exercised end-to-end by {@code S3DocumentStorageAdapterIT}, which needs a real S3 endpoint for
+ * the constructor's headBucket fail-fast.
+ */
+class StorageAdapterWiringTest {
+
+  private final ApplicationContextRunner runner =
+      new ApplicationContextRunner().withUserConfiguration(FilesystemDocumentStorageAdapter.class);
+
+  @Test
+  void defaultsToFilesystemAdapter(@TempDir Path baseDir) {
+    runner
+        .withPropertyValues("app.storage.jobs-dir=" + baseDir)
+        .run(
+            ctx -> {
+              assertThat(ctx).hasSingleBean(DocumentStoragePort.class);
+              assertThat(ctx.getBean(DocumentStoragePort.class))
+                  .isInstanceOf(FilesystemDocumentStorageAdapter.class);
+            });
+  }
+
+  @Test
+  void filesystemAdapterDisabledWhenTypeIsS3(@TempDir Path baseDir) {
+    runner
+        .withPropertyValues("app.storage.type=s3", "app.storage.jobs-dir=" + baseDir)
+        .run(ctx -> assertThat(ctx).doesNotHaveBean(FilesystemDocumentStorageAdapter.class));
+  }
+}

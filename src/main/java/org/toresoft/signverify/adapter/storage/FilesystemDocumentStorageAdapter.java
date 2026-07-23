@@ -22,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.toresoft.signverify.domain.port.DocumentStoragePort;
 
@@ -36,12 +37,8 @@ import org.toresoft.signverify.domain.port.DocumentStoragePort;
  * </pre>
  */
 @Component
+@ConditionalOnProperty(name = "app.storage.type", havingValue = "filesystem", matchIfMissing = true)
 public class FilesystemDocumentStorageAdapter implements DocumentStoragePort {
-
-  private static final String INPUT_PREFIX = "input-";
-  private static final String RESULT_NAME = "result.json";
-  private static final String DEFAULT_INPUT_NAME = "file";
-  private static final String SAFE_NAME_REGEX = "[^a-zA-Z0-9._-]";
 
   private final Path baseDir;
 
@@ -53,13 +50,12 @@ public class FilesystemDocumentStorageAdapter implements DocumentStoragePort {
 
   @Override
   public String storeInput(String jobId, String filename, byte[] content) {
-    String name = (filename == null) ? DEFAULT_INPUT_NAME : safeName(filename);
-    return write(jobId, INPUT_PREFIX + name, content);
+    return write(jobId, StorageKeys.inputLeaf(filename), content);
   }
 
   @Override
   public String storeResult(String jobId, byte[] content) {
-    return write(jobId, RESULT_NAME, content);
+    return write(jobId, StorageKeys.RESULT_NAME, content);
   }
 
   @Override
@@ -106,9 +102,5 @@ public class FilesystemDocumentStorageAdapter implements DocumentStoragePort {
     } catch (IOException e) {
       throw new IllegalStateException("write fail", e);
     }
-  }
-
-  private static String safeName(String filename) {
-    return filename.replaceAll(SAFE_NAME_REGEX, "_");
   }
 }
