@@ -214,4 +214,78 @@ class VerificationJobListIT {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.totalElements").value(2));
   }
+
+  @Test
+  void privileged_filtersByCreatedFromTo_fromInclusiveToExclusive() throws Exception {
+    // Before the window → excluded.
+    persist(
+        PrincipalType.API_KEY,
+        standardKeyId,
+        JobStatus.COMPLETED,
+        Instant.parse("2026-07-13T23:59:59Z"));
+    // Exactly at `from` → included (inclusive lower bound).
+    ValidationJob atFrom =
+        persist(
+            PrincipalType.API_KEY,
+            standardKeyId,
+            JobStatus.COMPLETED,
+            Instant.parse("2026-07-14T00:00:00Z"));
+    // Inside the window → included.
+    ValidationJob within =
+        persist(
+            PrincipalType.API_KEY,
+            standardKeyId,
+            JobStatus.COMPLETED,
+            Instant.parse("2026-07-14T12:00:00Z"));
+    // Exactly at `to` → excluded (exclusive upper bound).
+    persist(
+        PrincipalType.API_KEY,
+        standardKeyId,
+        JobStatus.COMPLETED,
+        Instant.parse("2026-07-15T00:00:00Z"));
+
+    mvc.perform(
+            get("/api/v1/verifications/jobs")
+                .param("createdFrom", "2026-07-14T00:00:00Z")
+                .param("createdTo", "2026-07-15T00:00:00Z")
+                .header("X-API-Key", privilegedKeyRaw))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalElements").value(2))
+        // Newest first: `within` then `atFrom`.
+        .andExpect(jsonPath("$.content[0].jobId").value(within.getId().toString()))
+        .andExpect(jsonPath("$.content[1].jobId").value(atFrom.getId().toString()));
+  }
+
+  @Test
+  void summary_omitsSensitiveColumns_andIncludesDeletedJobs() throws Exception {
+    // A DELETED job carrying every sensitive column the summary must never expose.
+    ValidationJob j = new ValidationJob();
+    j.setId(UUID.randomUUID());
+    j.setStatus(JobStatus.DELETED);
+    j.setReportsRequested("simple,etsi");
+    j.setRequestedByPrincipalType(PrincipalType.API_KEY);
+    j.setRequestedByPrincipalId(standardKeyId);
+    j.setCreatedAt(Instant.parse("2026-07-14T10:00:00Z"));
+    j.setExpiresAt(Instant.parse("2026-07-21T10:00:00Z"));
+    j.setCallbackAttempts(0);
+    j.setDocumentPath("storage/secret-doc");
+    j.setResultPath("storage/secret-result");
+    j.setCallbackUrl("https://attacker.example/callback");
+    j.setCallbackSecretCipher("cipher-should-never-surface");
+    jobs.save(j);
+
+    mvc.perform(get("/api/v1/verifications/jobs").header("X-API-Key", standardKeyRaw))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalElements").value(1))
+        // DELETED jobs surface in the list (only the single-result GET applies 410 semantics).
+        .andExpect(jsonPath("$.content[0].status").value("DELETED"))
+        // Sensitive columns must be absent from the summary.
+        .andExpect(jsonPath("$.content[0].callbackUrl").doesNotExist())
+        .andExpect(jsonPath("$.content[0].callbackSecretCipher").doesNotExist())
+        .andExpect(jsonPath("$.content[0].documentPath").doesNotExist())
+        .andExpect(jsonPath("$.content[0].resultPath").doesNotExist())
+        .andExpect(jsonPath("$.content[0].result").doesNotExist())
+        // deliveredAt is intentionally omitted from the summary view.
+        .andExpect(jsonPath("$.content[0].deliveredAt").doesNotExist());
+  }
 }
