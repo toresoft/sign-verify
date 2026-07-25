@@ -440,6 +440,8 @@ class AsyncVerificationControllerTest {
         .andExpect(content().contentTypeCompatibleWith("application/json"))
         .andExpect(jsonPath("$.jobId").value(jobId.toString()))
         .andExpect(jsonPath("$.status").value("PENDING"))
+        .andExpect(jsonPath("$.requestedBy.type").value(owner.type().name()))
+        .andExpect(jsonPath("$.requestedBy.id").value(owner.id()))
         .andExpect(jsonPath("$.createdAt").exists())
         .andExpect(jsonPath("$.expiresAt").exists());
   }
@@ -515,6 +517,8 @@ class AsyncVerificationControllerTest {
             get("/api/v1/verifications/jobs/{id}", jobId)
                 .with(authentication(authFor(owner, Role.STANDARD))))
         .andExpect(status().isGone())
+        .andExpect(jsonPath("$.requestedBy.type").value(owner.type().name()))
+        .andExpect(jsonPath("$.requestedBy.id").value(owner.id()))
         .andExpect(jsonPath("$.originalStatus").value("COMPLETED"))
         .andExpect(jsonPath("$.deletedAt").exists());
   }
@@ -561,7 +565,10 @@ class AsyncVerificationControllerTest {
             get("/api/v1/verifications/jobs/{id}", jobId)
                 .with(authentication(authFor(privileged, Role.PRIVILEGED))))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.jobId").value(jobId.toString()));
+        .andExpect(jsonPath("$.jobId").value(jobId.toString()))
+        // requestedBy reflects the job owner, not the privileged caller viewing it.
+        .andExpect(jsonPath("$.requestedBy.type").value(owner.type().name()))
+        .andExpect(jsonPath("$.requestedBy.id").value(owner.id()));
   }
 
   @Test
