@@ -375,8 +375,8 @@ paths:
         '410':
           description: gone (result no longer available)
           content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+            application/json:
+              schema: { $ref: '#/components/schemas/DeletedJobView' }
 
   /api/v1/extractions:
     post:
@@ -796,6 +796,7 @@ components:
       properties:
         jobId: { type: string, format: uuid }
         status: { type: string, enum: [PENDING, RUNNING, COMPLETED, FAILED, DELIVERED, DELIVERY_FAILED, DELETED] }
+        requestedBy: { $ref: '#/components/schemas/PrincipalRef' }
         createdAt: { type: string, format: date-time }
         startedAt: { type: string, format: date-time, nullable: true }
         completedAt: { type: string, format: date-time, nullable: true }
@@ -831,3 +832,38 @@ components:
           type: string
           nullable: true
           description: Outcome of the last failed callback delivery attempt, if any.
+
+    PrincipalRef:
+      type: object
+      description: >
+        The principal that submitted the job (its owner). Returned to the owner itself and to
+        PRIVILEGED principals — the only callers allowed to read the job.
+      properties:
+        type:
+          type: string
+          enum: [API_KEY, OAUTH_USER, SYSTEM]
+          description: Kind of principal that authenticated the submission.
+        id:
+          type: string
+          description: Stable identifier of the submitting principal within its type.
+      required: [type, id]
+
+    DeletedJobView:
+      type: object
+      description: >
+        Reduced view returned with 410 Gone when a job's result has been deleted (expired or
+        purged). Carries just enough context to identify the job and its owner.
+      properties:
+        jobId: { type: string, format: uuid }
+        requestedBy: { $ref: '#/components/schemas/PrincipalRef' }
+        originalStatus:
+          type: string
+          enum: [PENDING, RUNNING, COMPLETED, FAILED, DELIVERED, DELIVERY_FAILED, DELETED]
+          nullable: true
+          description: Status the job held before it was deleted.
+        completedAt: { type: string, format: date-time, nullable: true }
+        deletedAt: { type: string, format: date-time, nullable: true }
+        message:
+          type: string
+          description: Human-readable explanation that the result is no longer available.
+      required: [jobId, requestedBy, message]

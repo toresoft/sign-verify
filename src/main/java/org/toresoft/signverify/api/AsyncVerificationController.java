@@ -178,6 +178,10 @@ public class AsyncVerificationController {
     if (job.getStatus() == JobStatus.DELETED) {
       Map<String, Object> body = new LinkedHashMap<>();
       body.put("jobId", job.getId());
+      Map<String, Object> requestedBy = new LinkedHashMap<>();
+      requestedBy.put("type", job.getRequestedByPrincipalType().name());
+      requestedBy.put("id", job.getRequestedByPrincipalId());
+      body.put("requestedBy", requestedBy);
       body.put("originalStatus", job.getOriginalStatus());
       body.put(
           "completedAt",
@@ -195,6 +199,10 @@ public class AsyncVerificationController {
     Map<String, Object> out = new LinkedHashMap<>();
     out.put("jobId", job.getId());
     out.put("status", job.getStatus().name());
+    Map<String, Object> requestedBy = new LinkedHashMap<>();
+    requestedBy.put("type", job.getRequestedByPrincipalType().name());
+    requestedBy.put("id", job.getRequestedByPrincipalId());
+    out.put("requestedBy", requestedBy);
     out.put("createdAt", job.getCreatedAt().atOffset(ZoneOffset.UTC));
     if (job.getStartedAt() != null)
       out.put("startedAt", job.getStartedAt().atOffset(ZoneOffset.UTC));
