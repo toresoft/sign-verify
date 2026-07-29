@@ -19,15 +19,20 @@ Coordinate artefatto: `org.toresoft:sign-verify-2:1.0.0-SNAPSHOT`.
 ## Dove trovare le informazioni sul progetto
 
 La conoscenza dettagliata del progetto (architettura, domini, concetti DSS/eIDAS, entità,
-decisioni di design, ricerche) vive in un **wiki locale** sotto `.wiki/`.
+decisioni di design, ricerche) vive nel **wiki globale**, nel topic
+`digital-signature-verification` (`~/wiki/topics/digital-signature-verification`).
+Nel repo `.wiki` è un **symlink** a quel topic ed è escluso da git, così i comandi
+`/wiki:*` lo risolvono automaticamente lavorando da questa directory.
 
 **Prima di rispondere a domande su architettura, domini o scelte tecniche, consultare il wiki:**
 
 - Interrogare in linguaggio naturale: `/wiki:query <domanda>` (usare `--deep` per analisi approfondite).
-- Indice navigabile: `.wiki/meta/index.md` — 63 pagine tra `entities/`, `concepts/`,
-  `syntheses/`, `analyses/`, `sources/`.
+  Da fuori dal repo: `/wiki:query --wiki digital-signature-verification <domanda>`.
+- Indice navigabile: `.wiki/_index.md` — 94 pagine tra `wiki/concepts/`, `wiki/topics/`,
+  `wiki/references/`, `wiki/theses/`.
 - Esempi di voci utili: `concepts/hexagonal-architecture`, `concepts/design-first-openapi`,
-  `concepts/api-key-authentication`, `concepts/trusted-lists`, `entities/sign-verify-2`.
+  `concepts/api-key-authentication`, `concepts/trusted-lists`, `topics/sign-verify-2`.
+- Convenzioni locali e deviazioni note dallo schema: `.wiki/schema.md`.
 
 I piani e le specifiche di implementazione (in italiano) sono in `docs/superpowers/`.
 
