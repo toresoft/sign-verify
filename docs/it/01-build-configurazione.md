@@ -154,8 +154,8 @@ La password del keystore OJ va in `APP_OJ_KEYSTORE_PASSWORD`.
 | `verify.max-concurrent` | `8` | Verifiche sincrone simultanee (semaforo) |
 | `async.workers` | `4` | Numero di worker di validazione |
 | `async.worker.poll-interval` | `5s` | Intervallo tra un'interrogazione della coda e la successiva |
-| `async.max-pending-per-principal` | `50` | Limite di job in attesa per singolo chiamante |
-| `async.max-pending-global` | `500` | Limite complessivo di job in attesa |
+| `async.max-pending-per-principal` | `50` | Limite di job in attesa per singolo chiamante. Sovrascrivibile con `APP_ASYNC_MAX_PENDING_PER_PRINCIPAL` |
+| `async.max-pending-global` | `500` | Limite complessivo di job in attesa. Sovrascrivibile con `APP_ASYNC_MAX_PENDING_GLOBAL` |
 | `async.job-ttl` | `7d` | Durata massima di vita del job |
 | `async.input-retention` | `1h` | Conservazione del documento in ingresso |
 | `async.result-retention` | `30d` | Conservazione del risultato |

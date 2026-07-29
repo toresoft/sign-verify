@@ -80,6 +80,8 @@ Activation: `-Dspring.profiles.active=dev` (host) or `SPRING_PROFILES_ACTIVE=doc
 | `APP_SECURITY_OAUTH_ROLE_CLAIM` | JWT claim holding the roles | `roles` |
 | `APP_SECURITY_OAUTH_PRIVILEGED_VALUES` | Claim values that grant the `PRIVILEGED` role | `admin,privileged` |
 | `APP_SECURITY_BOOTSTRAP_KEY_FILE` | Path where the bootstrap key is written at first start | `/var/lib/sign-verify/bootstrap-api-key.txt` |
+| `APP_ASYNC_MAX_PENDING_PER_PRINCIPAL` | Per-principal pending-job limit (429 above it) | `50` |
+| `APP_ASYNC_MAX_PENDING_GLOBAL` | Global pending-job limit (429 above it) | `500` |
 | `APP_STORAGE_JOBS_DIR` | Async jobs directory | `/var/lib/sign-verify/jobs` |
 | `APP_STORAGE_TYPE` | Storage backend for job documents (`filesystem` or `s3`) | `filesystem` |
 | `APP_STORAGE_S3_ENDPOINT` | S3 endpoint (empty = native AWS) | _(empty)_ |

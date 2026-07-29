@@ -150,8 +150,8 @@ The OJ keystore password goes in `APP_OJ_KEYSTORE_PASSWORD`.
 | `verify.max-concurrent` | `8` | Concurrent sync verifications (semaphore) |
 | `async.workers` | `4` | Number of validation workers |
 | `async.worker.poll-interval` | `5s` | Job polling interval |
-| `async.max-pending-per-principal` | `50` | Per-principal backpressure |
-| `async.max-pending-global` | `500` | Global backpressure |
+| `async.max-pending-per-principal` | `50` | Per-principal backpressure. Override with `APP_ASYNC_MAX_PENDING_PER_PRINCIPAL` |
+| `async.max-pending-global` | `500` | Global backpressure. Override with `APP_ASYNC_MAX_PENDING_GLOBAL` |
 | `async.job-ttl` | `7d` | Job TTL |
 | `async.input-retention` | `1h` | Input document retention |
 | `async.result-retention` | `30d` | Result retention |
