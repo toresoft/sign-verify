@@ -53,3 +53,10 @@ docs/debug.txt
 .claude/
 .claude-flow/
 .zcode/
+
+# Wiki: moved to the global hub (~/wiki/topics/digital-signature-verification).
+# .wiki is a symlink so /wiki:* commands still resolve from this directory.
+/.wiki
+
+# Local Claude Code guidance: kept on disk, no longer tracked.
+/CLAUDE.md

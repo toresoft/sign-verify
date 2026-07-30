@@ -353,6 +353,48 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
 
+  /api/v1/verifications/jobs:
+    get:
+      tags: [Verifications]
+      operationId: listJobs
+      summary: List verification jobs (paginated, filterable)
+      description: >-
+        Returns a paginated, filterable summary view of verification jobs. STANDARD principals
+        see only their own jobs; PRIVILEGED principals see all and may filter by owner. Never
+        includes result bodies or error details (use GET /jobs/{jobId} for those).
+      parameters:
+        - { name: ownerId, in: query, required: false, schema: { type: string },
+            description: "Filter by owner principal id. PRIVILEGED only; STANDARD supplying it gets 400." }
+        - { name: ownerType, in: query, required: false,
+            schema: { type: string, enum: [API_KEY, OAUTH_USER, SYSTEM] },
+            description: "Disambiguates ownerId. PRIVILEGED only." }
+        - name: status
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { type: string, enum: [PENDING, RUNNING, COMPLETED, FAILED, DELIVERED, DELIVERY_FAILED, DELETED] }
+          description: "Repeatable. Matches any of the given statuses (IN)."
+        - { name: createdOn, in: query, required: false, schema: { type: string, format: date },
+            description: "Exact UTC day. Mutually exclusive with createdFrom/createdTo (else 400)." }
+        - { name: createdFrom, in: query, required: false, schema: { type: string, format: date-time },
+            description: "Lower bound, inclusive (createdAt >= createdFrom)." }
+        - { name: createdTo, in: query, required: false, schema: { type: string, format: date-time },
+            description: "Upper bound, exclusive (createdAt < createdTo)." }
+        - { name: page, in: query, required: false, schema: { type: integer, default: 0 } }
+        - { name: size, in: query, required: false, schema: { type: integer, default: 50 },
+            description: "Clamped to a maximum of 200." }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JobPage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   /api/v1/verifications/jobs/{jobId}:
     get:
       tags: [Verifications]
@@ -375,8 +417,8 @@ paths:
         '410':
           description: gone (result no longer available)
           content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+            application/json:
+              schema: { $ref: '#/components/schemas/DeletedJobView' }
 
   /api/v1/extractions:
     post:
@@ -796,6 +838,7 @@ components:
       properties:
         jobId: { type: string, format: uuid }
         status: { type: string, enum: [PENDING, RUNNING, COMPLETED, FAILED, DELIVERED, DELIVERY_FAILED, DELETED] }
+        requestedBy: { $ref: '#/components/schemas/PrincipalRef' }
         createdAt: { type: string, format: date-time }
         startedAt: { type: string, format: date-time, nullable: true }
         completedAt: { type: string, format: date-time, nullable: true }
@@ -831,3 +874,70 @@ components:
           type: string
           nullable: true
           description: Outcome of the last failed callback delivery attempt, if any.
+
+    PrincipalRef:
+      type: object
+      description: >
+        The principal that submitted the job (its owner). Returned to the owner itself and to
+        PRIVILEGED principals — the only callers allowed to read the job.
+      properties:
+        type:
+          type: string
+          enum: [API_KEY, OAUTH_USER, SYSTEM]
+          description: Kind of principal that authenticated the submission.
+        id:
+          type: string
+          description: Stable identifier of the submitting principal within its type.
+      required: [type, id]
+
+    DeletedJobView:
+      type: object
+      description: >
+        Reduced view returned with 410 Gone when a job's result has been deleted (expired or
+        purged). Carries just enough context to identify the job and its owner.
+      properties:
+        jobId: { type: string, format: uuid }
+        requestedBy: { $ref: '#/components/schemas/PrincipalRef' }
+        originalStatus:
+          type: string
+          enum: [PENDING, RUNNING, COMPLETED, FAILED, DELIVERED, DELIVERY_FAILED, DELETED]
+          nullable: true
+          description: Status the job held before it was deleted.
+        completedAt: { type: string, format: date-time, nullable: true }
+        deletedAt: { type: string, format: date-time, nullable: true }
+        message:
+          type: string
+          description: Human-readable explanation that the result is no longer available.
+      required: [jobId, requestedBy, message]
+
+    JobSummary:
+      type: object
+      description: Summary view of a verification job in list results. No result body or error details.
+      properties:
+        jobId: { type: string, format: uuid }
+        status: { type: string, enum: [PENDING, RUNNING, COMPLETED, FAILED, DELIVERED, DELIVERY_FAILED, DELETED] }
+        requestedBy: { $ref: '#/components/schemas/PrincipalRef' }
+        createdAt: { type: string, format: date-time }
+        startedAt: { type: string, format: date-time, nullable: true }
+        completedAt: { type: string, format: date-time, nullable: true }
+        expiresAt: { type: string, format: date-time }
+        callbackAttempts: { type: integer }
+        phase:
+          type: string
+          enum: [STORAGE_READ, POLICY_RESOLVE, DSS_VALIDATE, RESULT_STORE]
+          nullable: true
+        phaseUpdatedAt: { type: string, format: date-time, nullable: true }
+      required: [jobId, status, requestedBy, createdAt, expiresAt, callbackAttempts]
+
+    JobPage:
+      type: object
+      description: Paginated envelope of job summaries.
+      properties:
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer, format: int64 }
+        totalPages: { type: integer }
+        content:
+          type: array
+          items: { $ref: '#/components/schemas/JobSummary' }
+      required: [page, size, totalElements, totalPages, content]

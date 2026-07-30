@@ -138,8 +138,8 @@ app:
       max-validation-time: 5m
       # How often each instance checks its own in-flight jobs against their deadlines.
       budget-check-interval: 15s
-    max-pending-per-principal: 50
-    max-pending-global: 500
+    max-pending-per-principal: ${APP_ASYNC_MAX_PENDING_PER_PRINCIPAL:50}
+    max-pending-global: ${APP_ASYNC_MAX_PENDING_GLOBAL:500}
     max-pickup-attempts: 10
     job-ttl: 7d
     input-retention: 1h
