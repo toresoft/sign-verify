@@ -72,6 +72,28 @@
              higher-privileged view) is fixed in 3.1.5. The Jackson 2.x family carries the same fix
              and is pinned separately to 2.22.1 via the com.fasterxml jackson-bom import below. -->
         <jackson-bom.version>3.1.5</jackson-bom.version>
+        <!-- HttpComponents Core 5 is managed by the Spring Boot parent (httpcore5.version=5.4.2),
+             which drives both httpcore5 and httpcore5-h2. It reaches the classpath transitively via
+             httpclient5 (DSS dss-service and awssdk apache5-client). Override the property to the
+             patched 5.4.3, which fixes two remote DoS issues affecting 5.0–5.4.2:
+             CVE-2026-54399 (no bound on HTTP header/request-line length in the default config) and
+             CVE-2026-54428 (HPackDecoder accepts an unlimited HTTP/2 header list before the
+             SETTINGS ACK). -->
+        <httpcore5.version>5.4.3</httpcore5.version>
+        <!-- HttpComponents Client 5 is managed by the Spring Boot parent (httpclient5.version=5.6.1)
+             and pulled in transitively by DSS dss-service and awssdk apache5-client. Override the
+             property to a patched release: CVE-2026-64607 (a Content-Encoding decode error leaks the
+             connection instead of releasing it, exhausting the pool — affects 5.0.0 onward) is fixed
+             in 5.6.3. Bumped to 5.6.4, the current patch on that line. -->
+        <httpclient5.version>5.6.4</httpclient5.version>
+        <!-- Log4j 2 is managed by the Spring Boot parent (log4j2.version=2.25.4); only log4j-api
+             reaches the classpath, via the log4j-to-slf4j bridge that spring-boot-starter-logging
+             installs so any Log4j-based library routes through Logback. Override the property to the
+             patched 2.25.5: CVE-2026-49844 (MapMessage.asJson() emits non-finite floats as bare NaN /
+             Infinity, producing invalid JSON that can corrupt a downstream log pipeline) affects
+             2.13.1–2.25.4 and 2.26.0. Staying on the 2.25.x line keeps the diff minimal; 2.26.1 is
+             the equivalent fix on the newer line if the parent moves there. -->
+        <log4j2.version>2.25.5</log4j2.version>
         <!-- AWS SDK v2 is NOT managed by the Spring Boot parent; pin the BOM explicitly. Used by
              the S3 DocumentStoragePort adapter (see app.storage.type=s3). -->
         <awssdk.version>2.49.0</awssdk.version>
