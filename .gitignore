@@ -60,3 +60,4 @@ docs/debug.txt
 
 # Local Claude Code guidance: kept on disk, no longer tracked.
 /CLAUDE.md
+.gstack/
