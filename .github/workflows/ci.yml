@@ -253,6 +253,12 @@ jobs:
     permissions:
       contents: read
       security-events: write
+      # upload-sarif resolves the workflow run it is attaching the analysis to
+      # (GET /repos/{owner}/{repo}/actions/runs/{run_id}), which needs actions:read
+      # on a private repo. A job-level permissions block zeroes every scope it does
+      # not list, so without this the upload dies on "Resource not accessible by
+      # integration" and the findings never reach the Security tab.
+      actions: read
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v5
