@@ -35,7 +35,7 @@ ASiC-S/ASiC-E.
 ## Image
 
 - **Registry:** `toresoft/sign-verify`
-- **Base:** `alpine:3.21` with a minimal custom **jlink** runtime (Java 21), runs
+- **Base:** `alpine:3.24` with a minimal custom **jlink** runtime (Java 21), runs
   as non-root (`uid:gid 10001`)
 - **Exposed port:** `8080`
 - **Writable data path:** `/var/lib/sign-verify` (mount a volume here)
