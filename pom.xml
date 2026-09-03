@@ -94,6 +94,18 @@
              2.13.1–2.25.4 and 2.26.0. Staying on the 2.25.x line keeps the diff minimal; 2.26.1 is
              the equivalent fix on the newer line if the parent moves there. -->
         <log4j2.version>2.25.5</log4j2.version>
+        <!-- Embedded Tomcat is managed by the Spring Boot parent (tomcat.version=11.0.22) and
+             ships as the servlet container via spring-boot-starter-web. Override the property to
+             11.0.25, which fixes three advisories affecting 11.0.0-M1 through 11.0.24:
+             CVE-2026-65905 (a DIGEST-authenticated request made on the upper boundary of the nonce
+             replay window can be replayed once), CVE-2026-65182 (a security constraint on a longer
+             path declared before a more restrictive one on a shorter sub-path lets the shorter
+             constraint be bypassed) and CVE-2026-68525 (FORM authentication lets a constraint that
+             grants POST but not GET on a resource be bypassed). This service authenticates through
+             spring-boot-starter-oauth2-resource-server, not Tomcat's DIGEST/FORM authenticators, so
+             only the constraint-ordering issue is even theoretically reachable — bumped anyway to
+             keep the container free of known criticals. -->
+        <tomcat.version>11.0.25</tomcat.version>
         <!-- AWS SDK v2 is NOT managed by the Spring Boot parent; pin the BOM explicitly. Used by
              the S3 DocumentStoragePort adapter (see app.storage.type=s3). -->
         <awssdk.version>2.49.0</awssdk.version>

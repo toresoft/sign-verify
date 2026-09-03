@@ -70,17 +70,20 @@ RUN set -eu; \
 # =============================================================================
 FROM alpine:3.24 AS runtime
 
-# The version floors on the OpenSSL libs (installed in the base image as
-# apk-tools dependencies) carry the fix for the 2026-08 advisory batch —
-# CVE-2026-14456/14457, -18798, -54874, -63072..63076, -75803 — released as
-# 3.5.8-r0 in v3.24/main. `apk upgrade` alone does not get there: the
-# alpine:3.24 digest has not moved since 3.24.1 (2026-06) and there is no 3.25
-# branch yet, so CI's layer cache (--cache-from / type=gha) replays this step
-# and keeps the stale 3.5.7-r0. Editing the constraint invalidates the cached
-# layer and forces the upgrade. Floors, not pins: later revisions satisfy them.
+# The version floors carry fixes that the base image does not ship yet:
+#   libcrypto3/libssl3 >= 3.5.8-r0 — the 2026-08 OpenSSL advisory batch
+#     (CVE-2026-14456/14457, -18798, -54874, -63072..63076, -75803).
+#   expat >= 2.8.4-r0 — CVE-2026-66046, -76641, -76956, -76957. expat is not
+#     requested directly; it arrives as a fontconfig dependency, and naming it
+#     here raises the floor on that transitive install.
+# `apk upgrade` alone does not get there: the alpine:3.24 digest has not moved
+# since 3.24.1 (2026-06) and there is no 3.25 branch yet, so CI's layer cache
+# (--cache-from / type=gha) replays this step and keeps the stale revisions.
+# Editing the constraints invalidates the cached layer and forces the upgrade.
+# Floors, not pins: later revisions satisfy them.
 RUN apk upgrade --no-cache \
  && apk add --no-cache fontconfig freetype ttf-dejavu \
-      'libcrypto3>=3.5.8-r0' 'libssl3>=3.5.8-r0' \
+      'libcrypto3>=3.5.8-r0' 'libssl3>=3.5.8-r0' 'expat>=2.8.4-r0' \
  && addgroup -g 10001 app \
  && adduser -u 10001 -G app -s /sbin/nologin -D -H app \
  && mkdir -p /var/lib/sign-verify/dss-cache /var/lib/sign-verify/jobs /var/lib/sign-verify/extract-tmp \
