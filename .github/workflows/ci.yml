@@ -65,6 +65,7 @@ jobs:
             target/failsafe-reports/
             target/site/jacoco/
           if-no-files-found: ignore
+          retention-days: 5
 
   # --------------------------------------------------------------------------- #
   # build                                                                        #
@@ -84,6 +85,7 @@ jobs:
         with:
           name: jar
           path: target/sign-verify-2.jar
+          retention-days: 5
 
   # --------------------------------------------------------------------------- #
   # e2e  (boot the built image + PostgreSQL and drive a real signature          #
@@ -193,6 +195,7 @@ jobs:
           name: trivy-report
           path: trivy-report.txt
           if-no-files-found: ignore
+          retention-days: 5
 
   # Trivy filesystem scan: source-side dependency + Dockerfile/config misconfiguration check.
   # Complements the image scan (which runs post-build): this catches vulnerable Maven deps and
@@ -238,6 +241,7 @@ jobs:
           name: trivy-fs-report
           path: trivy-fs-report.txt
           if-no-files-found: ignore
+          retention-days: 5
 
   # OSV-Scanner: dependency (SCA) verification against the OSV.dev database.
   # Replaces OWASP Dependency-Check, whose full NVD datastore download (~356k CVEs into a local
@@ -300,6 +304,7 @@ jobs:
           name: osv-report
           path: osv-report.txt
           if-no-files-found: ignore
+          retention-days: 5
 
   # --------------------------------------------------------------------------- #
   # release  → GitHub Release with jar + vulnerability reports attached         #
