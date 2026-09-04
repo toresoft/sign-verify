@@ -55,8 +55,13 @@ jobs:
           java-version: "21"
           cache: maven
       - run: mvn -B -ntp verify
+      # Diagnostic only — nothing downstream consumes these reports. Kept non-fatal
+      # so an artifact-storage problem (the account-wide quota is shared across all
+      # repos and is exhausted by whichever one uploads most) cannot red this job and
+      # skip build → e2e → package → release behind it.
       - name: Upload test & coverage reports
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: test-reports
@@ -293,8 +298,13 @@ jobs:
             scan source --config=./osv-scanner.toml --format sarif ./target/bom.json > osv-results.sarif || true
           # upload-sarif rejects an empty file; drop it when the scan produced no SARIF.
           [ -s osv-results.sarif ] || rm -f osv-results.sarif
+      # Requires code scanning to be enabled on the repository; where it is not, the
+      # step errors with "Code scanning is not enabled for this repository". That is a
+      # repo-settings gap, not a scan failure — the findings are still in osv-report.txt
+      # below, so do not let it colour the run.
       - name: Upload SARIF to code scanning
         if: hashFiles('osv-results.sarif') != ''
+        continue-on-error: true
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: osv-results.sarif
