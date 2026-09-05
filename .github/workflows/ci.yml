@@ -122,8 +122,8 @@ jobs:
   #   Requires repository secrets: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN           #
   #   Publishing is tag/dispatch-only: branch pushes and PRs run the pipeline    #
   #   (incl. e2e) but never push an image.                                       #
-  #   On workflow_dispatch: only :sha and :latest are pushed (no semver tag).     #
-  #   On tag pushes: semver tag + :latest are pushed.                            #
+  #   On workflow_dispatch: only :sha-<short> is pushed (no semver, no :latest).  #
+  #   On tag pushes: semver tag + :latest are pushed (no :sha-* duplicate).       #
   # --------------------------------------------------------------------------- #
   package:
     runs-on: ubuntu-latest
@@ -144,7 +144,7 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=sha,format=short
+            type=sha,format=short,enable=${{ github.event_name == 'workflow_dispatch' }}
             type=raw,value=latest,enable=${{ github.event_name == 'push' }}
             type=semver,pattern={{version}}
       - id: build
