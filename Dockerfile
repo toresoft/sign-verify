@@ -76,14 +76,23 @@ FROM alpine:3.24 AS runtime
 #   expat >= 2.8.4-r0 — CVE-2026-66046, -76641, -76956, -76957. expat is not
 #     requested directly; it arrives as a fontconfig dependency, and naming it
 #     here raises the floor on that transitive install.
+#   libpng >= 1.6.59-r0 — CVE-2026-46675 (use-after-free of zlib input in
+#     png_read_end after incomplete zTXt/iTXt/iCCP decompression). Pulled in by
+#     freetype. 3.24 still ships 1.6.58-r1 (backport pending in aports!108911),
+#     so libpng alone comes from edge through the @edge tag: an untagged package
+#     never resolves from a tagged repository, so everything else stays on 3.24.
+#     edge's libpng depends only on musl and zlib. Drop the tag and keep the
+#     floor once 3.24 has 1.6.59.
 # `apk upgrade` alone does not get there: the alpine:3.24 digest has not moved
 # since 3.24.1 (2026-06) and there is no 3.25 branch yet, so CI's layer cache
 # (--cache-from / type=gha) replays this step and keeps the stale revisions.
 # Editing the constraints invalidates the cached layer and forces the upgrade.
 # Floors, not pins: later revisions satisfy them.
-RUN apk upgrade --no-cache \
+RUN echo '@edge https://dl-cdn.alpinelinux.org/alpine/edge/main' >> /etc/apk/repositories \
+ && apk upgrade --no-cache \
  && apk add --no-cache fontconfig freetype ttf-dejavu \
       'libcrypto3>=3.5.8-r0' 'libssl3>=3.5.8-r0' 'expat>=2.8.4-r0' \
+      'libpng@edge>=1.6.59-r0' \
  && addgroup -g 10001 app \
  && adduser -u 10001 -G app -s /sbin/nologin -D -H app \
  && mkdir -p /var/lib/sign-verify/dss-cache /var/lib/sign-verify/jobs /var/lib/sign-verify/extract-tmp \
