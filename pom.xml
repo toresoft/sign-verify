@@ -42,7 +42,7 @@
              Override to align with what starter-test expects and what Spring’s test extensions
              are compiled against. -->
         <junit-jupiter.version>6.0.3</junit-jupiter.version>
-        <dss.version>6.4</dss.version>
+        <dss.version>6.5</dss.version>
         <resilience4j.version>2.2.0</resilience4j.version>
         <shedlock.version>5.16.0</shedlock.version>
         <testcontainers.version>1.20.4</testcontainers.version>
@@ -69,9 +69,14 @@
              tools.jackson:jackson-bom at jackson-bom.version=3.1.4. Override the property to a
              patched release: CVE-2026-59889 (@JsonView bypassed for @JsonUnwrapped container
              properties on deserialization, letting crafted input write fields restricted to a
-             higher-privileged view) is fixed in 3.1.5. The Jackson 2.x family carries the same fix
-             and is pinned separately to 2.22.1 via the com.fasterxml jackson-bom import below. -->
-        <jackson-bom.version>3.1.5</jackson-bom.version>
+             higher-privileged view) is fixed in 3.1.5; CVE-2026-68497 (unbounded number parse DoS
+             in Duration / XMLGregorianCalendar deserialization), CVE-2026-19032 (Path
+             deserialization resolves any installed FileSystemProvider scheme) and CVE-2026-83557
+             (Comparable missing from DefaultBaseTypeLimitingValidator's unsafe base types) affect
+             3.0.0 through 3.1.5 and are fixed in 3.1.6. Bumped to 3.1.7, the current patch on the
+             3.1 line the parent tracks. The Jackson 2.x family carries the same fixes and is pinned
+             separately via the com.fasterxml jackson-bom import below. -->
+        <jackson-bom.version>3.1.7</jackson-bom.version>
         <!-- HttpComponents Core 5 is managed by the Spring Boot parent (httpcore5.version=5.4.2),
              which drives both httpcore5 and httpcore5-h2. It reaches the classpath transitively via
              httpclient5 (DSS dss-service and awssdk apache5-client). Override the property to the
@@ -118,12 +123,14 @@
                  to a patched release. Spring Boot 4.1 manages only Jackson 3 (tools.jackson), so
                  without this override the Jackson 2 on the classpath falls back to the parent-less
                  default 2.21.4, reopening CVE-2026-23183, CVE-2026-54512, CVE-2026-54513 and
-                 CVE-2026-54515 (all fixed in 2.22.1). Imported first so it wins. Remove once
-                 Jackson 2 is fully off the classpath (see jackson-databind-nullable follow-up). -->
+                 CVE-2026-54515 (all fixed in 2.22.1). 2.22.0-2.22.1 are in turn affected by
+                 CVE-2026-68497, CVE-2026-19032 and CVE-2026-83557 (fixed in 2.22.2), so pinned to
+                 2.22.3, the current patch. Imported first so it wins. Remove once Jackson 2 is fully
+                 off the classpath (see jackson-databind-nullable follow-up). -->
             <dependency>
                 <groupId>com.fasterxml.jackson</groupId>
                 <artifactId>jackson-bom</artifactId>
-                <version>2.22.1</version>
+                <version>2.22.3</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -341,19 +348,26 @@
 
         <!-- BouncyCastle (DSS deps, esplicite). Pin newer than the DSS BOM to clear known CVEs.
              Registered as a JCA provider at startup (BouncyCastleProviderConfig) so DSS can parse
-             legacy EU TSL certificates whose RSA key encoding the default JDK provider rejects. -->
+             legacy EU TSL certificates whose RSA key encoding the default JDK provider rejects.
+             1.84 and earlier are affected by CVE-2026-8763 (Name Constraints bypass via a trailing
+             dot in rfc822Name / URI) and CVE-2026-13506 (lazy ASN.1 sequence forcing resets the
+             nesting-depth guard), both fixed in 1.85. 1.85 rejects trailing bytes after the CMS
+             SignedData, which DSS 6.4 passed through from the zero-padded PAdES /Contents, so the
+             bump requires DSS 6.5 (built against BouncyCastle 1.85). bcprov and bcpkix are kept on
+             the same release as DSS (bcpkix pulls bcutil at its own version) to avoid a
+             mixed-version provider. -->
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk18on</artifactId>
-            <version>1.84</version>
+            <version>1.85</version>
         </dependency>
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcpkix-jdk18on</artifactId>
-            <version>1.84</version>
+            <version>1.85</version>
         </dependency>
 
-        <!-- Commons Lang3 (DSS 6.4 requires Strings class introduced in 3.18.0) -->
+        <!-- Commons Lang3 (DSS 6.4+ requires Strings class introduced in 3.18.0) -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>

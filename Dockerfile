@@ -121,6 +121,6 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
 ENTRYPOINT ["java", "-jar", "sign-verify-2.jar"]
 
 LABEL org.opencontainers.image.title="sign-verify" \
-      org.opencontainers.image.description="eIDAS digital signature verification service (DSS 6.4)" \
+      org.opencontainers.image.description="eIDAS digital signature verification service (DSS 6.5)" \
       org.opencontainers.image.source="https://github.com/toresoft/sign-verify" \
       org.opencontainers.image.licenses="LGPL-3.0"

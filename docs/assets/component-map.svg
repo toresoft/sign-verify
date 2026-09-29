@@ -79,7 +79,7 @@
   <!-- Adapters (connector / orange) -->
   <rect x="860" y="90" width="210" height="70" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
   <text x="965" y="118" text-anchor="middle" font-size="12" font-weight="600" fill="white">DSS Adapter</text>
-  <text x="965" y="134" text-anchor="middle" font-size="9" fill="#94a3b8">adapter/dss · DSS 6.4</text>
+  <text x="965" y="134" text-anchor="middle" font-size="9" fill="#94a3b8">adapter/dss · DSS 6.5</text>
 
   <rect x="860" y="200" width="210" height="70" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
   <text x="965" y="228" text-anchor="middle" font-size="12" font-weight="600" fill="white">Crypto Adapter</text>

@@ -8,7 +8,7 @@
 
 > 🇮🇹 **Questo documento è in italiano.** · 🇬🇧 [Read this in English](README.md)
 
-> Servizio REST per la **verifica di firme elettroniche eIDAS** (PAdES, CAdES, XAdES, JAdES, ASiC), basato su Spring Boot 4.1 e sulla libreria europea **DSS 6.4**, con gestione delle Trusted List UE (LOTL/TSL).
+> Servizio REST per la **verifica di firme elettroniche eIDAS** (PAdES, CAdES, XAdES, JAdES, ASiC), basato su Spring Boot 4.1 e sulla libreria europea **DSS 6.5**, con gestione delle Trusted List UE (LOTL/TSL).
 
 ---
 

@@ -8,7 +8,7 @@
 
 > 🇬🇧 **English** · 🇮🇹 [Leggi in italiano](README.it.md)
 
-> REST service for **eIDAS electronic-signature verification** (PAdES, CAdES, XAdES, JAdES, ASiC), built on Spring Boot 4.1 and the EU **DSS 6.4** library, with EU Trusted List (LOTL/TSL) management.
+> REST service for **eIDAS electronic-signature verification** (PAdES, CAdES, XAdES, JAdES, ASiC), built on Spring Boot 4.1 and the EU **DSS 6.5** library, with EU Trusted List (LOTL/TSL) management.
 
 ---
 
