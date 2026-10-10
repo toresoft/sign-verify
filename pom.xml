@@ -111,6 +111,15 @@
              only the constraint-ordering issue is even theoretically reachable — bumped anyway to
              keep the container free of known criticals. -->
         <tomcat.version>11.0.25</tomcat.version>
+        <!-- Spring Framework is managed by the Spring Boot parent (spring-framework.version=7.0.8).
+             Override the property to 7.0.9, which fixes two spring-webmvc advisories affecting
+             7.0.0 through 7.0.8: CVE-2026-47884 (XsltView resolves an unrestricted path, giving
+             SSRF / RCE when a "/**" mapping renders a view whose name is not set explicitly) and
+             CVE-2026-47890 (Server-Sent Event stream corruption while rendering view fragments).
+             This service is a JSON REST API with no XsltView, view fragments or SSE endpoints, so
+             neither is reachable — bumped anyway to keep the classpath free of known criticals.
+             Spring Boot 4.1.1 manages 7.0.9; drop the override once the parent moves there. -->
+        <spring-framework.version>7.0.9</spring-framework.version>
         <!-- AWS SDK v2 is NOT managed by the Spring Boot parent; pin the BOM explicitly. Used by
              the S3 DocumentStoragePort adapter (see app.storage.type=s3). -->
         <awssdk.version>2.49.0</awssdk.version>
