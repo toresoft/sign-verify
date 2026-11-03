@@ -87,6 +87,11 @@ FROM alpine:3.24 AS runtime
 #     freetype.
 #   zlib >= 1.3.2-r1 — CVE-2026-85091 (heap buffer overflow in 1.3.1.2 through
 #     1.3.2). Part of the base image, which still carries 1.3.2-r0.
+#   musl >= 1.2.6-r6 — CVE-2026-107891. Part of the base image, which carries
+#     1.2.6-r3; 3.24 has no r6 yet, so musl and musl-utils (which must match it)
+#     come from edge through the @edge tag. Same 1.2.6 upstream release, so the
+#     ABI the jlink runtime links against is unchanged. Drop the tag and keep the
+#     floor once 3.24 has 1.2.6-r6.
 # `apk upgrade` alone does not get there: the alpine:3.24 digest moves only on
 # point releases and there is no 3.25 branch yet, so CI's layer cache
 # (--cache-from / type=gha) replays this step and keeps the stale revisions.
@@ -97,6 +102,7 @@ RUN echo '@edge https://dl-cdn.alpinelinux.org/alpine/edge/main' >> /etc/apk/rep
  && apk add --no-cache fontconfig freetype ttf-dejavu \
       'libcrypto3>=3.5.8-r0' 'libssl3>=3.5.8-r0' 'libexpat@edge>=2.9.0-r0' \
       'libpng>=1.6.59-r0' 'zlib>=1.3.2-r1' \
+      'musl@edge>=1.2.6-r6' 'musl-utils@edge>=1.2.6-r6' \
  && addgroup -g 10001 app \
  && adduser -u 10001 -G app -s /sbin/nologin -D -H app \
  && mkdir -p /var/lib/sign-verify/dss-cache /var/lib/sign-verify/jobs /var/lib/sign-verify/extract-tmp \

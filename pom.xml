@@ -33,10 +33,13 @@
              commons-compress (via Testcontainers) — CVE-2024-25710 (DUMP infinite-loop DoS) and
              CVE-2024-26308 (Pack200 OOM), both fixed in 1.26.0. rhino (via
              swagger-request-validator -> json-schema-validator) — CVE-2025-66453 (toFixed DoS),
-             fixed in 1.7.15.1. Pinned via explicit dependencyManagement below so they win over the
-             imported BOMs. -->
+             fixed in 1.7.15.1. guava (via swagger-request-validator-core) — CVE-2026-102554
+             (CompactHashMap/CompactHashSet/MapMakerInternalMap deserialization allocates arrays
+             sized by an unvalidated stream count, OOM from a tiny payload), fixed in 33.7.2.
+             Pinned via explicit dependencyManagement below so they win over the imported BOMs. -->
         <commons-compress.version>1.27.1</commons-compress.version>
         <rhino.version>1.7.15.1</rhino.version>
+        <guava.version>33.7.2-jre</guava.version>
         <!-- Spring Boot 4.1 starter-test transitively depends on JUnit Jupiter 6.0.3, but the
              parent POM manages it to 5.14.3 which lacks computeIfAbsent(Object,Function,Class).
              Override to align with what starter-test expects and what Spring’s test extensions
@@ -120,6 +123,13 @@
              neither is reachable — bumped anyway to keep the classpath free of known criticals.
              Spring Boot 4.1.1 manages 7.0.9; drop the override once the parent moves there. -->
         <spring-framework.version>7.0.9</spring-framework.version>
+        <!-- OpenTelemetry is managed by the Spring Boot parent (opentelemetry.version=1.62.0, which
+             drives the opentelemetry-bom) and reaches the runtime classpath via
+             spring-boot-opentelemetry. Override the property to 1.67.0: CVE-2026-118259
+             (W3CTraceContextPropagator.extract() regex backtracking gives quadratic CPU on a crafted
+             tracestate header with long runs of spaces/tabs) affects every release before 1.67.0.
+             Drop the override once the parent manages 1.67.0 or later. -->
+        <opentelemetry.version>1.67.0</opentelemetry.version>
         <!-- AWS SDK v2 is NOT managed by the Spring Boot parent; pin the BOM explicitly. Used by
              the S3 DocumentStoragePort adapter (see app.storage.type=s3). -->
         <awssdk.version>2.49.0</awssdk.version>
@@ -181,6 +191,11 @@
                 <groupId>org.mozilla</groupId>
                 <artifactId>rhino</artifactId>
                 <version>${rhino.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${guava.version}</version>
             </dependency>
             <!-- Force JUnit Jupiter 6.0.3: Spring Boot 4.1 starter-test expects it but the parent
                  POM manages it to 5.14.3 which lacks computeIfAbsent(Object,Function,Class). These
