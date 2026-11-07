@@ -77,19 +77,20 @@ FROM alpine:3.24 AS runtime
 #     XML_ParseBuffer) and CVE-2026-102633 (integer overflow in expat_realloc),
 #     on top of the earlier CVE-2026-66046, -76641, -76956, -76957 and -93990.
 #     libexpat is not requested directly; it arrives as a fontconfig dependency,
-#     and naming it here raises the floor on that transitive install. 3.24 still
-#     ships 2.8.5-r0, so libexpat alone comes from edge through the @edge tag:
-#     an untagged package never resolves from a tagged repository, so everything
-#     else stays on 3.24. edge's libexpat depends only on musl. Drop the tag and
-#     keep the floor once 3.24 has 2.9.0.
+#     and naming it here raises the floor on that transitive install. 3.24 now
+#     ships 2.10.0-r0, so it no longer needs edge.
 #   libpng >= 1.6.59-r0 — CVE-2026-46675 (use-after-free of zlib input in
 #     png_read_end after incomplete zTXt/iTXt/iCCP decompression). Pulled in by
 #     freetype.
-#   zlib >= 1.3.2-r1 — CVE-2026-85091 (heap buffer overflow in 1.3.1.2 through
-#     1.3.2). Part of the base image, which still carries 1.3.2-r0.
+#   zlib >= 1.4-r0 — CVE-2026-4738 (out-of-bounds memory access), on top of the
+#     earlier CVE-2026-85091 (heap buffer overflow in 1.3.1.2 through 1.3.2).
+#     Part of the base image, which still carries 1.3.2-r1. 1.4 keeps the
+#     libz.so.1 soname, so dependents need no rebuild.
 #   musl >= 1.2.6-r6 — CVE-2026-107891. Part of the base image, which carries
 #     1.2.6-r3; 3.24 has no r6 yet, so musl and musl-utils (which must match it)
-#     come from edge through the @edge tag. Same 1.2.6 upstream release, so the
+#     come from edge through the @edge tag: an untagged package never resolves
+#     from a tagged repository, so everything else stays on 3.24. Same 1.2.6
+#     upstream release, so the
 #     ABI the jlink runtime links against is unchanged. Drop the tag and keep the
 #     floor once 3.24 has 1.2.6-r6.
 # `apk upgrade` alone does not get there: the alpine:3.24 digest moves only on
@@ -100,8 +101,8 @@ FROM alpine:3.24 AS runtime
 RUN echo '@edge https://dl-cdn.alpinelinux.org/alpine/edge/main' >> /etc/apk/repositories \
  && apk upgrade --no-cache \
  && apk add --no-cache fontconfig freetype ttf-dejavu \
-      'libcrypto3>=3.5.8-r0' 'libssl3>=3.5.8-r0' 'libexpat@edge>=2.9.0-r0' \
-      'libpng>=1.6.59-r0' 'zlib>=1.3.2-r1' \
+      'libcrypto3>=3.5.8-r0' 'libssl3>=3.5.8-r0' 'libexpat>=2.9.0-r0' \
+      'libpng>=1.6.59-r0' 'zlib>=1.4-r0' \
       'musl@edge>=1.2.6-r6' 'musl-utils@edge>=1.2.6-r6' \
  && addgroup -g 10001 app \
  && adduser -u 10001 -G app -s /sbin/nologin -D -H app \
